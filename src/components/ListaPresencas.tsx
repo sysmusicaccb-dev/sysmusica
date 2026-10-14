@@ -1,15 +1,15 @@
 /**
  * SysMúsica — Histórico de presenças (componente de apresentação).
  *
- * Não acessa o banco: recebe presenças, músicos e eventos da página e faz o
+ * Não acessa o banco: recebe presenças, membros e eventos da página e faz o
  * cruzamento (join) em memória, agrupando por evento (mais recente primeiro).
  * Trata quatro cenários: carregando, erro, vazio e lista com dados.
  */
-import type { Evento, Musico, Presenca } from "@/types/database";
+import type { Evento, MembroPublico, Presenca } from "@/types/database";
 
 interface ListaPresencasProps {
   presencas: Presenca[];
-  musicos: Musico[];
+  membros: MembroPublico[];
   eventos: Evento[]; // já chega ordenado do mais recente para o mais antigo
   carregando: boolean;
   erro: string | null;
@@ -37,7 +37,7 @@ const STATUS_RESUMO = ["Presente", "Ausente", "Justificado"] as const;
 
 export default function ListaPresencas({
   presencas,
-  musicos,
+  membros,
   eventos,
   carregando,
   erro,
@@ -72,8 +72,8 @@ export default function ListaPresencas({
     );
   }
 
-  // Cruzamento em memória: índice de músicos por id e presenças agrupadas por evento
-  const musicoPorId = new Map(musicos.map((musico): [string, Musico] => [musico.id, musico]));
+  // Cruzamento em memória: índice de membros por id e presenças agrupadas por evento
+  const membroPorId = new Map(membros.map((membro): [string, MembroPublico] => [membro.id, membro]));
   const presencasPorEvento = new Map<string, Presenca[]>();
   for (const presenca of presencas) {
     const grupo = presencasPorEvento.get(presenca.evento_id) ?? [];
@@ -100,12 +100,12 @@ export default function ListaPresencas({
   return (
     <ul className="grid gap-4">
       {eventosComPresenca.map((evento) => {
-        // Monta as linhas (presença + dados do músico) em ordem alfabética
+        // Monta as linhas (presença + dados do membro) em ordem alfabética
         const linhas = (presencasPorEvento.get(evento.id) ?? [])
           .map((presenca) => ({
             presenca,
-            nome: musicoPorId.get(presenca.musico_id)?.nome ?? "Músico não encontrado",
-            instrumento: musicoPorId.get(presenca.musico_id)?.instrumento ?? "",
+            nome: membroPorId.get(presenca.membro_id)?.nome ?? "Membro não encontrado",
+            categoria: membroPorId.get(presenca.membro_id)?.categoria_instrumento ?? "",
           }))
           .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
@@ -152,15 +152,13 @@ export default function ListaPresencas({
               ))}
             </div>
 
-            {/* Músicos e seus status */}
+            {/* Membros e seus status */}
             <ul className="mt-3 divide-y divide-slate-100">
-              {linhas.map(({ presenca, nome, instrumento }) => (
+              {linhas.map(({ presenca, nome, categoria }) => (
                 <li key={presenca.id} className="flex items-center justify-between gap-2 py-2">
                   <p className="min-w-0 truncate text-sm text-slate-900">
                     {nome}
-                    {instrumento && (
-                      <span className="ml-2 text-xs text-slate-500">{instrumento}</span>
-                    )}
+                    {categoria && <span className="ml-2 text-xs text-slate-500">{categoria}</span>}
                   </p>
                   <span
                     className={

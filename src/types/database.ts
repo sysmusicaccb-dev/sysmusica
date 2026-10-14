@@ -5,25 +5,58 @@
  * Convenções:
  *  - uuid        -> string
  *  - text        -> string
- *  - timestamptz -> string (o Supabase devolve data/hora em formato ISO 8601,
- *                   ex: "2026-10-13T19:30:00+00:00")
+ *  - boolean     -> boolean
+ *  - date        -> string ("AAAA-MM-DD", sem horário nem fuso)
+ *  - timestamptz -> string (ISO 8601, ex: "2026-10-13T19:30:00+00:00")
+ *  - colunas que aceitam NULL -> "tipo | null"
  */
 
 // ---------------------------------------------------------------------
-// Tabela: musicos
+// Tabela: cargos
 // ---------------------------------------------------------------------
-export interface Musico {
+export interface Cargo {
   id: string;
   nome: string;
-  instrumento: string;
+  permite_instrumento: boolean; // true = o cargo informa categoria de instrumento
+}
+
+/** Payload para INSERT: apenas o id é gerado pelo banco (permite_instrumento tem padrão false). */
+export type CargoInsert = Pick<Cargo, "nome"> & Partial<Pick<Cargo, "id" | "permite_instrumento">>;
+
+// ---------------------------------------------------------------------
+// Tabela: membros (antiga "musicos")
+// ---------------------------------------------------------------------
+export interface Membro {
+  id: string;
+  nome: string;
   congregacao: string;
+  cargo_id: string; // FK -> cargos.id
+  data_nascimento: string | null; // date (AAAA-MM-DD)
+  categoria_instrumento: string | null; // null para cargos que não usam instrumento
   status: string; // ex: "Ativo", "Inativo" (padrão no banco: "Ativo")
+  qr_secret: string; // segredo do QR Code; NÃO é legível pela chave anon (ver schema.sql, seção 8)
   data_cadastro: string; // timestamptz, preenchido automaticamente (now())
 }
 
-/** Payload para INSERT: campos com valor padrão no banco são opcionais. */
-export type MusicoInsert = Omit<Musico, "id" | "status" | "data_cadastro"> &
-  Partial<Pick<Musico, "id" | "status" | "data_cadastro">>;
+/**
+ * Membro como o frontend consegue LER com a chave anon (sem qr_secret).
+ * Use este tipo nas telas que buscam membros.
+ */
+export type MembroPublico = Omit<Membro, "qr_secret">;
+
+/**
+ * Colunas liberadas para leitura pública em "membros".
+ * Deve ser IGUAL à lista do GRANT SELECT (...) em supabase/schema.sql e às chaves de MembroPublico.
+ * Usada no lugar de select("*"), que falha porque inclui o qr_secret.
+ */
+export const COLUNAS_MEMBRO_PUBLICO =
+  "id, nome, congregacao, cargo_id, data_nascimento, categoria_instrumento, status, data_cadastro" as const;
+
+/** Payload para INSERT: o qr_secret é sempre gerado pelo banco e não pode ser enviado. */
+export type MembroInsert = Pick<Membro, "nome" | "congregacao" | "cargo_id"> &
+  Partial<
+    Pick<Membro, "id" | "data_nascimento" | "categoria_instrumento" | "status" | "data_cadastro">
+  >;
 
 // ---------------------------------------------------------------------
 // Tabela: eventos
@@ -43,10 +76,22 @@ export type EventoInsert = Omit<Evento, "id"> & Partial<Pick<Evento, "id">>;
 // ---------------------------------------------------------------------
 export interface Presenca {
   id: string;
-  musico_id: string; // FK -> musicos.id
+  membro_id: string; // FK -> membros.id
   evento_id: string; // FK -> eventos.id
   status: string; // ex: "Presente", "Ausente", "Justificado"
+  hora_entrada: string; // timestamptz (padrão no banco: now())
+  hora_saida: string | null; // timestamptz; null = entrada ainda em aberto
 }
 
-/** Payload para INSERT: apenas o id é gerado pelo banco. */
-export type PresencaInsert = Omit<Presenca, "id"> & Partial<Pick<Presenca, "id">>;
+/** Payload para INSERT: hora_entrada, hora_saida e id são opcionais (valores padrão do banco). */
+export type PresencaInsert = Pick<Presenca, "membro_id" | "evento_id" | "status"> &
+  Partial<Pick<Presenca, "id" | "hora_entrada" | "hora_saida">>;
+
+// ---------------------------------------------------------------------
+// RPC: registrar_presenca_qr(p_membro_id, p_evento_id)
+// Uso: supabase.rpc("registrar_presenca_qr", args) -> devolve a Presenca criada
+// ---------------------------------------------------------------------
+export interface RegistrarPresencaQrArgs {
+  p_membro_id: string;
+  p_evento_id: string;
+}

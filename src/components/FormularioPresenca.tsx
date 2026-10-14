@@ -1,25 +1,25 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de registro de presenças.
+ * SysMúsica — Formulário de registro de presenças (lançamento manual).
  *
- * Fluxo: escolher o evento -> marcar o status de cada músico -> salvar.
+ * Fluxo: escolher o evento -> marcar o status de cada membro -> salvar.
  * Os registros são enviados em LOTE (um único insert com vários itens) para a
  * tabela "presencas": ou salva todos, ou nenhum.
  *
  * Regras:
- *  - Só são salvos os músicos que tiverem um status marcado.
- *  - Músicos que já têm presença registrada no evento ficam travados
- *    (a tabela tem UNIQUE (musico_id, evento_id) e o RLS atual não permite UPDATE).
+ *  - Só são salvos os membros que tiverem um status marcado.
+ *  - Membros que já têm presença registrada no evento ficam travados
+ *    (o banco só aceita uma entrada em aberto por membro/evento e o RLS atual não permite UPDATE).
  */
 import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import type { Evento, Musico, Presenca, PresencaInsert } from "@/types/database";
+import type { Evento, MembroPublico, Presenca, PresencaInsert } from "@/types/database";
 
 interface FormularioPresencaProps {
   eventos: Evento[];
-  musicos: Musico[];
+  membros: MembroPublico[];
   presencas: Presenca[]; // usado para travar quem já foi registrado no evento
   carregando: boolean;
   erro: string | null;
@@ -44,7 +44,7 @@ const STATUS_PRESENCA = [
   },
 ] as const;
 
-// Selo de status para músicos já registrados
+// Selo de status para membros já registrados
 function classeStatus(status: string): string {
   if (status === "Presente") return "bg-emerald-100 text-emerald-700";
   if (status === "Ausente") return "bg-red-100 text-red-700";
@@ -78,29 +78,29 @@ const classeBotaoSecundario =
 
 export default function FormularioPresenca({
   eventos,
-  musicos,
+  membros,
   presencas,
   carregando,
   erro,
   onPresencaAdicionada,
 }: FormularioPresencaProps) {
   const [eventoId, setEventoId] = useState("");
-  // Mapa musico_id -> status marcado na tela (ainda não salvo)
+  // Mapa membro_id -> status marcado na tela (ainda não salvo)
   const [marcacoes, setMarcacoes] = useState<Record<string, string>>({});
   const [salvando, setSalvando] = useState(false);
   const [erroForm, setErroForm] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
 
-  // Presenças já gravadas para o evento selecionado: musico_id -> status
+  // Presenças já gravadas para o evento selecionado: membro_id -> status
   const jaRegistrados = useMemo(() => {
     const mapa = new Map<string, string>();
     for (const presenca of presencas) {
-      if (presenca.evento_id === eventoId) mapa.set(presenca.musico_id, presenca.status);
+      if (presenca.evento_id === eventoId) mapa.set(presenca.membro_id, presenca.status);
     }
     return mapa;
   }, [presencas, eventoId]);
 
-  const pendentes = musicos.filter((musico) => !jaRegistrados.has(musico.id));
+  const pendentes = membros.filter((membro) => !jaRegistrados.has(membro.id));
   const qtdMarcados = Object.keys(marcacoes).length;
 
   // Ao trocar de evento, zera marcações e mensagens
@@ -111,15 +111,15 @@ export default function FormularioPresenca({
     setSucesso(false);
   }
 
-  function marcar(musicoId: string, status: string) {
-    setMarcacoes((anterior) => ({ ...anterior, [musicoId]: status }));
+  function marcar(membroId: string, status: string) {
+    setMarcacoes((anterior) => ({ ...anterior, [membroId]: status }));
     setSucesso(false);
   }
 
-  // Atalho: marca todos os músicos pendentes como "Presente"
+  // Atalho: marca todos os membros pendentes como "Presente"
   function marcarTodosPresentes() {
     const todos: Record<string, string> = {};
-    for (const musico of pendentes) todos[musico.id] = "Presente";
+    for (const membro of pendentes) todos[membro.id] = "Presente";
     setMarcacoes(todos);
     setSucesso(false);
   }
@@ -134,17 +134,18 @@ export default function FormularioPresenca({
       return;
     }
 
-    // Monta o lote tipado com PresencaInsert (ignora quem já estava registrado)
+    // Monta o lote tipado com PresencaInsert (ignora quem já estava registrado).
+    // hora_entrada e hora_saida ficam por conta do banco (now() e null).
     const registros: PresencaInsert[] = Object.entries(marcacoes)
-      .filter(([musicoId]) => !jaRegistrados.has(musicoId))
-      .map(([musicoId, status]) => ({
-        musico_id: musicoId,
+      .filter(([membroId]) => !jaRegistrados.has(membroId))
+      .map(([membroId, status]) => ({
+        membro_id: membroId,
         evento_id: eventoId,
         status,
       }));
 
     if (registros.length === 0) {
-      setErroForm("Marque a presença de pelo menos um músico.");
+      setErroForm("Marque a presença de pelo menos um membro.");
       return;
     }
 
@@ -152,7 +153,7 @@ export default function FormularioPresenca({
     try {
       const { error } = await supabase.from("presencas").insert(registros);
       if (error) {
-        // 23505 = violação de UNIQUE: alguém já registrou este músico neste evento
+        // 23505 = violação de UNIQUE: já existe presença em aberto para algum membro neste evento
         throw new Error(
           error.code === "23505"
             ? "Alguma presença deste evento já foi registrada por outra pessoa. Recarregue a página e tente novamente."
@@ -206,13 +207,13 @@ export default function FormularioPresenca({
     );
   }
 
-  // Pré-requisitos: precisa haver pelo menos um evento e um músico
-  if (eventos.length === 0 || musicos.length === 0) {
+  // Pré-requisitos: precisa haver pelo menos um evento e um membro
+  if (eventos.length === 0 || membros.length === 0) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">Registrar presenças</h2>
         <p className="mt-2 text-sm text-slate-600">
-          Para registrar presenças é preciso ter ao menos um evento e um músico cadastrados.
+          Para registrar presenças é preciso ter ao menos um evento e um membro cadastrados.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {eventos.length === 0 && (
@@ -220,9 +221,9 @@ export default function FormularioPresenca({
               Cadastrar evento
             </Link>
           )}
-          {musicos.length === 0 && (
-            <Link href="/musicos" className="text-sm font-semibold text-indigo-600 hover:underline">
-              Cadastrar músico
+          {membros.length === 0 && (
+            <Link href="/membros" className="text-sm font-semibold text-indigo-600 hover:underline">
+              Cadastrar membro
             </Link>
           )}
         </div>
@@ -237,7 +238,7 @@ export default function FormularioPresenca({
     >
       <div>
         <h2 className="text-lg font-semibold text-slate-900">Registrar presenças</h2>
-        <p className="text-sm text-slate-500">Escolha o evento e marque cada músico.</p>
+        <p className="text-sm text-slate-500">Escolha o evento e marque cada membro.</p>
       </div>
 
       <div className="space-y-1.5">
@@ -260,12 +261,12 @@ export default function FormularioPresenca({
         </select>
       </div>
 
-      {/* Lista de músicos: aparece depois de escolher o evento */}
+      {/* Lista de membros: aparece depois de escolher o evento */}
       {eventoId && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-medium text-slate-700">
-              Músicos ({qtdMarcados} de {pendentes.length} marcados)
+              Membros ({qtdMarcados} de {pendentes.length} marcados)
             </p>
             <div className="flex gap-2">
               <button
@@ -288,17 +289,19 @@ export default function FormularioPresenca({
           </div>
 
           <ul className="max-h-96 space-y-2 overflow-y-auto pr-1">
-            {musicos.map((musico) => {
-              const statusRegistrado = jaRegistrados.get(musico.id);
-              const statusAtual = marcacoes[musico.id];
+            {membros.map((membro) => {
+              const statusRegistrado = jaRegistrados.get(membro.id);
+              const statusAtual = marcacoes[membro.id];
 
               return (
-                <li key={musico.id} className="rounded-xl border border-slate-200 p-3">
+                <li key={membro.id} className="rounded-xl border border-slate-200 p-3">
                   <p className="truncate text-sm font-medium text-slate-900">
-                    {musico.nome}
-                    <span className="ml-2 text-xs font-normal text-slate-500">
-                      {musico.instrumento}
-                    </span>
+                    {membro.nome}
+                    {membro.categoria_instrumento && (
+                      <span className="ml-2 text-xs font-normal text-slate-500">
+                        {membro.categoria_instrumento}
+                      </span>
+                    )}
                   </p>
 
                   {statusRegistrado ? (
@@ -317,17 +320,17 @@ export default function FormularioPresenca({
                     // Botões de seleção (radio escondido + rótulo estilizado)
                     <div
                       role="radiogroup"
-                      aria-label={`Presença de ${musico.nome}`}
+                      aria-label={`Presença de ${membro.nome}`}
                       className="mt-2 flex flex-wrap gap-1.5"
                     >
                       {STATUS_PRESENCA.map((opcao) => (
                         <label key={opcao.valor} className="cursor-pointer">
                           <input
                             type="radio"
-                            name={`presenca-${musico.id}`}
+                            name={`presenca-${membro.id}`}
                             value={opcao.valor}
                             checked={statusAtual === opcao.valor}
-                            onChange={() => marcar(musico.id, opcao.valor)}
+                            onChange={() => marcar(membro.id, opcao.valor)}
                             disabled={salvando}
                             className="peer sr-only"
                           />
