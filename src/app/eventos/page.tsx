@@ -38,6 +38,9 @@ export default function EventosPage() {
 
   // Primeira carga ao abrir a página
   useEffect(() => {
+    // O setState só roda DEPOIS do await (nunca de forma síncrona), então o aviso da regra
+    // set-state-in-effect não se aplica a esta carga inicial. Ignorado apenas nesta linha.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void buscarEventos();
   }, [buscarEventos]);
 
