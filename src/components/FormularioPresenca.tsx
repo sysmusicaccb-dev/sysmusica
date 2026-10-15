@@ -15,11 +15,18 @@
 import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import type { Evento, MembroPublico, Presenca, PresencaInsert } from "@/types/database";
+import type {
+  Evento,
+  Instrumento,
+  MembroPublico,
+  Presenca,
+  PresencaInsert,
+} from "@/types/database";
 
 interface FormularioPresencaProps {
   eventos: Evento[];
   membros: MembroPublico[];
+  instrumentos: Instrumento[]; // usado para exibir o nome do instrumento de cada membro
   presencas: Presenca[]; // usado para travar quem já foi registrado no evento
   carregando: boolean;
   erro: string | null;
@@ -79,6 +86,7 @@ const classeBotaoSecundario =
 export default function FormularioPresenca({
   eventos,
   membros,
+  instrumentos,
   presencas,
   carregando,
   erro,
@@ -297,9 +305,9 @@ export default function FormularioPresenca({
                 <li key={membro.id} className="rounded-xl border border-slate-200 p-3">
                   <p className="truncate text-sm font-medium text-slate-900">
                     {membro.nome}
-                    {membro.categoria_instrumento && (
+                    {membro.instrumento_id && (
                       <span className="ml-2 text-xs font-normal text-slate-500">
-                        {membro.categoria_instrumento}
+                        {instrumentos.find((instrumento) => instrumento.id === membro.instrumento_id)?.nome}
                       </span>
                     )}
                   </p>

@@ -5,11 +5,12 @@
  * cruzamento (join) em memória, agrupando por evento (mais recente primeiro).
  * Trata quatro cenários: carregando, erro, vazio e lista com dados.
  */
-import type { Evento, MembroPublico, Presenca } from "@/types/database";
+import type { Evento, Instrumento, MembroPublico, Presenca } from "@/types/database";
 
 interface ListaPresencasProps {
   presencas: Presenca[];
   membros: MembroPublico[];
+  instrumentos: Instrumento[]; // usado para exibir o nome do instrumento de cada membro
   eventos: Evento[]; // já chega ordenado do mais recente para o mais antigo
   carregando: boolean;
   erro: string | null;
@@ -38,6 +39,7 @@ const STATUS_RESUMO = ["Presente", "Ausente", "Justificado"] as const;
 export default function ListaPresencas({
   presencas,
   membros,
+  instrumentos,
   eventos,
   carregando,
   erro,
@@ -105,7 +107,10 @@ export default function ListaPresencas({
           .map((presenca) => ({
             presenca,
             nome: membroPorId.get(presenca.membro_id)?.nome ?? "Membro não encontrado",
-            categoria: membroPorId.get(presenca.membro_id)?.categoria_instrumento ?? "",
+            categoria: instrumentos.find(
+              (instrumento) =>
+                instrumento.id === membroPorId.get(presenca.membro_id)?.instrumento_id
+            )?.nome ?? "",
           }))
           .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 

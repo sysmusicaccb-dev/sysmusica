@@ -17,11 +17,22 @@
 export interface Cargo {
   id: string;
   nome: string;
-  permite_instrumento: boolean; // true = o cargo informa categoria de instrumento
+  permite_instrumento: boolean; // true = o cargo informa instrumento
 }
 
 /** Payload para INSERT: apenas o id é gerado pelo banco (permite_instrumento tem padrão false). */
 export type CargoInsert = Pick<Cargo, "nome"> & Partial<Pick<Cargo, "id" | "permite_instrumento">>;
+
+// ---------------------------------------------------------------------
+// Tabela: instrumentos
+// ---------------------------------------------------------------------
+export interface Instrumento {
+  id: string;
+  nome: string; // único (sem diferenciar maiúsculas/minúsculas)
+}
+
+/** Payload para INSERT: apenas o id é gerado pelo banco. */
+export type InstrumentoInsert = Pick<Instrumento, "nome"> & Partial<Pick<Instrumento, "id">>;
 
 // ---------------------------------------------------------------------
 // Tabela: membros (antiga "musicos")
@@ -32,9 +43,9 @@ export interface Membro {
   congregacao: string;
   cargo_id: string; // FK -> cargos.id
   data_nascimento: string | null; // date (AAAA-MM-DD)
-  categoria_instrumento: string | null; // null para cargos que não usam instrumento
+  instrumento_id: string | null; // FK -> instrumentos.id (null = sem instrumento)
   status: string; // ex: "Ativo", "Inativo" (padrão no banco: "Ativo")
-  qr_secret: string; // segredo do QR Code; NÃO é legível pela chave anon (ver schema.sql, seção 8)
+  qr_secret: string; // segredo do QR Code; NÃO é legível pela chave anon (ver schema.sql, seção 9)
   data_cadastro: string; // timestamptz, preenchido automaticamente (now())
 }
 
@@ -50,13 +61,11 @@ export type MembroPublico = Omit<Membro, "qr_secret">;
  * Usada no lugar de select("*"), que falha porque inclui o qr_secret.
  */
 export const COLUNAS_MEMBRO_PUBLICO =
-  "id, nome, congregacao, cargo_id, data_nascimento, categoria_instrumento, status, data_cadastro" as const;
+  "id, nome, congregacao, cargo_id, data_nascimento, instrumento_id, status, data_cadastro" as const;
 
 /** Payload para INSERT: o qr_secret é sempre gerado pelo banco e não pode ser enviado. */
 export type MembroInsert = Pick<Membro, "nome" | "congregacao" | "cargo_id"> &
-  Partial<
-    Pick<Membro, "id" | "data_nascimento" | "categoria_instrumento" | "status" | "data_cadastro">
-  >;
+  Partial<Pick<Membro, "id" | "data_nascimento" | "instrumento_id" | "status" | "data_cadastro">>;
 
 // ---------------------------------------------------------------------
 // Tabela: eventos

@@ -5,18 +5,24 @@
  *
  * Insere um registro na tabela "membros" via cliente Supabase central.
  * Os campos id, status ("Ativo"), qr_secret e data_cadastro são preenchidos pelo banco.
- * Os cargos chegam da página (lidos da tabela "cargos") e alimentam o select.
- * O campo de categoria do instrumento só aparece para cargos com permite_instrumento = true.
+ *
+ * Instrumento (combobox): o campo sugere os instrumentos da tabela "instrumentos".
+ *  - Se o texto digitado já existe (sem diferenciar maiúsculas/acentos), usa o id existente.
+ *  - Se não existe, faz um INSERT automático em "instrumentos", resgata o novo id e
+ *    vincula ao membro (membros.instrumento_id).
+ * O campo só aparece para cargos com permite_instrumento = true.
  */
 import { useState, type FormEvent } from "react";
 import { supabase } from "@/lib/supabase";
-import type { Cargo, MembroInsert } from "@/types/database";
+import { normalizarTexto } from "@/lib/texto";
+import type { Cargo, Instrumento, InstrumentoInsert, MembroInsert } from "@/types/database";
 
 interface FormularioMembroProps {
   cargos: Cargo[];
+  instrumentos: Instrumento[];
   carregando: boolean;
   erro: string | null;
-  /** Chamado após salvar com sucesso, para a página recarregar a lista. */
+  /** Chamado após salvar com sucesso, para a página recarregar os dados (inclui instrumentos novos). */
   onMembroAdicionado: () => void | Promise<void>;
 }
 
@@ -28,8 +34,16 @@ const classeInput =
   "focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60 " +
   "[color-scheme:light]";
 
+// Ajusta o nome digitado antes de salvar: tira espaços extras e põe a 1ª letra em maiúscula
+// (ex: "  sax   soprano " -> "Sax soprano")
+function formatarNomeInstrumento(texto: string): string {
+  const limpo = texto.trim().replace(/\s+/g, " ");
+  return limpo.charAt(0).toUpperCase() + limpo.slice(1);
+}
+
 export default function FormularioMembro({
   cargos,
+  instrumentos,
   carregando,
   erro,
   onMembroAdicionado,
@@ -38,27 +52,74 @@ export default function FormularioMembro({
   const [congregacao, setCongregacao] = useState("");
   const [cargoId, setCargoId] = useState("");
   const [dataNascimento, setDataNascimento] = useState(""); // formato do input date: "AAAA-MM-DD"
-  const [categoria, setCategoria] = useState("");
+  const [instrumentoTexto, setInstrumentoTexto] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erroForm, setErroForm] = useState<string | null>(null);
-  const [sucesso, setSucesso] = useState(false);
+  const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
 
   // O cargo escolhido define se o campo de instrumento aparece
   const cargoSelecionado = cargos.find((cargo) => cargo.id === cargoId);
   const permiteInstrumento = cargoSelecionado?.permite_instrumento ?? false;
 
-  // Ao trocar de cargo, limpa a categoria se o novo cargo não usar instrumento
+  // Instrumento digitado: já existe na tabela? (comparação sem acento e sem diferenciar maiúsculas)
+  const instrumentoDigitado = instrumentoTexto.trim();
+  const instrumentoExistente = instrumentoDigitado
+    ? instrumentos.find(
+        (instrumento) =>
+          normalizarTexto(instrumento.nome) === normalizarTexto(instrumentoDigitado)
+      )
+    : undefined;
+
+  // Ao trocar de cargo, limpa o instrumento se o novo cargo não usar instrumento
   function trocarCargo(novoCargoId: string) {
     setCargoId(novoCargoId);
     const novoCargo = cargos.find((cargo) => cargo.id === novoCargoId);
-    if (!novoCargo?.permite_instrumento) setCategoria("");
-    setSucesso(false);
+    if (!novoCargo?.permite_instrumento) setInstrumentoTexto("");
+    setMensagemSucesso(null);
+  }
+
+  // Descobre o id do instrumento digitado: usa o existente ou cria um novo (INSERT automático)
+  async function resolverInstrumentoId(
+    texto: string
+  ): Promise<{ id: string; nome: string; criado: boolean }> {
+    const chave = normalizarTexto(texto);
+
+    // 1) Já existe na lista carregada? Então só reaproveita o id
+    const existente = instrumentos.find(
+      (instrumento) => normalizarTexto(instrumento.nome) === chave
+    );
+    if (existente) return { id: existente.id, nome: existente.nome, criado: false };
+
+    // 2) Não existe: cria e resgata o novo registro (.select().single() devolve a linha inserida)
+    const novoInstrumento: InstrumentoInsert = { nome: formatarNomeInstrumento(texto) };
+    const { data, error } = await supabase
+      .from("instrumentos")
+      .insert(novoInstrumento)
+      .select()
+      .single();
+    if (!error && data) {
+      const criado = data as Instrumento;
+      return { id: criado.id, nome: criado.nome, criado: true };
+    }
+
+    // 3) 23505 = nome duplicado: outra pessoa criou o mesmo instrumento agora há pouco.
+    //    Busca a lista de novo e reaproveita o registro que já existe.
+    if (error?.code === "23505") {
+      const { data: lista, error: erroBusca } = await supabase.from("instrumentos").select("*");
+      if (erroBusca) throw new Error(erroBusca.message);
+      const achado = ((lista ?? []) as Instrumento[]).find(
+        (instrumento) => normalizarTexto(instrumento.nome) === chave
+      );
+      if (achado) return { id: achado.id, nome: achado.nome, criado: false };
+    }
+
+    throw new Error(error?.message ?? "Não foi possível criar o instrumento.");
   }
 
   async function handleSubmit(submissao: FormEvent<HTMLFormElement>) {
     submissao.preventDefault();
     setErroForm(null);
-    setSucesso(false);
+    setMensagemSucesso(null);
 
     // Barra campos obrigatórios vazios ou preenchidos só com espaços
     if (!nome.trim() || !congregacao.trim() || !cargoId) {
@@ -66,27 +127,36 @@ export default function FormularioMembro({
       return;
     }
 
-    // Payload tipado com MembroInsert (campos com valor padrão no banco ficam de fora)
-    const novoMembro: MembroInsert = {
-      nome: nome.trim(),
-      congregacao: congregacao.trim(),
-      cargo_id: cargoId,
-      data_nascimento: dataNascimento || null,
-      categoria_instrumento: permiteInstrumento && categoria.trim() ? categoria.trim() : null,
-    };
-
     setSalvando(true);
     try {
+      // Passo 1: resolve o instrumento (só se o cargo permitir e houver texto digitado)
+      const instrumento =
+        permiteInstrumento && instrumentoDigitado
+          ? await resolverInstrumentoId(instrumentoDigitado)
+          : null;
+
+      // Passo 2: grava o membro vinculado ao instrumento (ou sem instrumento)
+      const novoMembro: MembroInsert = {
+        nome: nome.trim(),
+        congregacao: congregacao.trim(),
+        cargo_id: cargoId,
+        data_nascimento: dataNascimento || null,
+        instrumento_id: instrumento?.id ?? null,
+      };
       const { error } = await supabase.from("membros").insert(novoMembro);
       if (error) throw new Error(error.message);
 
-      // Sucesso: limpa o formulário e avisa a página para recarregar a lista
+      // Sucesso: limpa o formulário e avisa a página para recarregar os dados
       setNome("");
       setCongregacao("");
       setCargoId("");
       setDataNascimento("");
-      setCategoria("");
-      setSucesso(true);
+      setInstrumentoTexto("");
+      setMensagemSucesso(
+        instrumento?.criado
+          ? `Membro cadastrado! O instrumento "${instrumento.nome}" também foi criado.`
+          : "Membro cadastrado com sucesso!"
+      );
       await onMembroAdicionado();
     } catch (e) {
       setErroForm(
@@ -193,29 +263,41 @@ export default function FormularioMembro({
         </select>
       </div>
 
-      {/* Categoria do instrumento: só para cargos com permite_instrumento = true */}
+      {/* Instrumento (combobox): digite para filtrar ou escolha na lista; texto novo cria o instrumento */}
       {permiteInstrumento && (
         <div className="space-y-1.5">
-          <label htmlFor="categoria" className="text-sm font-medium text-slate-700">
-            Categoria do instrumento <span className="font-normal text-slate-400">(opcional)</span>
+          <label htmlFor="instrumento" className="text-sm font-medium text-slate-700">
+            Instrumento <span className="font-normal text-slate-400">(opcional)</span>
           </label>
           <input
-            id="categoria"
+            id="instrumento"
             type="text"
-            list="sugestoes-categoria-instrumento"
-            value={categoria}
-            onChange={(e) => setCategoria(e.target.value)}
+            list="lista-instrumentos"
+            autoComplete="off"
+            value={instrumentoTexto}
+            onChange={(e) => setInstrumentoTexto(e.target.value)}
             disabled={salvando}
-            placeholder="Ex: Madeiras"
+            placeholder="Digite ou escolha um instrumento"
             className={classeInput}
           />
-          {/* Sugestões; o campo continua livre */}
-          <datalist id="sugestoes-categoria-instrumento">
-            <option value="Cordas" />
-            <option value="Madeiras" />
-            <option value="Metais" />
-            <option value="Órgão" />
+          <datalist id="lista-instrumentos">
+            {instrumentos.map((instrumento) => (
+              <option key={instrumento.id} value={instrumento.nome} />
+            ))}
           </datalist>
+
+          {/* Feedback ao vivo: informa se o instrumento já existe ou se será criado */}
+          {instrumentoDigitado && (
+            <p
+              className={
+                "text-xs " + (instrumentoExistente ? "text-slate-500" : "text-indigo-600")
+              }
+            >
+              {instrumentoExistente
+                ? `Instrumento cadastrado: ${instrumentoExistente.nome}`
+                : `Novo instrumento: "${formatarNomeInstrumento(instrumentoDigitado)}" será criado ao salvar.`}
+            </p>
+          )}
         </div>
       )}
 
@@ -255,9 +337,9 @@ export default function FormularioMembro({
           {erroForm}
         </p>
       )}
-      {sucesso && (
+      {mensagemSucesso && (
         <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-          Membro cadastrado com sucesso!
+          {mensagemSucesso}
         </p>
       )}
 

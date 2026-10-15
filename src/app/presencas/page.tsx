@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 import {
   COLUNAS_MEMBRO_PUBLICO,
   type Evento,
+  type Instrumento,
   type MembroPublico,
   type Presenca,
 } from "@/types/database";
@@ -21,6 +22,7 @@ import ListaPresencas from "@/components/ListaPresencas";
 export default function PresencasPage() {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [membros, setMembros] = useState<MembroPublico[]>([]);
+  const [instrumentos, setInstrumentos] = useState<Instrumento[]>([]);
   const [presencas, setPresencas] = useState<Presenca[]>([]);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export default function PresencasPage() {
   // Busca as três tabelas em paralelo
   const buscarDados = useCallback(async () => {
     try {
-      const [resEventos, resMembros, resPresencas] = await Promise.all([
+      const [resEventos, resMembros, resPresencas, resInstrumentos] = await Promise.all([
         supabase.from("eventos").select("*").order("data_evento", { ascending: false }),
         // Lista explícita de colunas: select("*") falharia por causa do qr_secret (protegido)
         supabase
@@ -36,16 +38,18 @@ export default function PresencasPage() {
           .select(COLUNAS_MEMBRO_PUBLICO)
           .order("nome", { ascending: true }),
         supabase.from("presencas").select("*"),
+        supabase.from("instrumentos").select("*"),
       ]);
 
       // Se qualquer uma das consultas falhar, trata como erro único
-      const erroBanco = resEventos.error ?? resMembros.error ?? resPresencas.error;
+      const erroBanco = resEventos.error ?? resMembros.error ?? resPresencas.error ?? resInstrumentos.error;
       if (erroBanco) throw new Error(erroBanco.message);
 
       setEventos((resEventos.data ?? []) as Evento[]);
       // Cast duplo: com lista de colunas, o cliente (sem tipagem gerada) não infere a linha
       setMembros((resMembros.data ?? []) as unknown as MembroPublico[]);
       setPresencas((resPresencas.data ?? []) as Presenca[]);
+      setInstrumentos((resInstrumentos.data ?? []) as Instrumento[]);
       setErro(null);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro desconhecido ao buscar os dados.");
@@ -69,8 +73,8 @@ export default function PresencasPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="text-slate-900">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Presenças</h1>
           <p className="mt-1 text-sm text-slate-600">
@@ -85,6 +89,7 @@ export default function PresencasPage() {
             <FormularioPresenca
               eventos={eventos}
               membros={membros}
+              instrumentos={instrumentos}
               presencas={presencas}
               carregando={carregando}
               erro={erro}
@@ -96,6 +101,7 @@ export default function PresencasPage() {
             <ListaPresencas
               presencas={presencas}
               membros={membros}
+              instrumentos={instrumentos}
               eventos={eventos}
               carregando={carregando}
               erro={erro}
