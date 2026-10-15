@@ -1,16 +1,27 @@
 -- =====================================================================
--- SysMúsica — Schema PostgreSQL (Supabase) — v3
+-- SysMúsica — Schema PostgreSQL (Supabase) — v4
 --
 -- Novidades desta versão:
---   * tabela INSTRUMENTOS (gestão dinâmica de instrumentos)
---   * MEMBROS: o texto livre "categoria_instrumento" foi substituído por "instrumento_id"
---     (FK opcional para instrumentos); os textos antigos são migrados automaticamente
---   * RLS de SELECT e INSERT anônimos em INSTRUMENTOS
+--   * tabela FAMILIAS (Cordas, Madeiras, Metais, Teclas) com palavras-chave de classificação
+--   * INSTRUMENTOS passa a ter familia_id; a família é definida AUTOMATICAMENTE pelo nome
+--     do instrumento (gatilho no INSERT) e só um ADMINISTRADOR pode corrigi-la depois
+--   * nomes de família ("Madeiras") deixam de ser aceitos como instrumento; os que já
+--     existiam como instrumento são removidos (os membros ligados ficam sem instrumento)
+--   * políticas passam a valer para 'anon' E 'authenticated' (usuário logado usa o papel authenticated)
 --
 -- Como aplicar: Supabase Dashboard > SQL Editor > colar tudo e executar (Run).
 -- O script é IDEMPOTENTE e roda em uma única transação (begin/commit):
 -- se qualquer passo falhar, nada é alterado. Pode ser executado várias vezes e
--- parte de qualquer versão anterior (v1 com "musicos", v2 com "categoria_instrumento" ou banco novo).
+-- parte de qualquer versão anterior (v1, v2, v3 ou banco novo).
+--
+-- COMO CRIAR UM ADMINISTRADOR (uma vez):
+--   1) Dashboard > Authentication > Users > Add user (e-mail + senha).
+--   2) Rode no SQL Editor, trocando o e-mail:
+--        update auth.users
+--           set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"papel": "admin"}'::jsonb
+--         where email = 'seu-email@exemplo.com';
+--   3) O usuário deve sair e entrar de novo para o login refletir o papel.
+--   4) Recomendado: Authentication > Providers/Sign In > desativar novos cadastros (signups).
 -- =====================================================================
 begin;
 
@@ -42,19 +53,85 @@ insert into public.cargos (nome, permite_instrumento) values
 on conflict (nome) do nothing;
 
 -- ---------------------------------------------------------------------
--- 2) INSTRUMENTOS — lista dinâmica de instrumentos (alimentada pelo formulário de membros)
+-- 2) FAMILIAS — famílias de instrumentos
+--    palavras_chave: trechos que, se aparecerem no nome do instrumento, o classificam nesta
+--    família. IMPORTANTE: escrever em minúsculas e SEM acentos (ex: 'orgao', 'oboe').
+--    Em caso de várias famílias casarem, vence a palavra-chave mais longa
+--    (ex: 'saxhorn' em Metais vence 'sax' em Madeiras).
+--    Para criar/ajustar uma família: insert/update direto nesta tabela (SQL Editor).
+-- ---------------------------------------------------------------------
+create table if not exists public.familias (
+  id             uuid   primary key default gen_random_uuid(),
+  nome           text   not null unique,
+  palavras_chave text[] not null default '{}'
+);
+
+insert into public.familias (nome, palavras_chave) values
+  ('Cordas',   array['violino','viola','violoncelo','cello','contrabaixo','harpa']),
+  ('Madeiras', array['flauta','flautim','piccolo','oboe','corne ingles','clarinete','clarone','fagote','contrafagote','saxofone','sax']),
+  ('Metais',   array['trompete','corneta','flugelhorn','flugel','trompa','trombone','bombardino','eufonio','euphonium','tuba','bombardao','sousafone','saxhorn']),
+  ('Teclas',   array['orgao','piano','teclado','acordeon','acordeao'])
+on conflict (nome) do nothing;
+
+-- ---------------------------------------------------------------------
+-- 3) INSTRUMENTOS — lista dinâmica de instrumentos (alimentada pelo formulário de membros)
+--    familia_id: família do instrumento (definida automaticamente; corrigível por administrador).
 -- ---------------------------------------------------------------------
 create table if not exists public.instrumentos (
-  id   uuid primary key default gen_random_uuid(),
-  nome text not null unique
+  id         uuid primary key default gen_random_uuid(),
+  nome       text not null unique,
+  familia_id uuid references public.familias (id) on delete set null
 );
+
+-- Banco já existente (v3): garante a coluna nova familia_id
+alter table public.instrumentos
+  add column if not exists familia_id uuid references public.familias (id) on delete set null;
 
 -- Reforço: não deixa cadastrar "Violino" e "violino" como instrumentos diferentes
 create unique index if not exists instrumentos_nome_lower_unico
   on public.instrumentos (lower(nome));
 
 -- ---------------------------------------------------------------------
--- 3) MEMBROS — substitui a antiga tabela MUSICOS
+-- 4) FUNÇÕES DE CLASSIFICAÇÃO
+--    normalizar_texto: minúsculas, sem acentos e sem espaços repetidos.
+--    inferir_familia_instrumento: devolve o id da família do nome informado (ou null).
+--    ATENÇÃO: o frontend repete esta lógica em src/lib/familias.ts (para mostrar a família
+--    antes de salvar). Se mudar o algoritmo aqui, mude lá também.
+-- ---------------------------------------------------------------------
+create or replace function public.normalizar_texto(p_texto text)
+returns text
+language sql
+immutable
+as $$
+  select btrim(
+    regexp_replace(
+      translate(
+        lower(coalesce(p_texto, '')),
+        'áàâãäéèêëíìîïóòôõöúùûüç',
+        'aaaaaeeeeiiiiooooouuuuc'
+      ),
+      '\s+', ' ', 'g'
+    )
+  )
+$$;
+
+create or replace function public.inferir_familia_instrumento(p_nome text)
+returns uuid
+language sql
+stable
+set search_path = public
+as $$
+  select f.id
+  from public.familias f
+  cross join lateral unnest(f.palavras_chave) as k(palavra)
+  where k.palavra <> ''
+    and public.normalizar_texto(p_nome) like '%' || k.palavra || '%'
+  order by length(k.palavra) desc, f.nome
+  limit 1
+$$;
+
+-- ---------------------------------------------------------------------
+-- 5) MEMBROS — substitui a antiga tabela MUSICOS
 --    qr_secret: segredo individual usado para validar o QR Code dinâmico.
 --    data_nascimento e instrumento_id são opcionais.
 -- ---------------------------------------------------------------------
@@ -70,11 +147,11 @@ create table if not exists public.membros (
   data_cadastro   timestamptz not null default now()
 );
 
--- 3.1) Banco já existente (v2): garante a coluna nova instrumento_id
+-- 5.1) Banco já existente (v2): garante a coluna nova instrumento_id
 alter table public.membros
   add column if not exists instrumento_id uuid references public.instrumentos (id) on delete set null;
 
--- 3.2) Migração v1 -> v3: dados antigos de MUSICOS (só roda se musicos ainda existir).
+-- 5.2) Migração v1 -> v4: dados antigos de MUSICOS (só roda se musicos ainda existir).
 --      Os textos de "instrumento" viram registros em INSTRUMENTOS (sem duplicar por maiúsculas/espaços)
 --      e cada membro migrado já é ligado ao seu instrumento. Mantém o mesmo id da pessoa.
 do $$
@@ -101,7 +178,7 @@ begin
 end
 $$;
 
--- 3.3) Migração v2 -> v3: o texto livre "categoria_instrumento" vira "instrumento_id".
+-- 5.3) Migração v2 -> v4: o texto livre "categoria_instrumento" vira "instrumento_id".
 --      Só roda se a coluna antiga ainda existir; depois de copiar, ela é removida.
 do $$
 begin
@@ -112,7 +189,6 @@ begin
       and table_name   = 'membros'
       and column_name  = 'categoria_instrumento'
   ) then
-    -- Cria os instrumentos a partir dos textos existentes (um por nome, ignorando maiúsculas/espaços)
     insert into public.instrumentos (nome)
     select distinct on (lower(btrim(m.categoria_instrumento))) btrim(m.categoria_instrumento)
     from public.membros m
@@ -120,7 +196,6 @@ begin
     order by lower(btrim(m.categoria_instrumento)), btrim(m.categoria_instrumento)
     on conflict do nothing;
 
-    -- Liga cada membro ao instrumento correspondente
     update public.membros m
        set instrumento_id = i.id
       from public.instrumentos i
@@ -128,14 +203,13 @@ begin
        and m.categoria_instrumento is not null
        and lower(i.nome) = lower(btrim(m.categoria_instrumento));
 
-    -- Remove o campo de texto livre
     alter table public.membros drop column categoria_instrumento;
   end if;
 end
 $$;
 
 -- ---------------------------------------------------------------------
--- 4) EVENTOS — sem alteração estrutural
+-- 6) EVENTOS — sem alteração estrutural
 -- ---------------------------------------------------------------------
 create table if not exists public.eventos (
   id           uuid        primary key default gen_random_uuid(),
@@ -145,7 +219,7 @@ create table if not exists public.eventos (
 );
 
 -- ---------------------------------------------------------------------
--- 5) PRESENCAS — membro_id + hora_entrada / hora_saida
+-- 7) PRESENCAS — membro_id + hora_entrada / hora_saida
 --    (instalação nova já nasce neste formato; banco antigo é ajustado abaixo)
 -- ---------------------------------------------------------------------
 create table if not exists public.presencas (
@@ -157,7 +231,7 @@ create table if not exists public.presencas (
   hora_saida   timestamptz
 );
 
--- 5.1) Migração do formato v1 (coluna musico_id): troca por membro_id.
+-- 7.1) Migração do formato v1 (coluna musico_id): troca por membro_id.
 --      Só roda se a coluna musico_id ainda existir.
 do $$
 begin
@@ -186,12 +260,12 @@ begin
 end
 $$;
 
--- 5.2) Colunas de entrada/saída (em banco antigo, as linhas existentes recebem now())
+-- 7.2) Colunas de entrada/saída (em banco antigo, as linhas existentes recebem now())
 alter table public.presencas add column if not exists hora_entrada timestamptz not null default now();
 alter table public.presencas add column if not exists hora_saida   timestamptz;
 
 -- ---------------------------------------------------------------------
--- 6) Remove a tabela antiga MUSICOS, mas só depois de conferir que tudo foi copiado.
+-- 8) Remove a tabela antiga MUSICOS, mas só depois de conferir que tudo foi copiado.
 --    (Se ainda houver dependência, o DROP falha de propósito e a transação desfaz tudo.)
 -- ---------------------------------------------------------------------
 do $$
@@ -209,30 +283,83 @@ end
 $$;
 
 -- ---------------------------------------------------------------------
--- 7) ÍNDICES
---    presencas_entrada_aberta_unica: no máximo UMA entrada sem saída por membro/evento.
---    Permite nova entrada depois de uma saída e protege a função registrar_presenca_qr
---    contra duas leituras simultâneas.
+-- 9) LIMPEZA E CLASSIFICAÇÃO DOS INSTRUMENTOS EXISTENTES
+--    9.1) Remove "instrumentos" cujo nome é o nome de uma família (ex: "Madeiras", vindo do texto
+--         livre antigo). Os membros ligados a eles ficam sem instrumento (on delete set null)
+--         e precisam ter o instrumento real informado.
+--    9.2) Classifica automaticamente os instrumentos que ainda estão sem família.
+-- ---------------------------------------------------------------------
+delete from public.instrumentos i
+where exists (
+  select 1 from public.familias f
+  where public.normalizar_texto(f.nome) = public.normalizar_texto(i.nome)
+);
+
+update public.instrumentos
+   set familia_id = public.inferir_familia_instrumento(nome)
+ where familia_id is null;
+
+-- ---------------------------------------------------------------------
+-- 10) GATILHO: classificação automática no cadastro de instrumentos
+--     - recusa nomes de família digitados como se fossem instrumento;
+--     - se o cadastro não trouxer familia_id, define pela inferência do nome.
+-- ---------------------------------------------------------------------
+create or replace function public.instrumentos_definir_familia()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if exists (
+    select 1 from public.familias f
+    where public.normalizar_texto(f.nome) = public.normalizar_texto(new.nome)
+  ) then
+    raise exception '"%" é uma família de instrumentos. Informe o instrumento (ex.: Clarinete).', new.nome
+      using errcode = 'check_violation';
+  end if;
+
+  if new.familia_id is null then
+    new.familia_id := public.inferir_familia_instrumento(new.nome);
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_instrumentos_definir_familia on public.instrumentos;
+create trigger trg_instrumentos_definir_familia
+  before insert on public.instrumentos
+  for each row execute function public.instrumentos_definir_familia();
+
+-- ---------------------------------------------------------------------
+-- 11) ÍNDICES
+--     presencas_entrada_aberta_unica: no máximo UMA entrada sem saída por membro/evento.
+--     Permite nova entrada depois de uma saída e protege a função registrar_presenca_qr
+--     contra duas leituras simultâneas.
 -- ---------------------------------------------------------------------
 create unique index if not exists presencas_entrada_aberta_unica
   on public.presencas (membro_id, evento_id)
   where hora_saida is null;
 
-create index if not exists idx_presencas_evento_id   on public.presencas (evento_id);
-create index if not exists idx_presencas_membro_id   on public.presencas (membro_id);
-create index if not exists idx_membros_cargo_id      on public.membros (cargo_id);
+create index if not exists idx_presencas_evento_id    on public.presencas (evento_id);
+create index if not exists idx_presencas_membro_id    on public.presencas (membro_id);
+create index if not exists idx_membros_cargo_id       on public.membros (cargo_id);
 create index if not exists idx_membros_instrumento_id on public.membros (instrumento_id);
+create index if not exists idx_instrumentos_familia_id on public.instrumentos (familia_id);
 
 -- ---------------------------------------------------------------------
--- 8) RLS (Row Level Security) — FASE INICIAL
---    cargos      : somente leitura pública (os cargos vêm do seed acima)
---    instrumentos: leitura e inserção públicas para 'anon' (o formulário cria instrumentos novos)
---    membros     : leitura e inserção públicas para 'anon'
---    eventos     : leitura e inserção públicas para 'anon'
---    presencas   : leitura e inserção públicas para 'anon'
---    Sem políticas de UPDATE/DELETE: essas operações ficam BLOQUEADAS.
+-- 12) RLS (Row Level Security) — FASE INICIAL
+--     As políticas valem para 'anon' E 'authenticated': quem faz login passa a usar o papel
+--     authenticated e, sem isso, deixaria de enxergar os dados.
+--     cargos      : somente leitura
+--     familias    : somente leitura (ajustes são feitos por SQL)
+--     instrumentos: leitura e inserção (o formulário cria instrumentos novos);
+--                   UPDATE (corrigir a família) somente para ADMINISTRADOR
+--     membros / eventos / presencas: leitura e inserção
+--     Sem políticas de DELETE: essa operação fica BLOQUEADA.
 -- ---------------------------------------------------------------------
 alter table public.cargos        enable row level security;
+alter table public.familias      enable row level security;
 alter table public.instrumentos  enable row level security;
 alter table public.membros       enable row level security;
 alter table public.eventos       enable row level security;
@@ -240,8 +367,10 @@ alter table public.presencas     enable row level security;
 
 -- Remove políticas anteriores (mantém o script reexecutável)
 drop policy if exists "anon_select_cargos"        on public.cargos;
+drop policy if exists "anon_select_familias"      on public.familias;
 drop policy if exists "anon_select_instrumentos"  on public.instrumentos;
 drop policy if exists "anon_insert_instrumentos"  on public.instrumentos;
+drop policy if exists "admin_update_instrumentos" on public.instrumentos;
 drop policy if exists "anon_select_membros"       on public.membros;
 drop policy if exists "anon_insert_membros"       on public.membros;
 drop policy if exists "anon_select_eventos"       on public.eventos;
@@ -251,46 +380,61 @@ drop policy if exists "anon_insert_presencas"     on public.presencas;
 
 -- cargos
 create policy "anon_select_cargos"       on public.cargos
-  for select to anon using (true);
+  for select to anon, authenticated using (true);
+
+-- familias
+create policy "anon_select_familias"     on public.familias
+  for select to anon, authenticated using (true);
 
 -- instrumentos
 create policy "anon_select_instrumentos" on public.instrumentos
-  for select to anon using (true);
+  for select to anon, authenticated using (true);
 create policy "anon_insert_instrumentos" on public.instrumentos
-  for insert to anon with check (true);
+  for insert to anon, authenticated with check (true);
+
+-- Corrigir a família de um instrumento: só quem tem papel 'admin' no token (app_metadata),
+-- que só pode ser definido pelo painel/SQL — o usuário não consegue se promover sozinho.
+create policy "admin_update_instrumentos" on public.instrumentos
+  for update to authenticated
+  using      ((select auth.jwt() -> 'app_metadata' ->> 'papel') = 'admin')
+  with check ((select auth.jwt() -> 'app_metadata' ->> 'papel') = 'admin');
 
 -- membros
 create policy "anon_select_membros"      on public.membros
-  for select to anon using (true);
+  for select to anon, authenticated using (true);
 create policy "anon_insert_membros"      on public.membros
-  for insert to anon with check (true);
+  for insert to anon, authenticated with check (true);
 
 -- eventos
 create policy "anon_select_eventos"      on public.eventos
-  for select to anon using (true);
+  for select to anon, authenticated using (true);
 create policy "anon_insert_eventos"      on public.eventos
-  for insert to anon with check (true);
+  for insert to anon, authenticated with check (true);
 
 -- presencas
 create policy "anon_select_presencas"    on public.presencas
-  for select to anon using (true);
+  for select to anon, authenticated using (true);
 create policy "anon_insert_presencas"    on public.presencas
-  for insert to anon with check (true);
+  for insert to anon, authenticated with check (true);
 
 -- ---------------------------------------------------------------------
--- 9) PROTEÇÃO DO qr_secret
---    A leitura pública de membros NÃO inclui a coluna qr_secret: sem isso, qualquer
---    visitante com a chave anon (pública no frontend) copiaria os segredos de todos.
---    Consequência: "select *" em membros falha para anon; o frontend deve listar as colunas
---    (ver COLUNAS_MEMBRO_PUBLICO em src/types/database.ts, que precisa ficar igual a esta lista).
---    O revoke vem ANTES do grant, pois revogar o privilégio da tabela remove os das colunas.
+-- 13) PRIVILÉGIOS POR COLUNA
+--     a) qr_secret: a leitura de membros NÃO inclui essa coluna (nem para anon, nem para
+--        authenticated), senão qualquer visitante copiaria os segredos de todos. Consequência:
+--        "select *" em membros falha; o frontend lista as colunas (COLUNAS_MEMBRO_PUBLICO em
+--        src/types/database.ts deve ficar igual a esta lista). O revoke vem ANTES do grant.
+--     b) instrumentos: o único campo que pode ser alterado é familia_id (e só passa pela política
+--        de administrador acima).
 -- ---------------------------------------------------------------------
-revoke select on public.membros from anon;
+revoke select on public.membros from anon, authenticated;
 grant select (id, nome, congregacao, cargo_id, data_nascimento, instrumento_id, status, data_cadastro)
-  on public.membros to anon;
+  on public.membros to anon, authenticated;
+
+revoke update on public.instrumentos from anon, authenticated;
+grant update (familia_id) on public.instrumentos to authenticated;
 
 -- ---------------------------------------------------------------------
--- 10) RPC registrar_presenca_qr — entrada via QR Code
+-- 14) RPC registrar_presenca_qr — entrada via QR Code
 --     Se já existe entrada SEM hora_saida para o membro neste evento, levanta exceção
 --     (evita duplicidade). Caso contrário, insere a presença e devolve o registro criado.
 --     security invoker (padrão): executa com as permissões de quem chama, respeitando o RLS.

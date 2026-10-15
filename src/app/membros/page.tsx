@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 import {
   COLUNAS_MEMBRO_PUBLICO,
   type Cargo,
+  type Familia,
   type Instrumento,
   type MembroPublico,
 } from "@/types/database";
@@ -21,6 +22,7 @@ import ListaMembros from "@/components/ListaMembros";
 export default function MembrosPage() {
   const [cargos, setCargos] = useState<Cargo[]>([]);
   const [instrumentos, setInstrumentos] = useState<Instrumento[]>([]);
+  const [familias, setFamilias] = useState<Familia[]>([]);
   const [membros, setMembros] = useState<MembroPublico[]>([]);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export default function MembrosPage() {
   // Busca as três tabelas em paralelo
   const buscarDados = useCallback(async () => {
     try {
-      const [resCargos, resInstrumentos, resMembros] = await Promise.all([
+      const [resCargos, resInstrumentos, resMembros, resFamilias] = await Promise.all([
         supabase.from("cargos").select("*").order("nome", { ascending: true }),
         supabase.from("instrumentos").select("*").order("nome", { ascending: true }),
         // Lista explícita de colunas: select("*") falharia por causa do qr_secret (protegido)
@@ -36,14 +38,16 @@ export default function MembrosPage() {
           .from("membros")
           .select(COLUNAS_MEMBRO_PUBLICO)
           .order("nome", { ascending: true }),
+        supabase.from("familias").select("*").order("nome", { ascending: true }),
       ]);
 
       // Se qualquer uma das consultas falhar, trata como erro único
-      const erroBanco = resCargos.error ?? resInstrumentos.error ?? resMembros.error;
+      const erroBanco = resCargos.error ?? resInstrumentos.error ?? resMembros.error ?? resFamilias.error;
       if (erroBanco) throw new Error(erroBanco.message);
 
       setCargos((resCargos.data ?? []) as Cargo[]);
       setInstrumentos((resInstrumentos.data ?? []) as Instrumento[]);
+      setFamilias((resFamilias.data ?? []) as Familia[]);
       // Cast duplo: com lista de colunas, o cliente (sem tipagem gerada) não infere a linha
       setMembros((resMembros.data ?? []) as unknown as MembroPublico[]);
       setErro(null);
@@ -85,6 +89,7 @@ export default function MembrosPage() {
             <FormularioMembro
               cargos={cargos}
               instrumentos={instrumentos}
+              familias={familias}
               carregando={carregando}
               erro={erro}
               onMembroAdicionado={buscarDados}
@@ -96,6 +101,7 @@ export default function MembrosPage() {
               membros={membros}
               cargos={cargos}
               instrumentos={instrumentos}
+              familias={familias}
               carregando={carregando}
               erro={erro}
               onTentarNovamente={tentarNovamente}

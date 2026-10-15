@@ -8,18 +8,29 @@
  *
  * Instrumento (combobox): o campo sugere os instrumentos da tabela "instrumentos".
  *  - Se o texto digitado já existe (sem diferenciar maiúsculas/acentos), usa o id existente.
- *  - Se não existe, faz um INSERT automático em "instrumentos", resgata o novo id e
- *    vincula ao membro (membros.instrumento_id).
- * O campo só aparece para cargos com permite_instrumento = true.
+ *  - Se não existe, faz um INSERT automático em "instrumentos" (já com a família inferida),
+ *    resgata o novo id e vincula ao membro (membros.instrumento_id).
+ *  - A FAMÍLIA é automática e somente leitura: vem do instrumento existente ou é inferida pelo
+ *    nome. Quem corrige uma classificação errada é um administrador (página /instrumentos).
+ *  - Nome de família (ex: "Madeiras") não é aceito como instrumento.
+ * O campo de instrumento só aparece para cargos com permite_instrumento = true.
  */
 import { useState, type FormEvent } from "react";
 import { supabase } from "@/lib/supabase";
 import { normalizarTexto } from "@/lib/texto";
-import type { Cargo, Instrumento, InstrumentoInsert, MembroInsert } from "@/types/database";
+import { ehNomeDeFamilia, inferirFamilia } from "@/lib/familias";
+import type {
+  Cargo,
+  Familia,
+  Instrumento,
+  InstrumentoInsert,
+  MembroInsert,
+} from "@/types/database";
 
 interface FormularioMembroProps {
   cargos: Cargo[];
   instrumentos: Instrumento[];
+  familias: Familia[];
   carregando: boolean;
   erro: string | null;
   /** Chamado após salvar com sucesso, para a página recarregar os dados (inclui instrumentos novos). */
@@ -44,6 +55,7 @@ function formatarNomeInstrumento(texto: string): string {
 export default function FormularioMembro({
   cargos,
   instrumentos,
+  familias,
   carregando,
   erro,
   onMembroAdicionado,
@@ -70,6 +82,24 @@ export default function FormularioMembro({
       )
     : undefined;
 
+  // O texto digitado é o nome de uma família (ex: "Madeiras")? Isso não é um instrumento.
+  const digitadoEhFamilia =
+    instrumentoDigitado !== "" && ehNomeDeFamilia(instrumentoDigitado, familias);
+
+  // Família AUTOMÁTICA: a do instrumento já cadastrado ou, se for novo, a inferida pelo nome
+  const familiaAutomatica: Familia | null = instrumentoExistente
+    ? (familias.find((familia) => familia.id === instrumentoExistente.familia_id) ?? null)
+    : instrumentoDigitado && !digitadoEhFamilia
+      ? inferirFamilia(instrumentoDigitado, familias)
+      : null;
+
+  // Texto mostrado no campo (somente leitura) "Família"
+  const textoFamilia = familiaAutomatica
+    ? familiaAutomatica.nome
+    : instrumentoDigitado && !digitadoEhFamilia
+      ? "Não identificada (um administrador poderá classificar)"
+      : "";
+
   // Ao trocar de cargo, limpa o instrumento se o novo cargo não usar instrumento
   function trocarCargo(novoCargoId: string) {
     setCargoId(novoCargoId);
@@ -81,17 +111,28 @@ export default function FormularioMembro({
   // Descobre o id do instrumento digitado: usa o existente ou cria um novo (INSERT automático)
   async function resolverInstrumentoId(
     texto: string
-  ): Promise<{ id: string; nome: string; criado: boolean }> {
+  ): Promise<{ id: string; nome: string; criado: boolean; familiaNome: string | null }> {
     const chave = normalizarTexto(texto);
 
     // 1) Já existe na lista carregada? Então só reaproveita o id
     const existente = instrumentos.find(
       (instrumento) => normalizarTexto(instrumento.nome) === chave
     );
-    if (existente) return { id: existente.id, nome: existente.nome, criado: false };
+    if (existente) {
+      return {
+        id: existente.id,
+        nome: existente.nome,
+        criado: false,
+        familiaNome: familias.find((familia) => familia.id === existente.familia_id)?.nome ?? null,
+      };
+    }
 
-    // 2) Não existe: cria e resgata o novo registro (.select().single() devolve a linha inserida)
-    const novoInstrumento: InstrumentoInsert = { nome: formatarNomeInstrumento(texto) };
+    // 2) Não existe: cria já com a família inferida e resgata o registro
+    //    (.select().single() devolve a linha inserida, já com o que o gatilho do banco definiu)
+    const novoInstrumento: InstrumentoInsert = {
+      nome: formatarNomeInstrumento(texto),
+      familia_id: inferirFamilia(texto, familias)?.id ?? null,
+    };
     const { data, error } = await supabase
       .from("instrumentos")
       .insert(novoInstrumento)
@@ -99,7 +140,12 @@ export default function FormularioMembro({
       .single();
     if (!error && data) {
       const criado = data as Instrumento;
-      return { id: criado.id, nome: criado.nome, criado: true };
+      return {
+        id: criado.id,
+        nome: criado.nome,
+        criado: true,
+        familiaNome: familias.find((familia) => familia.id === criado.familia_id)?.nome ?? null,
+      };
     }
 
     // 3) 23505 = nome duplicado: outra pessoa criou o mesmo instrumento agora há pouco.
@@ -110,7 +156,14 @@ export default function FormularioMembro({
       const achado = ((lista ?? []) as Instrumento[]).find(
         (instrumento) => normalizarTexto(instrumento.nome) === chave
       );
-      if (achado) return { id: achado.id, nome: achado.nome, criado: false };
+      if (achado) {
+        return {
+          id: achado.id,
+          nome: achado.nome,
+          criado: false,
+          familiaNome: familias.find((familia) => familia.id === achado.familia_id)?.nome ?? null,
+        };
+      }
     }
 
     throw new Error(error?.message ?? "Não foi possível criar o instrumento.");
@@ -124,6 +177,14 @@ export default function FormularioMembro({
     // Barra campos obrigatórios vazios ou preenchidos só com espaços
     if (!nome.trim() || !congregacao.trim() || !cargoId) {
       setErroForm("Preencha nome, cargo e congregação.");
+      return;
+    }
+
+    // Família não é instrumento: pede o instrumento real
+    if (permiteInstrumento && digitadoEhFamilia) {
+      setErroForm(
+        `"${instrumentoDigitado}" é uma família de instrumentos. Informe o instrumento (ex.: Clarinete).`
+      );
       return;
     }
 
@@ -154,7 +215,11 @@ export default function FormularioMembro({
       setInstrumentoTexto("");
       setMensagemSucesso(
         instrumento?.criado
-          ? `Membro cadastrado! O instrumento "${instrumento.nome}" também foi criado.`
+          ? `Membro cadastrado! Instrumento "${instrumento.nome}" criado${
+              instrumento.familiaNome
+                ? ` na família ${instrumento.familiaNome}`
+                : " (família a ser classificada por um administrador)"
+            }.`
           : "Membro cadastrado com sucesso!"
       );
       await onMembroAdicionado();
@@ -263,42 +328,66 @@ export default function FormularioMembro({
         </select>
       </div>
 
-      {/* Instrumento (combobox): digite para filtrar ou escolha na lista; texto novo cria o instrumento */}
+      {/* Instrumento (combobox) + Família automática (somente leitura) */}
       {permiteInstrumento && (
-        <div className="space-y-1.5">
-          <label htmlFor="instrumento" className="text-sm font-medium text-slate-700">
-            Instrumento <span className="font-normal text-slate-400">(opcional)</span>
-          </label>
-          <input
-            id="instrumento"
-            type="text"
-            list="lista-instrumentos"
-            autoComplete="off"
-            value={instrumentoTexto}
-            onChange={(e) => setInstrumentoTexto(e.target.value)}
-            disabled={salvando}
-            placeholder="Digite ou escolha um instrumento"
-            className={classeInput}
-          />
-          <datalist id="lista-instrumentos">
-            {instrumentos.map((instrumento) => (
-              <option key={instrumento.id} value={instrumento.nome} />
-            ))}
-          </datalist>
+        <>
+          <div className="space-y-1.5">
+            <label htmlFor="instrumento" className="text-sm font-medium text-slate-700">
+              Instrumento <span className="font-normal text-slate-400">(opcional)</span>
+            </label>
+            <input
+              id="instrumento"
+              type="text"
+              list="lista-instrumentos"
+              autoComplete="off"
+              value={instrumentoTexto}
+              onChange={(e) => setInstrumentoTexto(e.target.value)}
+              disabled={salvando}
+              placeholder="Digite ou escolha um instrumento"
+              className={classeInput}
+            />
+            <datalist id="lista-instrumentos">
+              {instrumentos.map((instrumento) => (
+                <option key={instrumento.id} value={instrumento.nome} />
+              ))}
+            </datalist>
 
-          {/* Feedback ao vivo: informa se o instrumento já existe ou se será criado */}
-          {instrumentoDigitado && (
-            <p
-              className={
-                "text-xs " + (instrumentoExistente ? "text-slate-500" : "text-indigo-600")
-              }
-            >
-              {instrumentoExistente
-                ? `Instrumento cadastrado: ${instrumentoExistente.nome}`
-                : `Novo instrumento: "${formatarNomeInstrumento(instrumentoDigitado)}" será criado ao salvar.`}
-            </p>
-          )}
-        </div>
+            {/* Feedback ao vivo: família digitada, instrumento existente ou novo */}
+            {instrumentoDigitado && (
+              <p
+                className={
+                  "text-xs " +
+                  (digitadoEhFamilia
+                    ? "text-red-600"
+                    : instrumentoExistente
+                      ? "text-slate-500"
+                      : "text-indigo-600")
+                }
+              >
+                {digitadoEhFamilia
+                  ? `"${instrumentoDigitado}" é uma família. Digite o instrumento (ex.: Clarinete).`
+                  : instrumentoExistente
+                    ? `Instrumento cadastrado: ${instrumentoExistente.nome}`
+                    : `Novo instrumento: "${formatarNomeInstrumento(instrumentoDigitado)}" será criado ao salvar.`}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="familia" className="text-sm font-medium text-slate-700">
+              Família <span className="font-normal text-slate-400">(automática)</span>
+            </label>
+            <input
+              id="familia"
+              type="text"
+              readOnly
+              tabIndex={-1}
+              value={textoFamilia}
+              placeholder="Definida automaticamente pelo instrumento"
+              className="w-full cursor-default rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+            />
+          </div>
+        </>
       )}
 
       <div className="space-y-1.5">

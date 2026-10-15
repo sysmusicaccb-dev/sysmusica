@@ -14,6 +14,7 @@ const ITENS_MENU = [
   { href: "/membros", rotulo: "Membros" },
   { href: "/eventos", rotulo: "Eventos" },
   { href: "/presencas", rotulo: "Presenças" },
+  { href: "/instrumentos", rotulo: "Instrumentos" },
 ] as const;
 
 export default function MenuNavegacao() {

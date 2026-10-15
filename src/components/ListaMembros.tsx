@@ -4,42 +4,53 @@
  * SysMúsica — Lista de membros em tabela, com barra de ferramentas de filtros.
  *
  * Não acessa o banco: recebe os dados e os estados (loading/erro) da página.
- * Os filtros (busca por nome e cargo) são aplicados no navegador sobre a lista recebida.
- * Cruza cada membro com seu cargo e instrumento (cargo_id / instrumento_id) para exibir os nomes.
+ * Os filtros (busca por nome, cargo e família) são aplicados no navegador sobre a lista recebida.
+ * Cruza cada membro com seu cargo e instrumento; a FAMÍLIA do membro é a do seu instrumento
+ * (instrumento -> familia_id), então corrigir a família de um instrumento atualiza todos os membros.
  *
  * Responsividade:
- *  - telas >= 768px: colunas Nome, Cargo, Instrumento, Congregação e Status;
- *  - telas menores: apenas Nome (com cargo, instrumento e congregação em uma linha abaixo) e Status.
+ *  - telas >= 768px: colunas Nome, Cargo, Instrumento, Família, Congregação e Status;
+ *  - telas menores: apenas Nome (com os demais dados em uma linha abaixo) e Status.
  *
  * Trata quatro cenários: carregando, erro, nenhum membro cadastrado e tabela com dados.
  */
 import { useState } from "react";
 import { normalizarTexto } from "@/lib/texto";
-import type { Cargo, Instrumento, MembroPublico } from "@/types/database";
+import type { Cargo, Familia, Instrumento, MembroPublico } from "@/types/database";
 
 interface ListaMembrosProps {
   membros: MembroPublico[];
   cargos: Cargo[];
   instrumentos: Instrumento[];
+  familias: Familia[];
   carregando: boolean;
   erro: string | null;
   onTentarNovamente: () => void;
 }
 
+// Valor especial do filtro de família: membros sem instrumento ou com instrumento não classificado
+const FILTRO_SEM_FAMILIA = "sem-familia";
+
 // Classe compartilhada pelos cabeçalhos das colunas
 const classeCabecalho =
   "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500";
+
+// Classe compartilhada pelos selects da barra de ferramentas
+const classeSelect =
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200";
 
 export default function ListaMembros({
   membros,
   cargos,
   instrumentos,
+  familias,
   carregando,
   erro,
   onTentarNovamente,
 }: ListaMembrosProps) {
   const [busca, setBusca] = useState("");
   const [cargoFiltroId, setCargoFiltroId] = useState(""); // "" = todos os cargos
+  const [familiaFiltroId, setFamiliaFiltroId] = useState(""); // "" = todas as famílias
 
   // 1) Carregando: skeleton (barra de ferramentas + linhas)
   if (carregando) {
@@ -52,7 +63,8 @@ export default function ListaMembros({
         <span className="sr-only">Carregando membros...</span>
         <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row">
           <div className="h-10 flex-1 animate-pulse rounded-lg bg-slate-200" />
-          <div className="h-10 animate-pulse rounded-lg bg-slate-200 sm:w-56" />
+          <div className="h-10 animate-pulse rounded-lg bg-slate-200 sm:w-48" />
+          <div className="h-10 animate-pulse rounded-lg bg-slate-200 sm:w-44" />
         </div>
         <div className="space-y-3 p-4">
           {[0, 1, 2, 3, 4].map((i) => (
@@ -92,30 +104,42 @@ export default function ListaMembros({
 
   // Índices por id (cruzamento em memória)
   const cargoPorId = new Map(cargos.map((cargo): [string, Cargo] => [cargo.id, cargo]));
+  const familiaPorId = new Map(familias.map((familia): [string, Familia] => [familia.id, familia]));
   const instrumentoPorId = new Map(
     instrumentos.map((instrumento): [string, Instrumento] => [instrumento.id, instrumento])
   );
 
-  // Filtros: nome (sem acento/maiúsculas, "contém") e cargo (igualdade)
+  // Família do membro = família do instrumento dele (null se não tiver instrumento ou classificação)
+  const familiaIdDoMembro = (membro: MembroPublico): string | null =>
+    membro.instrumento_id
+      ? (instrumentoPorId.get(membro.instrumento_id)?.familia_id ?? null)
+      : null;
+
+  // Filtros: nome (sem acento/maiúsculas, "contém"), cargo e família (igualdade)
   const termo = normalizarTexto(busca);
-  const membrosFiltrados = membros.filter(
-    (membro) =>
-      (termo === "" || normalizarTexto(membro.nome).includes(termo)) &&
-      (cargoFiltroId === "" || membro.cargo_id === cargoFiltroId)
-  );
-  const filtrosAtivos = termo !== "" || cargoFiltroId !== "";
+  const membrosFiltrados = membros.filter((membro) => {
+    const familiaId = familiaIdDoMembro(membro);
+    const passaNome = termo === "" || normalizarTexto(membro.nome).includes(termo);
+    const passaCargo = cargoFiltroId === "" || membro.cargo_id === cargoFiltroId;
+    const passaFamilia =
+      familiaFiltroId === "" ||
+      (familiaFiltroId === FILTRO_SEM_FAMILIA ? familiaId === null : familiaId === familiaFiltroId);
+    return passaNome && passaCargo && passaFamilia;
+  });
+  const filtrosAtivos = termo !== "" || cargoFiltroId !== "" || familiaFiltroId !== "";
 
   function limparFiltros() {
     setBusca("");
     setCargoFiltroId("");
+    setFamiliaFiltroId("");
   }
 
   // 4) Tabela com barra de ferramentas
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      {/* Barra de ferramentas: pesquisa por nome + filtro por cargo */}
+      {/* Barra de ferramentas: pesquisa por nome + filtro por cargo + filtro por família */}
       <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
+        <div className="relative min-w-0 flex-1">
           <label htmlFor="busca-nome" className="sr-only">
             Pesquisar por nome
           </label>
@@ -142,7 +166,7 @@ export default function ListaMembros({
           />
         </div>
 
-        <div className="sm:w-56">
+        <div className="sm:w-48">
           <label htmlFor="filtro-cargo" className="sr-only">
             Filtrar por cargo
           </label>
@@ -150,7 +174,7 @@ export default function ListaMembros({
             id="filtro-cargo"
             value={cargoFiltroId}
             onChange={(e) => setCargoFiltroId(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            className={classeSelect}
           >
             <option value="">Todos os cargos</option>
             {cargos.map((cargo) => (
@@ -158,6 +182,26 @@ export default function ListaMembros({
                 {cargo.nome}
               </option>
             ))}
+          </select>
+        </div>
+
+        <div className="sm:w-44">
+          <label htmlFor="filtro-familia" className="sr-only">
+            Filtrar por família do instrumento
+          </label>
+          <select
+            id="filtro-familia"
+            value={familiaFiltroId}
+            onChange={(e) => setFamiliaFiltroId(e.target.value)}
+            className={classeSelect}
+          >
+            <option value="">Todas as famílias</option>
+            {familias.map((familia) => (
+              <option key={familia.id} value={familia.id}>
+                {familia.nome}
+              </option>
+            ))}
+            <option value={FILTRO_SEM_FAMILIA}>Sem família</option>
           </select>
         </div>
       </div>
@@ -177,6 +221,9 @@ export default function ListaMembros({
                 Instrumento
               </th>
               <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>
+                Família
+              </th>
+              <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>
                 Congregação
               </th>
               <th scope="col" className={classeCabecalho}>
@@ -189,7 +236,7 @@ export default function ListaMembros({
             {membrosFiltrados.length === 0 ? (
               // Filtros sem resultado
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
                   Nenhum membro encontrado com os filtros atuais.
                 </td>
               </tr>
@@ -199,6 +246,8 @@ export default function ListaMembros({
                 const nomeInstrumento = membro.instrumento_id
                   ? (instrumentoPorId.get(membro.instrumento_id)?.nome ?? null)
                   : null;
+                const familiaId = familiaIdDoMembro(membro);
+                const nomeFamilia = familiaId ? (familiaPorId.get(familiaId)?.nome ?? null) : null;
 
                 return (
                   <tr key={membro.id} className="transition hover:bg-slate-50">
@@ -212,7 +261,7 @@ export default function ListaMembros({
                           <p className="truncate font-medium text-slate-900">{membro.nome}</p>
                           {/* Telas pequenas: os dados das colunas ocultas aparecem aqui */}
                           <p className="truncate text-xs text-slate-500 md:hidden">
-                            {[nomeCargo, nomeInstrumento, membro.congregacao]
+                            {[nomeCargo, nomeInstrumento, nomeFamilia, membro.congregacao]
                               .filter(Boolean)
                               .join(" · ")}
                           </p>
@@ -222,6 +271,15 @@ export default function ListaMembros({
                     <td className="hidden px-4 py-3 text-slate-700 md:table-cell">{nomeCargo}</td>
                     <td className="hidden px-4 py-3 text-slate-700 md:table-cell">
                       {nomeInstrumento ?? "—"}
+                    </td>
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      {nomeFamilia ? (
+                        <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                          {nomeFamilia}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
                     </td>
                     <td className="hidden px-4 py-3 text-slate-700 md:table-cell">
                       {membro.congregacao}

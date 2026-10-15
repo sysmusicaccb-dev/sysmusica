@@ -5,6 +5,7 @@
  * Convenções:
  *  - uuid        -> string
  *  - text        -> string
+ *  - text[]      -> string[]
  *  - boolean     -> boolean
  *  - date        -> string ("AAAA-MM-DD", sem horário nem fuso)
  *  - timestamptz -> string (ISO 8601, ex: "2026-10-13T19:30:00+00:00")
@@ -24,15 +25,30 @@ export interface Cargo {
 export type CargoInsert = Pick<Cargo, "nome"> & Partial<Pick<Cargo, "id" | "permite_instrumento">>;
 
 // ---------------------------------------------------------------------
+// Tabela: familias (Cordas, Madeiras, Metais, Teclas...)
+// ---------------------------------------------------------------------
+export interface Familia {
+  id: string;
+  nome: string;
+  /** Trechos (minúsculas, sem acento) que classificam um instrumento nesta família. */
+  palavras_chave: string[];
+}
+
+/** Payload para INSERT: id e palavras_chave são opcionais (o padrão de palavras_chave é lista vazia). */
+export type FamiliaInsert = Pick<Familia, "nome"> & Partial<Pick<Familia, "id" | "palavras_chave">>;
+
+// ---------------------------------------------------------------------
 // Tabela: instrumentos
 // ---------------------------------------------------------------------
 export interface Instrumento {
   id: string;
   nome: string; // único (sem diferenciar maiúsculas/minúsculas)
+  familia_id: string | null; // FK -> familias.id (null = ainda não classificado)
 }
 
-/** Payload para INSERT: apenas o id é gerado pelo banco. */
-export type InstrumentoInsert = Pick<Instrumento, "nome"> & Partial<Pick<Instrumento, "id">>;
+/** Payload para INSERT: o id é gerado pelo banco; se familia_id faltar, o gatilho do banco classifica. */
+export type InstrumentoInsert = Pick<Instrumento, "nome"> &
+  Partial<Pick<Instrumento, "id" | "familia_id">>;
 
 // ---------------------------------------------------------------------
 // Tabela: membros (antiga "musicos")
@@ -45,13 +61,13 @@ export interface Membro {
   data_nascimento: string | null; // date (AAAA-MM-DD)
   instrumento_id: string | null; // FK -> instrumentos.id (null = sem instrumento)
   status: string; // ex: "Ativo", "Inativo" (padrão no banco: "Ativo")
-  qr_secret: string; // segredo do QR Code; NÃO é legível pela chave anon (ver schema.sql, seção 9)
+  qr_secret: string; // segredo do QR Code; NÃO é legível pela chave anon (ver schema.sql, seção 13)
   data_cadastro: string; // timestamptz, preenchido automaticamente (now())
 }
 
 /**
  * Membro como o frontend consegue LER com a chave anon (sem qr_secret).
- * Use este tipo nas telas que buscam membros.
+ * Use este tipo nas telas que buscam membros. A família do membro é a do seu instrumento.
  */
 export type MembroPublico = Omit<Membro, "qr_secret">;
 
