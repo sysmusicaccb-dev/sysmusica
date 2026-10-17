@@ -21,7 +21,7 @@ describe("CATALOGO_PERMISSOES", () => {
 
   it("todo código segue o formato modulo.acao em minúsculas", () => {
     for (const { codigo } of CATALOGO_PERMISSOES) {
-      expect(codigo).toMatch(/^[a-z]+\.[a-z]+$/);
+      expect(codigo).toMatch(/^[a-z]+\.[a-z_]+$/);
     }
   });
 

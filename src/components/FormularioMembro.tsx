@@ -4,6 +4,10 @@
  * SysMúsica — Formulário de membro (cadastro e edição) — conteúdo do painel lateral.
  * membro = null -> cadastrar; preenchido -> editar (inclui o status Ativo/Inativo).
  *
+ * Localidade: congregação (comum), cidade e bairro, com sugestões dos valores já cadastrados.
+ * CPF: só aparece para quem tem a permissão membros.cpf (o banco também confere). É opcional,
+ *      validado pelos dígitos verificadores e não pode repetir entre os membros.
+ *
  * Instrumento (combobox): o campo sugere os instrumentos cadastrados.
  *  - Se o texto digitado já existe (sem diferenciar maiúsculas/acentos), usa o instrumento existente.
  *  - Se não existe, o instrumento é criado automaticamente (com a família inferida pelo nome).
@@ -14,6 +18,7 @@
  */
 import { useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
+import { formatarCpf, limparCpf, validarCpf } from "@/lib/cpf";
 import { ehNomeDeFamilia, inferirFamilia } from "@/lib/familias";
 import { normalizarTexto } from "@/lib/texto";
 import { formatarNomeInstrumento } from "@/modules/instrumentos/regras";
@@ -21,11 +26,21 @@ import { obterOuCriarInstrumento } from "@/modules/instrumentos/services/instrum
 import { atualizarMembro, criarMembro } from "@/modules/membros/services/membros";
 import type { Cargo, Familia, Instrumento, MembroPublico } from "@/types/database";
 
+/** Listas de sugestões para os campos de localidade. */
+export interface SugestoesLocalidade {
+  congregacoes: string[];
+  cidades: string[];
+  bairros: string[];
+}
+
 interface FormularioMembroProps {
   membro: MembroPublico | null; // null = cadastrar; preenchido = editar
+  cpfInicial: string | null; // CPF completo (só na edição e só para quem tem membros.cpf)
+  podeCpf: boolean; // permissão membros.cpf
   cargos: Cargo[];
   instrumentos: Instrumento[];
   familias: Familia[];
+  sugestoes: SugestoesLocalidade;
   carregando: boolean;
   erro: string | null;
   /** Chamado após salvar com sucesso, com a mensagem para o aviso da tela. */
@@ -42,9 +57,12 @@ const classeInput =
 
 export default function FormularioMembro({
   membro,
+  cpfInicial,
+  podeCpf,
   cargos,
   instrumentos,
   familias,
+  sugestoes,
   carregando,
   erro,
   onSalvo,
@@ -58,6 +76,9 @@ export default function FormularioMembro({
 
   const [nome, setNome] = useState(membro?.nome ?? "");
   const [congregacao, setCongregacao] = useState(membro?.congregacao ?? "");
+  const [cidade, setCidade] = useState(membro?.cidade ?? "");
+  const [bairro, setBairro] = useState(membro?.bairro ?? "");
+  const [cpf, setCpf] = useState(cpfInicial ? formatarCpf(cpfInicial) : "");
   const [cargoId, setCargoId] = useState(membro?.cargo_id ?? "");
   const [dataNascimento, setDataNascimento] = useState(membro?.data_nascimento ?? ""); // "AAAA-MM-DD"
   const [instrumentoTexto, setInstrumentoTexto] = useState(instrumentoInicial);
@@ -111,6 +132,12 @@ export default function FormularioMembro({
       return setErroForm("Preencha nome, cargo e congregação.");
     }
 
+    // CPF (opcional): se preenchido, precisa ser válido
+    const cpfDigitos = limparCpf(cpf);
+    if (podeCpf && cpfDigitos !== "" && !validarCpf(cpfDigitos)) {
+      return setErroForm("CPF inválido. Confira os números digitados.");
+    }
+
     // Família não é instrumento: pede o instrumento real
     if (permiteInstrumento && digitadoEhFamilia) {
       return setErroForm(
@@ -130,12 +157,22 @@ export default function FormularioMembro({
       const dados = {
         nome: nome.trim(),
         congregacao: congregacao.trim(),
+        cidade: cidade.trim() || null,
+        bairro: bairro.trim() || null,
         cargo_id: cargoId,
         data_nascimento: dataNascimento || null,
         instrumento_id: instrumento?.id ?? null,
       };
-      if (membro) await atualizarMembro(membro.id, { ...dados, status });
-      else await criarMembro(dados);
+      if (membro) {
+        // O CPF só é enviado por quem tem a permissão (os demais nem tocam nele)
+        await atualizarMembro(membro.id, {
+          ...dados,
+          status,
+          ...(podeCpf ? { cpf: cpfDigitos || null } : {}),
+        });
+      } else {
+        await criarMembro({ ...dados, ...(podeCpf && cpfDigitos ? { cpf: cpfDigitos } : {}) });
+      }
 
       const complemento = instrumento?.criado
         ? ` Instrumento "${instrumento.nome}" criado${
@@ -187,7 +224,7 @@ export default function FormularioMembro({
     <form onSubmit={salvar} className="space-y-5">
       <div className="space-y-1.5">
         <label htmlFor="nome" className="text-sm font-medium text-slate-700">
-          Nome
+          Nome completo
         </label>
         <input
           id="nome"
@@ -200,6 +237,29 @@ export default function FormularioMembro({
           className={classeInput}
         />
       </div>
+
+      {/* CPF: só para quem tem a permissão membros.cpf */}
+      {podeCpf && (
+        <div className="space-y-1.5">
+          <label htmlFor="cpf" className="text-sm font-medium text-slate-700">
+            CPF <span className="font-normal text-slate-400">(opcional)</span>
+          </label>
+          <input
+            id="cpf"
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            value={cpf}
+            onChange={(e) => setCpf(formatarCpf(e.target.value))}
+            disabled={salvando}
+            placeholder="000.000.000-00"
+            className={classeInput}
+          />
+          <p className="text-xs text-slate-500">
+            Evita cadastros duplicados. O CPF é protegido: só quem tem permissão o vê por completo.
+          </p>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <label htmlFor="cargo" className="text-sm font-medium text-slate-700">
@@ -284,13 +344,16 @@ export default function FormularioMembro({
         </>
       )}
 
+      {/* Localidade: congregação (comum), cidade e bairro, com sugestões dos já cadastrados */}
       <div className="space-y-1.5">
         <label htmlFor="congregacao" className="text-sm font-medium text-slate-700">
-          Congregação
+          Comum / congregação
         </label>
         <input
           id="congregacao"
           type="text"
+          list="sugestoes-congregacao"
+          autoComplete="off"
           required
           value={congregacao}
           onChange={(e) => setCongregacao(e.target.value)}
@@ -298,6 +361,55 @@ export default function FormularioMembro({
           placeholder="Ex: Central"
           className={classeInput}
         />
+        <datalist id="sugestoes-congregacao">
+          {sugestoes.congregacoes.map((valor) => (
+            <option key={valor} value={valor} />
+          ))}
+        </datalist>
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="cidade" className="text-sm font-medium text-slate-700">
+          Cidade <span className="font-normal text-slate-400">(opcional)</span>
+        </label>
+        <input
+          id="cidade"
+          type="text"
+          list="sugestoes-cidade"
+          autoComplete="off"
+          value={cidade}
+          onChange={(e) => setCidade(e.target.value)}
+          disabled={salvando}
+          placeholder="Ex: Salvador, Lauro de Freitas"
+          className={classeInput}
+        />
+        <datalist id="sugestoes-cidade">
+          {sugestoes.cidades.map((valor) => (
+            <option key={valor} value={valor} />
+          ))}
+        </datalist>
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="bairro" className="text-sm font-medium text-slate-700">
+          Bairro / igreja de referência <span className="font-normal text-slate-400">(opcional)</span>
+        </label>
+        <input
+          id="bairro"
+          type="text"
+          list="sugestoes-bairro"
+          autoComplete="off"
+          value={bairro}
+          onChange={(e) => setBairro(e.target.value)}
+          disabled={salvando}
+          placeholder="Ex: Itinga"
+          className={classeInput}
+        />
+        <datalist id="sugestoes-bairro">
+          {sugestoes.bairros.map((valor) => (
+            <option key={valor} value={valor} />
+          ))}
+        </datalist>
       </div>
 
       <div className="space-y-1.5">
@@ -319,7 +431,7 @@ export default function FormularioMembro({
       {editando && (
         <div className="space-y-1.5">
           <label htmlFor="status" className="text-sm font-medium text-slate-700">
-            Status
+            Situação cadastral
           </label>
           <select
             id="status"

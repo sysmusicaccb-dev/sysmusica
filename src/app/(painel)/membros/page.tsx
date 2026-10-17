@@ -2,16 +2,21 @@
 
 /**
  * SysMúsica — Página /membros: listagem em tabela (largura total) com busca e filtros, novo,
- * editar e excluir. Cada botão só aparece para quem tem a permissão (grupo do usuário); o banco
- * confere de novo em toda operação.
+ * editar, excluir e QR Code. Cada botão só aparece para quem tem a permissão (grupo do usuário);
+ * o banco confere de novo em toda operação.
  * Excluir é exclusão lógica: o membro some das telas e o histórico de presenças é mantido.
+ * Editar abre o formulário já com o CPF completo (só para quem tem a permissão membros.cpf).
  */
 import { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import {
   buscarDadosMembros,
   excluirMembro,
+  obterCpfMembro,
+  obterQrMembro,
+  regenerarQrMembro,
 } from "@/modules/membros/services/membros";
+import QrMembro from "@/modules/membros/components/QrMembro";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -20,10 +25,16 @@ import Notificacao from "@/components/ui/Notificacao";
 import PageHeader from "@/components/ui/PageHeader";
 import FormularioMembro from "@/components/FormularioMembro";
 import ListaMembros from "@/components/ListaMembros";
+import { valoresDistintos } from "@/lib/listas";
+import { montarConteudoQr } from "@/lib/qr";
+import { gerarImagemQr } from "@/lib/qrImagem";
 import type { Cargo, Familia, Instrumento, MembroPublico } from "@/types/database";
 
-// Qual painel lateral está aberto: novo membro, ou edição de um membro
-type PainelMembro = { tipo: "novo" } | { tipo: "editar"; membro: MembroPublico };
+// Qual painel lateral está aberto: novo membro, edição ou QR Code de um membro
+type PainelMembro =
+  | { tipo: "novo" }
+  | { tipo: "editar"; membro: MembroPublico; cpfInicial: string | null }
+  | { tipo: "qr"; membro: MembroPublico; imagem: string; conteudo: string };
 
 export default function MembrosPage() {
   const { pode } = useSessao();
@@ -34,6 +45,8 @@ export default function MembrosPage() {
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
   const [painel, setPainel] = useState<PainelMembro | null>(null);
+  const [abrindo, setAbrindo] = useState(false); // buscando CPF/QR antes de abrir o painel
+  const [erroAcao, setErroAcao] = useState<string | null>(null);
   const [alvoExclusao, setAlvoExclusao] = useState<MembroPublico | null>(null);
   const [excluindo, setExcluindo] = useState(false);
   const [erroExclusao, setErroExclusao] = useState<string | null>(null);
@@ -78,6 +91,48 @@ export default function MembrosPage() {
     setAviso(mensagem);
   }
 
+  // Abre a edição já com o CPF completo (a consulta fica registrada na auditoria)
+  async function abrirEdicao(membro: MembroPublico) {
+    if (abrindo) return;
+    setErroAcao(null);
+    setAbrindo(true);
+    try {
+      const cpfInicial = pode("membros.cpf") ? await obterCpfMembro(membro.id) : null;
+      setPainel({ tipo: "editar", membro, cpfInicial });
+    } catch (e) {
+      setErroAcao(e instanceof Error ? e.message : "Não foi possível abrir a edição.");
+    } finally {
+      setAbrindo(false);
+    }
+  }
+
+  // Busca o código do QR Code no servidor (fica registrado na auditoria) e gera a imagem
+  async function montarPainelQr(membro: MembroPublico, codigo: string): Promise<PainelMembro> {
+    const conteudo = montarConteudoQr(codigo);
+    const imagem = await gerarImagemQr(conteudo);
+    return { tipo: "qr", membro, imagem, conteudo };
+  }
+
+  async function abrirQr(membro: MembroPublico) {
+    if (abrindo) return;
+    setErroAcao(null);
+    setAbrindo(true);
+    try {
+      setPainel(await montarPainelQr(membro, await obterQrMembro(membro.id)));
+    } catch (e) {
+      setErroAcao(e instanceof Error ? e.message : "Não foi possível abrir o QR Code.");
+    } finally {
+      setAbrindo(false);
+    }
+  }
+
+  // Substitui o QR Code (o código antigo deixa de funcionar) e mostra a nova imagem
+  async function substituirQr(membro: MembroPublico, justificativa: string) {
+    const novoCodigo = await regenerarQrMembro(membro.id, justificativa);
+    setPainel(await montarPainelQr(membro, novoCodigo));
+    setAviso(`QR Code de "${membro.nome}" substituído. O código anterior deixou de funcionar.`);
+  }
+
   // Confirma a exclusão (lógica) do membro escolhido
   async function confirmarExclusao() {
     if (!alvoExclusao) return;
@@ -94,6 +149,16 @@ export default function MembrosPage() {
       setExcluindo(false);
     }
   }
+
+  // Sugestões dos campos de localidade (valores já cadastrados)
+  const sugestoes = {
+    congregacoes: valoresDistintos(membros.map((membro) => membro.congregacao)),
+    cidades: valoresDistintos(membros.map((membro) => membro.cidade)),
+    bairros: valoresDistintos(membros.map((membro) => membro.bairro)),
+  };
+
+  const tituloPainel =
+    painel?.tipo === "editar" ? "Editar membro" : painel?.tipo === "qr" ? "QR Code do membro" : "Novo membro";
 
   return (
     <main className="text-slate-900">
@@ -112,6 +177,12 @@ export default function MembrosPage() {
           }
         />
 
+        {erroAcao && (
+          <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {erroAcao}
+          </p>
+        )}
+
         <ListaMembros
           membros={membros}
           cargos={cargos}
@@ -122,7 +193,9 @@ export default function MembrosPage() {
           onTentarNovamente={tentarNovamente}
           podeEditar={pode("membros.editar")}
           podeExcluir={pode("membros.excluir")}
-          onEditar={(membro) => setPainel({ tipo: "editar", membro })}
+          podeQr={pode("membros.qr")}
+          onEditar={(membro) => void abrirEdicao(membro)}
+          onQr={(membro) => void abrirQr(membro)}
           onExcluir={(membro) => {
             setErroExclusao(null);
             setAlvoExclusao(membro);
@@ -130,22 +203,37 @@ export default function MembrosPage() {
         />
       </div>
 
-      {/* Painel lateral: novo membro ou edição */}
+      {/* Painel lateral: novo membro, edição ou QR Code */}
       <Drawer
         aberto={painel !== null}
         onFechar={() => setPainel(null)}
-        titulo={painel?.tipo === "editar" ? "Editar membro" : "Novo membro"}
-        descricao="Preencha os dados do membro."
+        titulo={tituloPainel}
+        descricao={
+          painel?.tipo === "qr" ? "Identificação individual e permanente do membro." : "Preencha os dados do membro."
+        }
       >
-        {painel && (
+        {(painel?.tipo === "novo" || painel?.tipo === "editar") && (
           <FormularioMembro
             membro={painel.tipo === "editar" ? painel.membro : null}
+            cpfInicial={painel.tipo === "editar" ? painel.cpfInicial : null}
+            podeCpf={pode("membros.cpf")}
             cargos={cargos}
             instrumentos={instrumentos}
             familias={familias}
+            sugestoes={sugestoes}
             carregando={carregando}
             erro={erro}
             onSalvo={aoSalvar}
+          />
+        )}
+        {painel?.tipo === "qr" && (
+          <QrMembro
+            nome={painel.membro.nome}
+            congregacao={painel.membro.congregacao}
+            imagem={painel.imagem}
+            conteudo={painel.conteudo}
+            podeSubstituir={pode("membros.qr_revogar")}
+            onSubstituir={(justificativa) => substituirQr(painel.membro, justificativa)}
           />
         )}
       </Drawer>
@@ -158,8 +246,8 @@ export default function MembrosPage() {
           <>
             <p>
               <strong>{alvoExclusao?.nome}</strong> deixará de aparecer nas telas. O histórico de
-              presenças dele é mantido. Para apenas impedir novos registros sem excluir, altere o status
-              para Inativo na edição.
+              presenças dele é mantido. Para apenas impedir novos registros sem excluir, altere a situação
+              cadastral para Inativo na edição.
             </p>
             {erroExclusao && (
               <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-red-700">

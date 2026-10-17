@@ -64,13 +64,18 @@ export interface Membro {
   qr_secret: string; // segredo do QR Code; NÃO é legível pela chave anon (ver schema.sql, seção 13)
   data_cadastro: string; // timestamptz, preenchido automaticamente (now())
   excluido_em: string | null; // exclusão lógica: preenchido quando o membro é excluído (some das telas)
+  cpf: string | null; // 11 dígitos; NÃO é lido diretamente (use cpf_mascarado ou a função obter_cpf_membro)
+  cpf_mascarado: string | null; // "***.***.***-25": coluna gerada pelo banco
+  cidade: string | null; // município da congregação
+  bairro: string | null; // bairro ou igreja de referência
+  atualizado_em: string; // timestamptz, atualizado automaticamente a cada alteração
 }
 
 /**
  * Membro como o frontend consegue LER com a chave anon (sem qr_secret).
  * Use este tipo nas telas que buscam membros. A família do membro é a do seu instrumento.
  */
-export type MembroPublico = Omit<Membro, "qr_secret" | "excluido_em">;
+export type MembroPublico = Omit<Membro, "qr_secret" | "excluido_em" | "cpf">;
 
 /**
  * Colunas liberadas para leitura pública em "membros".
@@ -78,11 +83,16 @@ export type MembroPublico = Omit<Membro, "qr_secret" | "excluido_em">;
  * Usada no lugar de select("*"), que falha porque inclui o qr_secret.
  */
 export const COLUNAS_MEMBRO_PUBLICO =
-  "id, nome, congregacao, cargo_id, data_nascimento, instrumento_id, status, data_cadastro" as const;
+  "id, nome, congregacao, cargo_id, data_nascimento, instrumento_id, status, data_cadastro, cidade, bairro, atualizado_em, cpf_mascarado" as const;
 
 /** Payload para INSERT: o qr_secret é sempre gerado pelo banco e não pode ser enviado. */
 export type MembroInsert = Pick<Membro, "nome" | "congregacao" | "cargo_id"> &
-  Partial<Pick<Membro, "id" | "data_nascimento" | "instrumento_id" | "status" | "data_cadastro">>;
+  Partial<
+    Pick<
+      Membro,
+      "id" | "data_nascimento" | "instrumento_id" | "status" | "data_cadastro" | "cidade" | "bairro" | "cpf"
+    >
+  >;
 
 // ---------------------------------------------------------------------
 // Tabela: eventos

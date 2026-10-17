@@ -15,7 +15,7 @@
  * Trata quatro cenários: carregando, erro, nenhum membro cadastrado e tabela com dados.
  */
 import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, QrCode, Trash2 } from "lucide-react";
 import BotaoIcone from "@/components/ui/BotaoIcone";
 import { normalizarTexto } from "@/lib/texto";
 import type { Cargo, Familia, Instrumento, MembroPublico } from "@/types/database";
@@ -32,6 +32,8 @@ interface ListaMembrosProps {
   podeExcluir: boolean; // mostra o botão Excluir em cada linha
   onEditar: (membro: MembroPublico) => void;
   onExcluir: (membro: MembroPublico) => void;
+  podeQr: boolean; // mostra o botão QR Code em cada linha
+  onQr: (membro: MembroPublico) => void;
 }
 
 // Valor especial do filtro de família: membros sem instrumento ou com instrumento não classificado
@@ -57,11 +59,13 @@ export default function ListaMembros({
   podeExcluir,
   onEditar,
   onExcluir,
+  podeQr,
+  onQr,
 }: ListaMembrosProps) {
   const [busca, setBusca] = useState("");
   const [cargoFiltroId, setCargoFiltroId] = useState(""); // "" = todos os cargos
   const [familiaFiltroId, setFamiliaFiltroId] = useState(""); // "" = todas as famílias
-  const mostrarAcoes = podeEditar || podeExcluir; // a coluna Ações só existe para quem pode algo
+  const mostrarAcoes = podeEditar || podeExcluir || podeQr; // a coluna Ações só existe para quem pode algo
 
   // 1) Carregando: skeleton (barra de ferramentas + linhas)
   if (carregando) {
@@ -299,6 +303,11 @@ export default function ListaMembros({
                     </td>
                     <td className="hidden px-4 py-3 text-slate-700 md:table-cell">
                       {membro.congregacao}
+                      {(membro.bairro || membro.cidade) && (
+                        <span className="block text-xs text-slate-500">
+                          {[membro.bairro, membro.cidade].filter(Boolean).join(" · ")}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -315,6 +324,13 @@ export default function ListaMembros({
                     {mostrarAcoes && (
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
+                          {podeQr && (
+                            <BotaoIcone
+                              icone={QrCode}
+                              rotulo={`QR Code de ${membro.nome}`}
+                              onClick={() => onQr(membro)}
+                            />
+                          )}
                           {podeEditar && (
                             <BotaoIcone
                               icone={Pencil}
