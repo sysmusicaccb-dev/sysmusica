@@ -8,6 +8,7 @@
  */
 import {
   CalendarDays,
+  Camera,
   ClipboardList,
   DoorOpen,
   Guitar,
@@ -63,6 +64,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         qualquer: ["portarias.criar", "portarias.aprovar"],
       },
       { href: "/portaria", rotulo: "Portaria", icone: DoorOpen, permissao: "portaria.visualizar" },
+      { href: "/fotografias", rotulo: "Fotografias", icone: Camera, permissao: "membros.foto" },
     ],
   },
   {

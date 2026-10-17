@@ -153,4 +153,8 @@ describe("Gestão de portarias no menu", () => {
   it("quem só cria portarias não vê a Portaria (registro de entrada)", () => {
     expect(hrefs(["portarias.criar"])).toEqual(["/portarias"]);
   });
+
+  it("quem só tem a permissão de fotografia vê apenas Fotografias", () => {
+    expect(hrefs(["membros.foto"])).toEqual(["/fotografias"]);
+  });
 });
