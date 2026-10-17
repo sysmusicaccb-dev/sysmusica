@@ -39,6 +39,8 @@ export function validarMotivoRejeicao(texto: string): string | null {
 
 /** Texto da cota do dia: "Hoje: 2 de 4 portarias criadas · restam 2". */
 export function descreverCota(cota: CotaPortarias): string {
+  // Controle total: não há limite diário
+  if (cota.ilimitada) return `Hoje: ${cota.usadas} portarias criadas · sem limite (controle total)`;
   const sobra =
     cota.restantes === 0 ? "limite atingido" : cota.restantes === 1 ? "resta 1" : `restam ${cota.restantes}`;
   return `Hoje: ${cota.usadas} de ${cota.limite} portarias criadas · ${sobra}`;

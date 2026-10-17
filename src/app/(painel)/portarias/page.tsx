@@ -49,6 +49,7 @@ export default function PortariasPage() {
   const { pode } = useSessao();
   const podeCriar = pode("portarias.criar");
   const podeAprovar = pode("portarias.aprovar");
+  const controleTotal = pode("portarias.controle_total"); // atua em qualquer cidade: não precisa de abrangência
 
   const [portarias, setPortarias] = useState<PortariaDetalhada[]>([]);
   const [eventos, setEventos] = useState<EventoParaPortaria[]>([]);
@@ -186,7 +187,7 @@ export default function PortariasPage() {
         />
 
         {/* Aprovador sem cidade de abrangência: avisa o que fazer */}
-        {podeAprovar && cidades !== null && cidades.length === 0 && (
+        {podeAprovar && !controleTotal && cidades !== null && cidades.length === 0 && (
           <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
             Você ainda não tem cidades de abrangência, então não consegue aprovar nem rejeitar portarias. Peça a
             um administrador para marcá-las em Administração &gt; Usuários.

@@ -38,6 +38,8 @@ export interface CotaPortarias {
   usadas: number;
   limite: number;
   restantes: number;
+  /** Controle total: sem limite diário (o "restantes" não limita). */
+  ilimitada?: boolean;
 }
 
 /** Uma linha do histórico de uma portaria. */

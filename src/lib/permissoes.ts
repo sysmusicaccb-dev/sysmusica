@@ -31,6 +31,7 @@ export const CATALOGO_PERMISSOES = [
   { codigo: "portarias.criar", modulo: "Gestão de portarias", acao: "Criar" },
   { codigo: "portarias.aprovar", modulo: "Gestão de portarias", acao: "Aprovar" },
   { codigo: "portarias.excluir", modulo: "Gestão de portarias", acao: "Excluir" },
+  { codigo: "portarias.controle_total", modulo: "Gestão de portarias", acao: "Controle total" },
   { codigo: "membros.foto", modulo: "Membros", acao: "Fotografia" },
   { codigo: "usuarios.visualizar", modulo: "Usuários", acao: "Visualizar" },
   { codigo: "usuarios.criar", modulo: "Usuários", acao: "Criar" },

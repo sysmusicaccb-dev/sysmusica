@@ -8,7 +8,7 @@ export default function CotaPortariasIndicador({ cota }: { cota: CotaPortarias }
     <span
       className={cn(
         "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium",
-        cota.restantes <= 1 ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"
+        !cota.ilimitada && cota.restantes <= 1 ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"
       )}
       title="Limite de portarias que você pode criar por dia (horário de Salvador)"
     >

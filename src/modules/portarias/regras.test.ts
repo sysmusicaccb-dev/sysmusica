@@ -31,6 +31,13 @@ describe("descreverCota", () => {
   });
 });
 
+describe("descreverCota com controle total", () => {
+  it("mostra que não há limite diário", () => {
+    const texto = descreverCota({ usadas: 7, limite: 4, restantes: 4, ilimitada: true });
+    expect(texto).toBe("Hoje: 7 portarias criadas · sem limite (controle total)");
+  });
+});
+
 describe("cidadeNaAbrangencia", () => {
   it("compara ignorando acento e maiúsculas", () => {
     expect(cidadeNaAbrangencia("lauro de freitas", ["Lauro de Freitas", "Salvador"])).toBe(true);
