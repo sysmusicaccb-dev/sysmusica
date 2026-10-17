@@ -85,3 +85,22 @@ describe("primeiraRotaPermitida", () => {
     expect(primeiraRotaPermitida(criarPode(["dashboard.visualizar"]))).toBeNull();
   });
 });
+
+describe("menu de Administração", () => {
+  it("aparece só para quem tem permissão de usuários ou grupos", () => {
+    const semAdmin = filtrarMenu(GRUPOS_MENU, criarPode(["portaria.visualizar"]));
+    expect(semAdmin.map((grupo) => grupo.titulo)).not.toContain("Administração");
+
+    const comUsuarios = filtrarMenu(GRUPOS_MENU, criarPode(["usuarios.visualizar"]));
+    const administracao = comUsuarios.find((grupo) => grupo.titulo === "Administração");
+    expect(administracao?.itens.map((item) => item.rotulo)).toEqual(["Usuários"]);
+  });
+
+  it("monta os breadcrumbs Início > Administração > Usuários", () => {
+    expect(montarMigalhas("/administracao/usuarios")).toEqual([
+      { rotulo: "Início", href: "/" },
+      { rotulo: "Administração" },
+      { rotulo: "Usuários" },
+    ]);
+  });
+});

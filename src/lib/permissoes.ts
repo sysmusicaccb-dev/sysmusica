@@ -3,8 +3,8 @@
  *
  * Cada permissão tem o formato "modulo.acao". O tipo CodigoPermissao faz o TypeScript recusar
  * códigos digitados errado (ex: pode("membros.editr") não compila).
- * Mantenha igual ao catálogo do banco (supabase/migrations/0002_rbac.sql): o teste
- * permissoes.test.ts confere se todo código daqui existe lá.
+ * Mantenha igual ao catálogo do banco (supabase/migrations): o teste permissoes.test.ts
+ * confere se todo código daqui existe nas migrações.
  */
 export const CATALOGO_PERMISSOES = [
   { codigo: "dashboard.visualizar", modulo: "Dashboard", acao: "Visualizar" },
@@ -24,6 +24,13 @@ export const CATALOGO_PERMISSOES = [
   { codigo: "portaria.registrar", modulo: "Portaria", acao: "Registrar" },
   { codigo: "portaria.editar", modulo: "Portaria", acao: "Editar" },
   { codigo: "portaria.excluir", modulo: "Portaria", acao: "Excluir" },
+  { codigo: "usuarios.visualizar", modulo: "Usuários", acao: "Visualizar" },
+  { codigo: "usuarios.criar", modulo: "Usuários", acao: "Criar" },
+  { codigo: "usuarios.editar", modulo: "Usuários", acao: "Editar" },
+  { codigo: "grupos.visualizar", modulo: "Grupos e permissões", acao: "Visualizar" },
+  { codigo: "grupos.criar", modulo: "Grupos e permissões", acao: "Criar" },
+  { codigo: "grupos.editar", modulo: "Grupos e permissões", acao: "Editar" },
+  { codigo: "grupos.excluir", modulo: "Grupos e permissões", acao: "Excluir" },
 ] as const;
 
 export type CodigoPermissao = (typeof CATALOGO_PERMISSOES)[number]["codigo"];

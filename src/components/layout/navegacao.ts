@@ -10,7 +10,9 @@ import {
   CalendarDays,
   DoorOpen,
   Guitar,
+  KeyRound,
   LayoutDashboard,
+  ShieldCheck,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -51,6 +53,23 @@ export const GRUPOS_MENU: GrupoMenu[] = [
   {
     titulo: "Operações",
     itens: [{ href: "/portaria", rotulo: "Portaria", icone: DoorOpen, permissao: "portaria.visualizar" }],
+  },
+  {
+    titulo: "Administração",
+    itens: [
+      {
+        href: "/administracao/usuarios",
+        rotulo: "Usuários",
+        icone: KeyRound,
+        permissao: "usuarios.visualizar",
+      },
+      {
+        href: "/administracao/grupos",
+        rotulo: "Grupos e permissões",
+        icone: ShieldCheck,
+        permissao: "grupos.visualizar",
+      },
+    ],
   },
 ];
 
