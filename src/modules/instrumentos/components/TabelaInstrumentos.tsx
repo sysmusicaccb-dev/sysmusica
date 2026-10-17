@@ -2,13 +2,13 @@
 
 /**
  * SysMúsica — Tabela de instrumentos e famílias, com busca por nome.
- *
- * Qualquer pessoa vê a classificação. Só quem tem "podeEditar" (administrador) vê o select para
- * corrigir a família; o banco impõe a regra de verdade (política admin_update_instrumentos).
+ * Ações por linha (só aparecem para quem tem a permissão): editar e excluir.
+ * A família é corrigida no formulário de edição (painel lateral).
  */
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Pencil, Search, Trash2 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
+import BotaoIcone from "@/components/ui/BotaoIcone";
 import { normalizarTexto } from "@/lib/texto";
 import type { Familia, Instrumento } from "@/types/database";
 
@@ -16,9 +16,9 @@ interface TabelaInstrumentosProps {
   instrumentos: Instrumento[];
   familias: Familia[];
   podeEditar: boolean;
-  salvandoId: string | null; // instrumento sendo salvo agora (desabilita o select dele)
-  erroEdicao: string | null;
-  onAlterarFamilia: (instrumento: Instrumento, novaFamiliaId: string) => void;
+  podeExcluir: boolean;
+  onEditar: (instrumento: Instrumento) => void;
+  onExcluir: (instrumento: Instrumento) => void;
 }
 
 const classeCabecalho =
@@ -28,11 +28,12 @@ export default function TabelaInstrumentos({
   instrumentos,
   familias,
   podeEditar,
-  salvandoId,
-  erroEdicao,
-  onAlterarFamilia,
+  podeExcluir,
+  onEditar,
+  onExcluir,
 }: TabelaInstrumentosProps) {
   const [busca, setBusca] = useState("");
+  const mostrarAcoes = podeEditar || podeExcluir;
 
   const termo = normalizarTexto(busca);
   const filtrados = instrumentos.filter(
@@ -63,12 +64,6 @@ export default function TabelaInstrumentos({
         </div>
       </div>
 
-      {erroEdicao && (
-        <p role="alert" className="border-b border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {erroEdicao}
-        </p>
-      )}
-
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50">
@@ -79,12 +74,17 @@ export default function TabelaInstrumentos({
               <th scope="col" className={classeCabecalho}>
                 Família
               </th>
+              {mostrarAcoes && (
+                <th scope="col" className={classeCabecalho + " text-right"}>
+                  Ações
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtrados.length === 0 ? (
               <tr>
-                <td colSpan={2} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td colSpan={mostrarAcoes ? 3 : 2} className="px-4 py-10 text-center text-sm text-slate-500">
                   Nenhum instrumento encontrado.
                 </td>
               </tr>
@@ -96,28 +96,33 @@ export default function TabelaInstrumentos({
                   <tr key={instrumento.id} className="transition hover:bg-slate-50">
                     <td className="px-4 py-3 font-medium text-slate-900">{instrumento.nome}</td>
                     <td className="px-4 py-3">
-                      {podeEditar ? (
-                        // Administrador: pode corrigir a família
-                        <select
-                          aria-label={`Família de ${instrumento.nome}`}
-                          value={instrumento.familia_id ?? ""}
-                          onChange={(e) => onAlterarFamilia(instrumento, e.target.value)}
-                          disabled={salvandoId === instrumento.id}
-                          className="w-full max-w-[14rem] rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:opacity-60"
-                        >
-                          <option value="">Não classificada</option>
-                          {familias.map((item) => (
-                            <option key={item.id} value={item.id}>
-                              {item.nome}
-                            </option>
-                          ))}
-                        </select>
-                      ) : familia ? (
+                      {familia ? (
                         <Badge variante="marca">{familia.nome}</Badge>
                       ) : (
                         <Badge variante="alerta">Não classificada</Badge>
                       )}
                     </td>
+                    {mostrarAcoes && (
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1">
+                          {podeEditar && (
+                            <BotaoIcone
+                              icone={Pencil}
+                              rotulo={`Editar ${instrumento.nome}`}
+                              onClick={() => onEditar(instrumento)}
+                            />
+                          )}
+                          {podeExcluir && (
+                            <BotaoIcone
+                              icone={Trash2}
+                              variante="perigo"
+                              rotulo={`Excluir ${instrumento.nome}`}
+                              onClick={() => onExcluir(instrumento)}
+                            />
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })

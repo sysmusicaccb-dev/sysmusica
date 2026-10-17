@@ -15,6 +15,8 @@
  * Trata quatro cenários: carregando, erro, nenhum membro cadastrado e tabela com dados.
  */
 import { useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
+import BotaoIcone from "@/components/ui/BotaoIcone";
 import { normalizarTexto } from "@/lib/texto";
 import type { Cargo, Familia, Instrumento, MembroPublico } from "@/types/database";
 
@@ -26,6 +28,10 @@ interface ListaMembrosProps {
   carregando: boolean;
   erro: string | null;
   onTentarNovamente: () => void;
+  podeEditar: boolean; // mostra o botão Editar em cada linha
+  podeExcluir: boolean; // mostra o botão Excluir em cada linha
+  onEditar: (membro: MembroPublico) => void;
+  onExcluir: (membro: MembroPublico) => void;
 }
 
 // Valor especial do filtro de família: membros sem instrumento ou com instrumento não classificado
@@ -47,10 +53,15 @@ export default function ListaMembros({
   carregando,
   erro,
   onTentarNovamente,
+  podeEditar,
+  podeExcluir,
+  onEditar,
+  onExcluir,
 }: ListaMembrosProps) {
   const [busca, setBusca] = useState("");
   const [cargoFiltroId, setCargoFiltroId] = useState(""); // "" = todos os cargos
   const [familiaFiltroId, setFamiliaFiltroId] = useState(""); // "" = todas as famílias
+  const mostrarAcoes = podeEditar || podeExcluir; // a coluna Ações só existe para quem pode algo
 
   // 1) Carregando: skeleton (barra de ferramentas + linhas)
   if (carregando) {
@@ -229,6 +240,11 @@ export default function ListaMembros({
               <th scope="col" className={classeCabecalho}>
                 Status
               </th>
+              {mostrarAcoes && (
+                <th scope="col" className={classeCabecalho + " text-right"}>
+                  Ações
+                </th>
+              )}
             </tr>
           </thead>
 
@@ -236,7 +252,7 @@ export default function ListaMembros({
             {membrosFiltrados.length === 0 ? (
               // Filtros sem resultado
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td colSpan={mostrarAcoes ? 7 : 6} className="px-4 py-10 text-center text-sm text-slate-500">
                   Nenhum membro encontrado com os filtros atuais.
                 </td>
               </tr>
@@ -296,6 +312,27 @@ export default function ListaMembros({
                         {membro.status}
                       </span>
                     </td>
+                    {mostrarAcoes && (
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1">
+                          {podeEditar && (
+                            <BotaoIcone
+                              icone={Pencil}
+                              rotulo={`Editar ${membro.nome}`}
+                              onClick={() => onEditar(membro)}
+                            />
+                          )}
+                          {podeExcluir && (
+                            <BotaoIcone
+                              icone={Trash2}
+                              variante="perigo"
+                              rotulo={`Excluir ${membro.nome}`}
+                              onClick={() => onExcluir(membro)}
+                            />
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })

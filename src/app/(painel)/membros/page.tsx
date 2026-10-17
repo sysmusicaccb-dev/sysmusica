@@ -1,27 +1,29 @@
 "use client";
 
 /**
- * SysMúsica — Página /membros: listagem em tabela (largura total) com busca e filtros.
- * O botão "Novo membro" abre o formulário de cadastro em um painel lateral.
- * Busca cargos, instrumentos, famílias e membros de uma vez e distribui os dados.
+ * SysMúsica — Página /membros: listagem em tabela (largura total) com busca e filtros, novo,
+ * editar e excluir. Cada botão só aparece para quem tem a permissão (grupo do usuário); o banco
+ * confere de novo em toda operação.
+ * Excluir é exclusão lógica: o membro some das telas e o histórico de presenças é mantido.
  */
 import { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import {
-  COLUNAS_MEMBRO_PUBLICO,
-  type Cargo,
-  type Familia,
-  type Instrumento,
-  type MembroPublico,
-} from "@/types/database";
+  buscarDadosMembros,
+  excluirMembro,
+} from "@/modules/membros/services/membros";
+import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import Button from "@/components/ui/Button";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Drawer from "@/components/ui/Drawer";
 import Notificacao from "@/components/ui/Notificacao";
 import PageHeader from "@/components/ui/PageHeader";
-import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import FormularioMembro from "@/components/FormularioMembro";
 import ListaMembros from "@/components/ListaMembros";
+import type { Cargo, Familia, Instrumento, MembroPublico } from "@/types/database";
+
+// Qual painel lateral está aberto: novo membro, ou edição de um membro
+type PainelMembro = { tipo: "novo" } | { tipo: "editar"; membro: MembroPublico };
 
 export default function MembrosPage() {
   const { pode } = useSessao();
@@ -31,33 +33,20 @@ export default function MembrosPage() {
   const [membros, setMembros] = useState<MembroPublico[]>([]);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
-  const [painelAberto, setPainelAberto] = useState(false);
+  const [painel, setPainel] = useState<PainelMembro | null>(null);
+  const [alvoExclusao, setAlvoExclusao] = useState<MembroPublico | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+  const [erroExclusao, setErroExclusao] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
-  // Busca as quatro tabelas em paralelo
-  const buscarDados = useCallback(async () => {
+  // Busca cargos, instrumentos, famílias e membros
+  const carregar = useCallback(async () => {
     try {
-      const [resCargos, resInstrumentos, resMembros, resFamilias] = await Promise.all([
-        supabase.from("cargos").select("*").order("nome", { ascending: true }),
-        supabase.from("instrumentos").select("*").order("nome", { ascending: true }),
-        // Lista explícita de colunas: select("*") falharia por causa do qr_secret (protegido)
-        supabase
-          .from("membros")
-          .select(COLUNAS_MEMBRO_PUBLICO)
-          .order("nome", { ascending: true }),
-        supabase.from("familias").select("*").order("nome", { ascending: true }),
-      ]);
-
-      // Se qualquer uma das consultas falhar, trata como erro único
-      const erroBanco =
-        resCargos.error ?? resInstrumentos.error ?? resMembros.error ?? resFamilias.error;
-      if (erroBanco) throw new Error(erroBanco.message);
-
-      setCargos((resCargos.data ?? []) as Cargo[]);
-      setInstrumentos((resInstrumentos.data ?? []) as Instrumento[]);
-      setFamilias((resFamilias.data ?? []) as Familia[]);
-      // Cast duplo: com lista de colunas, o cliente (sem tipagem gerada) não infere a linha
-      setMembros((resMembros.data ?? []) as unknown as MembroPublico[]);
+      const dados = await buscarDadosMembros();
+      setCargos(dados.cargos);
+      setInstrumentos(dados.instrumentos);
+      setFamilias(dados.familias);
+      setMembros(dados.membros);
       setErro(null);
     } catch (e) {
       // O detalhe técnico vai só para o console; a tela mostra uma mensagem simples
@@ -73,20 +62,37 @@ export default function MembrosPage() {
     // O setState só roda DEPOIS do await (nunca de forma síncrona), então o aviso da regra
     // set-state-in-effect não se aplica a esta carga inicial. Ignorado apenas nesta linha.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void buscarDados();
-  }, [buscarDados]);
+    void carregar();
+  }, [carregar]);
 
   // Botão "Tentar novamente": volta ao estado de loading e busca de novo
   function tentarNovamente() {
     setCarregando(true);
-    void buscarDados();
+    void carregar();
   }
 
   // Depois de salvar: recarrega a lista, fecha o painel e mostra o aviso de sucesso
-  async function aoCadastrar(mensagem: string) {
-    await buscarDados();
-    setPainelAberto(false);
+  async function aoSalvar(mensagem: string) {
+    await carregar();
+    setPainel(null);
     setAviso(mensagem);
+  }
+
+  // Confirma a exclusão (lógica) do membro escolhido
+  async function confirmarExclusao() {
+    if (!alvoExclusao) return;
+    setExcluindo(true);
+    setErroExclusao(null);
+    try {
+      await excluirMembro(alvoExclusao.id);
+      await carregar();
+      setAviso(`Membro "${alvoExclusao.nome}" excluído.`);
+      setAlvoExclusao(null);
+    } catch (e) {
+      setErroExclusao(e instanceof Error ? e.message : "Não foi possível excluir o membro.");
+    } finally {
+      setExcluindo(false);
+    }
   }
 
   return (
@@ -99,7 +105,7 @@ export default function MembrosPage() {
           }`}
           acoes={
             pode("membros.criar") ? (
-              <Button icone={Plus} onClick={() => setPainelAberto(true)} disabled={carregando || !!erro}>
+              <Button icone={Plus} onClick={() => setPainel({ tipo: "novo" })} disabled={carregando || !!erro}>
                 Novo membro
               </Button>
             ) : undefined
@@ -114,24 +120,59 @@ export default function MembrosPage() {
           carregando={carregando}
           erro={erro}
           onTentarNovamente={tentarNovamente}
+          podeEditar={pode("membros.editar")}
+          podeExcluir={pode("membros.excluir")}
+          onEditar={(membro) => setPainel({ tipo: "editar", membro })}
+          onExcluir={(membro) => {
+            setErroExclusao(null);
+            setAlvoExclusao(membro);
+          }}
         />
       </div>
 
+      {/* Painel lateral: novo membro ou edição */}
       <Drawer
-        aberto={painelAberto}
-        onFechar={() => setPainelAberto(false)}
-        titulo="Novo membro"
-        descricao="Preencha os dados para cadastrar."
+        aberto={painel !== null}
+        onFechar={() => setPainel(null)}
+        titulo={painel?.tipo === "editar" ? "Editar membro" : "Novo membro"}
+        descricao="Preencha os dados do membro."
       >
-        <FormularioMembro
-          cargos={cargos}
-          instrumentos={instrumentos}
-          familias={familias}
-          carregando={carregando}
-          erro={erro}
-          onMembroAdicionado={aoCadastrar}
-        />
+        {painel && (
+          <FormularioMembro
+            membro={painel.tipo === "editar" ? painel.membro : null}
+            cargos={cargos}
+            instrumentos={instrumentos}
+            familias={familias}
+            carregando={carregando}
+            erro={erro}
+            onSalvo={aoSalvar}
+          />
+        )}
       </Drawer>
+
+      {/* Confirmação de exclusão */}
+      <ConfirmDialog
+        aberto={alvoExclusao !== null}
+        titulo="Excluir membro?"
+        mensagem={
+          <>
+            <p>
+              <strong>{alvoExclusao?.nome}</strong> deixará de aparecer nas telas. O histórico de
+              presenças dele é mantido. Para apenas impedir novos registros sem excluir, altere o status
+              para Inativo na edição.
+            </p>
+            {erroExclusao && (
+              <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-red-700">
+                {erroExclusao}
+              </p>
+            )}
+          </>
+        }
+        textoConfirmar="Excluir"
+        processando={excluindo}
+        onConfirmar={() => void confirmarExclusao()}
+        onCancelar={() => setAlvoExclusao(null)}
+      />
 
       <Notificacao mensagem={aviso} onFechar={() => setAviso(null)} />
     </main>

@@ -106,7 +106,7 @@ export default function ListaPresencas({
         const linhas = (presencasPorEvento.get(evento.id) ?? [])
           .map((presenca) => ({
             presenca,
-            nome: membroPorId.get(presenca.membro_id)?.nome ?? "Membro não encontrado",
+            nome: membroPorId.get(presenca.membro_id)?.nome ?? "Membro excluído",
             categoria: instrumentos.find(
               (instrumento) =>
                 instrumento.id === membroPorId.get(presenca.membro_id)?.instrumento_id

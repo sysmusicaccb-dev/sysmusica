@@ -1,27 +1,34 @@
 "use client";
 
 /**
- * SysMúsica — Lista de eventos em tabela (largura total), com busca por local ou tipo.
+ * SysMúsica — Lista de eventos em tabela (largura total), com busca por finalidade, local ou tipo.
  *
  * Não acessa o banco: recebe os dados e os estados (loading/erro) da página.
  * Os eventos chegam ordenados do mais recente para o mais antigo.
+ * Ações por linha (só aparecem para quem tem a permissão): editar e excluir.
  * Trata quatro cenários: carregando, erro, nenhum evento e tabela com dados.
  */
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Pencil, Search, Trash2 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
+import BotaoIcone from "@/components/ui/BotaoIcone";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import Skeleton from "@/components/ui/Skeleton";
 import { formatarDataHora, partesDaData } from "@/lib/datas";
 import { normalizarTexto } from "@/lib/texto";
-import type { Evento } from "@/types/database";
+import type { Evento, FinalidadeEvento } from "@/types/database";
 
 interface ListaEventosProps {
   eventos: Evento[];
+  finalidades: FinalidadeEvento[];
   carregando: boolean;
   erro: string | null;
   onTentarNovamente: () => void;
+  podeEditar: boolean;
+  podeExcluir: boolean;
+  onEditar: (evento: Evento) => void;
+  onExcluir: (evento: Evento) => void;
 }
 
 // Cor do selo conforme o tipo do evento (tipos desconhecidos usam o neutro)
@@ -37,11 +44,17 @@ const classeCabecalho =
 
 export default function ListaEventos({
   eventos,
+  finalidades,
   carregando,
   erro,
   onTentarNovamente,
+  podeEditar,
+  podeExcluir,
+  onEditar,
+  onExcluir,
 }: ListaEventosProps) {
   const [busca, setBusca] = useState("");
+  const mostrarAcoes = podeEditar || podeExcluir;
 
   // 1) Carregando: skeleton (barra de ferramentas + linhas)
   if (carregando) {
@@ -85,13 +98,20 @@ export default function ListaEventos({
     );
   }
 
-  // Busca por local ou tipo (sem acento e sem diferenciar maiúsculas)
+  const finalidadePorId = new Map(
+    finalidades.map((finalidade): [string, FinalidadeEvento] => [finalidade.id, finalidade])
+  );
+  const nomeDaFinalidade = (evento: Evento): string | null =>
+    evento.finalidade_id ? (finalidadePorId.get(evento.finalidade_id)?.nome ?? null) : null;
+
+  // Busca por finalidade, local ou tipo (sem acento e sem diferenciar maiúsculas)
   const termo = normalizarTexto(busca);
   const filtrados = eventos.filter(
     (evento) =>
       termo === "" ||
       normalizarTexto(evento.local).includes(termo) ||
-      normalizarTexto(evento.tipo).includes(termo)
+      normalizarTexto(evento.tipo).includes(termo) ||
+      normalizarTexto(nomeDaFinalidade(evento) ?? "").includes(termo)
   );
 
   // 4) Tabela
@@ -101,7 +121,7 @@ export default function ListaEventos({
       <div className="border-b border-slate-200 p-4">
         <div className="relative max-w-md">
           <label htmlFor="busca-evento" className="sr-only">
-            Pesquisar por local ou tipo
+            Pesquisar por finalidade, local ou tipo
           </label>
           <Search
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
@@ -113,7 +133,7 @@ export default function ListaEventos({
             autoComplete="off"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Pesquisar por local ou tipo..."
+            placeholder="Pesquisar por finalidade, local ou tipo..."
             className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
           />
         </div>
@@ -129,21 +149,33 @@ export default function ListaEventos({
               <th scope="col" className={classeCabecalho}>
                 Tipo
               </th>
-              <th scope="col" className={classeCabecalho}>
+              <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>
+                Finalidade
+              </th>
+              <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>
                 Local
               </th>
+              {mostrarAcoes && (
+                <th scope="col" className={classeCabecalho + " text-right"}>
+                  Ações
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtrados.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td
+                  colSpan={mostrarAcoes ? 5 : 4}
+                  className="px-4 py-10 text-center text-sm text-slate-500"
+                >
                   Nenhum evento encontrado com a pesquisa atual.
                 </td>
               </tr>
             ) : (
               filtrados.map((evento) => {
                 const { dia, mes } = partesDaData(evento.data_evento);
+                const finalidade = nomeDaFinalidade(evento);
 
                 return (
                   <tr key={evento.id} className="transition hover:bg-slate-50">
@@ -154,13 +186,45 @@ export default function ListaEventos({
                           <span className="text-sm font-bold leading-none">{dia}</span>
                           <span className="mt-0.5 text-[10px] font-medium uppercase">{mes}</span>
                         </div>
-                        <span className="text-slate-700">{formatarDataHora(evento.data_evento)}</span>
+                        <div className="min-w-0">
+                          <p className="text-slate-700">{formatarDataHora(evento.data_evento)}</p>
+                          {/* Telas pequenas: finalidade e local aparecem aqui */}
+                          <p className="line-clamp-2 text-xs text-slate-500 md:hidden">
+                            {[finalidade, evento.local].filter(Boolean).join(" · ")}
+                          </p>
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <Badge variante={varianteTipo(evento.tipo)}>{evento.tipo}</Badge>
                     </td>
-                    <td className="px-4 py-3 font-medium text-slate-900">{evento.local}</td>
+                    <td className="hidden max-w-sm px-4 py-3 text-slate-700 md:table-cell">
+                      {finalidade ?? <span className="text-slate-400">—</span>}
+                    </td>
+                    <td className="hidden px-4 py-3 font-medium text-slate-900 md:table-cell">
+                      {evento.local}
+                    </td>
+                    {mostrarAcoes && (
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1">
+                          {podeEditar && (
+                            <BotaoIcone
+                              icone={Pencil}
+                              rotulo={`Editar o evento de ${formatarDataHora(evento.data_evento)}`}
+                              onClick={() => onEditar(evento)}
+                            />
+                          )}
+                          {podeExcluir && (
+                            <BotaoIcone
+                              icone={Trash2}
+                              variante="perigo"
+                              rotulo={`Excluir o evento de ${formatarDataHora(evento.data_evento)}`}
+                              onClick={() => onExcluir(evento)}
+                            />
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })

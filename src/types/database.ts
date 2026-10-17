@@ -63,13 +63,14 @@ export interface Membro {
   status: string; // ex: "Ativo", "Inativo" (padrão no banco: "Ativo")
   qr_secret: string; // segredo do QR Code; NÃO é legível pela chave anon (ver schema.sql, seção 13)
   data_cadastro: string; // timestamptz, preenchido automaticamente (now())
+  excluido_em: string | null; // exclusão lógica: preenchido quando o membro é excluído (some das telas)
 }
 
 /**
  * Membro como o frontend consegue LER com a chave anon (sem qr_secret).
  * Use este tipo nas telas que buscam membros. A família do membro é a do seu instrumento.
  */
-export type MembroPublico = Omit<Membro, "qr_secret">;
+export type MembroPublico = Omit<Membro, "qr_secret" | "excluido_em">;
 
 /**
  * Colunas liberadas para leitura pública em "membros".
@@ -91,10 +92,24 @@ export interface Evento {
   tipo: string; // ex: "Ensaio", "Culto"
   data_evento: string; // timestamptz (ISO 8601)
   local: string;
+  finalidade_id: string | null; // FK -> finalidades_evento.id (nula em eventos antigos)
 }
 
-/** Payload para INSERT: apenas o id é gerado pelo banco. */
-export type EventoInsert = Omit<Evento, "id"> & Partial<Pick<Evento, "id">>;
+/** Payload para INSERT: o id é gerado pelo banco; a finalidade é opcional (eventos antigos não têm). */
+export type EventoInsert = Pick<Evento, "tipo" | "data_evento" | "local"> &
+  Partial<Pick<Evento, "id" | "finalidade_id">>;
+
+// ---------------------------------------------------------------------
+// Tabela: finalidades_evento (catálogo reaproveitável de finalidades)
+// ---------------------------------------------------------------------
+export interface FinalidadeEvento {
+  id: string;
+  nome: string; // único (sem diferenciar maiúsculas/minúsculas)
+  criado_em: string; // timestamptz
+}
+
+/** Payload para INSERT: o id e criado_em são gerados pelo banco. */
+export type FinalidadeEventoInsert = Pick<FinalidadeEvento, "nome"> & Partial<Pick<FinalidadeEvento, "id">>;
 
 // ---------------------------------------------------------------------
 // Tabela: presencas

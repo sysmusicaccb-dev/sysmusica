@@ -1,73 +1,69 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de cadastro de membro.
+ * SysMúsica — Formulário de membro (cadastro e edição) — conteúdo do painel lateral.
+ * membro = null -> cadastrar; preenchido -> editar (inclui o status Ativo/Inativo).
  *
- * Insere um registro na tabela "membros" via cliente Supabase central.
- * Os campos id, status ("Ativo"), qr_secret e data_cadastro são preenchidos pelo banco.
- *
- * Instrumento (combobox): o campo sugere os instrumentos da tabela "instrumentos".
- *  - Se o texto digitado já existe (sem diferenciar maiúsculas/acentos), usa o id existente.
- *  - Se não existe, faz um INSERT automático em "instrumentos" (já com a família inferida),
- *    resgata o novo id e vincula ao membro (membros.instrumento_id).
- *  - A FAMÍLIA é automática e somente leitura: vem do instrumento existente ou é inferida pelo
- *    nome. Quem corrige uma classificação errada é um administrador (página /instrumentos).
+ * Instrumento (combobox): o campo sugere os instrumentos cadastrados.
+ *  - Se o texto digitado já existe (sem diferenciar maiúsculas/acentos), usa o instrumento existente.
+ *  - Se não existe, o instrumento é criado automaticamente (com a família inferida pelo nome).
+ *  - A FAMÍLIA é automática e somente leitura; quem corrige uma classificação errada é quem
+ *    tem permissão de editar instrumentos (tela Instrumentos e famílias).
  *  - Nome de família (ex: "Madeiras") não é aceito como instrumento.
  * O campo de instrumento só aparece para cargos com permite_instrumento = true.
  */
 import { useState, type FormEvent } from "react";
-import { supabase } from "@/lib/supabase";
-import { normalizarTexto } from "@/lib/texto";
+import Button from "@/components/ui/Button";
 import { ehNomeDeFamilia, inferirFamilia } from "@/lib/familias";
-import type {
-  Cargo,
-  Familia,
-  Instrumento,
-  InstrumentoInsert,
-  MembroInsert,
-} from "@/types/database";
+import { normalizarTexto } from "@/lib/texto";
+import { formatarNomeInstrumento } from "@/modules/instrumentos/regras";
+import { obterOuCriarInstrumento } from "@/modules/instrumentos/services/instrumentos";
+import { atualizarMembro, criarMembro } from "@/modules/membros/services/membros";
+import type { Cargo, Familia, Instrumento, MembroPublico } from "@/types/database";
 
 interface FormularioMembroProps {
+  membro: MembroPublico | null; // null = cadastrar; preenchido = editar
   cargos: Cargo[];
   instrumentos: Instrumento[];
   familias: Familia[];
   carregando: boolean;
   erro: string | null;
-  /** Chamado após salvar com sucesso, para a página recarregar os dados (inclui instrumentos novos). */
-  onMembroAdicionado: (mensagem: string) => void | Promise<void>;
+  /** Chamado após salvar com sucesso, com a mensagem para o aviso da tela. */
+  onSalvo: (mensagem: string) => void | Promise<void>;
 }
 
 // Classe compartilhada pelos campos (mesma identidade visual dos demais módulos).
 // [color-scheme:light] mantém o ícone do seletor de data visível mesmo com o navegador em tema escuro.
 const classeInput =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 " +
-  "placeholder:text-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none " +
-  "focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60 " +
+  "placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none " +
+  "focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-60 " +
   "[color-scheme:light]";
 
-// Ajusta o nome digitado antes de salvar: tira espaços extras e põe a 1ª letra em maiúscula
-// (ex: "  sax   soprano " -> "Sax soprano")
-function formatarNomeInstrumento(texto: string): string {
-  const limpo = texto.trim().replace(/\s+/g, " ");
-  return limpo.charAt(0).toUpperCase() + limpo.slice(1);
-}
-
 export default function FormularioMembro({
+  membro,
   cargos,
   instrumentos,
   familias,
   carregando,
   erro,
-  onMembroAdicionado,
+  onSalvo,
 }: FormularioMembroProps) {
-  const [nome, setNome] = useState("");
-  const [congregacao, setCongregacao] = useState("");
-  const [cargoId, setCargoId] = useState("");
-  const [dataNascimento, setDataNascimento] = useState(""); // formato do input date: "AAAA-MM-DD"
-  const [instrumentoTexto, setInstrumentoTexto] = useState("");
+  const editando = membro !== null;
+
+  // Valores iniciais: vazios no cadastro; os dados do membro na edição
+  const instrumentoInicial = membro?.instrumento_id
+    ? (instrumentos.find((instrumento) => instrumento.id === membro.instrumento_id)?.nome ?? "")
+    : "";
+
+  const [nome, setNome] = useState(membro?.nome ?? "");
+  const [congregacao, setCongregacao] = useState(membro?.congregacao ?? "");
+  const [cargoId, setCargoId] = useState(membro?.cargo_id ?? "");
+  const [dataNascimento, setDataNascimento] = useState(membro?.data_nascimento ?? ""); // "AAAA-MM-DD"
+  const [instrumentoTexto, setInstrumentoTexto] = useState(instrumentoInicial);
+  const [status, setStatus] = useState(membro?.status ?? "Ativo");
   const [salvando, setSalvando] = useState(false);
   const [erroForm, setErroForm] = useState<string | null>(null);
-  const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
 
   // O cargo escolhido define se o campo de instrumento aparece
   const cargoSelecionado = cargos.find((cargo) => cargo.id === cargoId);
@@ -77,14 +73,12 @@ export default function FormularioMembro({
   const instrumentoDigitado = instrumentoTexto.trim();
   const instrumentoExistente = instrumentoDigitado
     ? instrumentos.find(
-        (instrumento) =>
-          normalizarTexto(instrumento.nome) === normalizarTexto(instrumentoDigitado)
+        (instrumento) => normalizarTexto(instrumento.nome) === normalizarTexto(instrumentoDigitado)
       )
     : undefined;
 
   // O texto digitado é o nome de uma família (ex: "Madeiras")? Isso não é um instrumento.
-  const digitadoEhFamilia =
-    instrumentoDigitado !== "" && ehNomeDeFamilia(instrumentoDigitado, familias);
+  const digitadoEhFamilia = instrumentoDigitado !== "" && ehNomeDeFamilia(instrumentoDigitado, familias);
 
   // Família AUTOMÁTICA: a do instrumento já cadastrado ou, se for novo, a inferida pelo nome
   const familiaAutomatica: Familia | null = instrumentoExistente
@@ -97,7 +91,7 @@ export default function FormularioMembro({
   const textoFamilia = familiaAutomatica
     ? familiaAutomatica.nome
     : instrumentoDigitado && !digitadoEhFamilia
-      ? "Não identificada (um administrador poderá classificar)"
+      ? "Não identificada (poderá ser classificada depois)"
       : "";
 
   // Ao trocar de cargo, limpa o instrumento se o novo cargo não usar instrumento
@@ -105,87 +99,23 @@ export default function FormularioMembro({
     setCargoId(novoCargoId);
     const novoCargo = cargos.find((cargo) => cargo.id === novoCargoId);
     if (!novoCargo?.permite_instrumento) setInstrumentoTexto("");
-    setMensagemSucesso(null);
   }
 
-  // Descobre o id do instrumento digitado: usa o existente ou cria um novo (INSERT automático)
-  async function resolverInstrumentoId(
-    texto: string
-  ): Promise<{ id: string; nome: string; criado: boolean; familiaNome: string | null }> {
-    const chave = normalizarTexto(texto);
-
-    // 1) Já existe na lista carregada? Então só reaproveita o id
-    const existente = instrumentos.find(
-      (instrumento) => normalizarTexto(instrumento.nome) === chave
-    );
-    if (existente) {
-      return {
-        id: existente.id,
-        nome: existente.nome,
-        criado: false,
-        familiaNome: familias.find((familia) => familia.id === existente.familia_id)?.nome ?? null,
-      };
-    }
-
-    // 2) Não existe: cria já com a família inferida e resgata o registro
-    //    (.select().single() devolve a linha inserida, já com o que o gatilho do banco definiu)
-    const novoInstrumento: InstrumentoInsert = {
-      nome: formatarNomeInstrumento(texto),
-      familia_id: inferirFamilia(texto, familias)?.id ?? null,
-    };
-    const { data, error } = await supabase
-      .from("instrumentos")
-      .insert(novoInstrumento)
-      .select()
-      .single();
-    if (!error && data) {
-      const criado = data as Instrumento;
-      return {
-        id: criado.id,
-        nome: criado.nome,
-        criado: true,
-        familiaNome: familias.find((familia) => familia.id === criado.familia_id)?.nome ?? null,
-      };
-    }
-
-    // 3) 23505 = nome duplicado: outra pessoa criou o mesmo instrumento agora há pouco.
-    //    Busca a lista de novo e reaproveita o registro que já existe.
-    if (error?.code === "23505") {
-      const { data: lista, error: erroBusca } = await supabase.from("instrumentos").select("*");
-      if (erroBusca) throw new Error(erroBusca.message);
-      const achado = ((lista ?? []) as Instrumento[]).find(
-        (instrumento) => normalizarTexto(instrumento.nome) === chave
-      );
-      if (achado) {
-        return {
-          id: achado.id,
-          nome: achado.nome,
-          criado: false,
-          familiaNome: familias.find((familia) => familia.id === achado.familia_id)?.nome ?? null,
-        };
-      }
-    }
-
-    throw new Error(error?.message ?? "Não foi possível criar o instrumento.");
-  }
-
-  async function handleSubmit(submissao: FormEvent<HTMLFormElement>) {
+  async function salvar(submissao: FormEvent<HTMLFormElement>) {
     submissao.preventDefault();
+    if (salvando) return; // evita envio duplicado
     setErroForm(null);
-    setMensagemSucesso(null);
 
     // Barra campos obrigatórios vazios ou preenchidos só com espaços
     if (!nome.trim() || !congregacao.trim() || !cargoId) {
-      setErroForm("Preencha nome, cargo e congregação.");
-      return;
+      return setErroForm("Preencha nome, cargo e congregação.");
     }
 
     // Família não é instrumento: pede o instrumento real
     if (permiteInstrumento && digitadoEhFamilia) {
-      setErroForm(
+      return setErroForm(
         `"${instrumentoDigitado}" é uma família de instrumentos. Informe o instrumento (ex.: Clarinete).`
       );
-      return;
     }
 
     setSalvando(true);
@@ -193,42 +123,34 @@ export default function FormularioMembro({
       // Passo 1: resolve o instrumento (só se o cargo permitir e houver texto digitado)
       const instrumento =
         permiteInstrumento && instrumentoDigitado
-          ? await resolverInstrumentoId(instrumentoDigitado)
+          ? await obterOuCriarInstrumento(instrumentoDigitado, instrumentos, familias)
           : null;
 
-      // Passo 2: grava o membro vinculado ao instrumento (ou sem instrumento)
-      const novoMembro: MembroInsert = {
+      // Passo 2: grava o membro (criar ou atualizar)
+      const dados = {
         nome: nome.trim(),
         congregacao: congregacao.trim(),
         cargo_id: cargoId,
         data_nascimento: dataNascimento || null,
         instrumento_id: instrumento?.id ?? null,
       };
-      const { error } = await supabase.from("membros").insert(novoMembro);
-      if (error) throw new Error(error.message);
+      if (membro) await atualizarMembro(membro.id, { ...dados, status });
+      else await criarMembro(dados);
 
-      // Sucesso: limpa o formulário e avisa a página para recarregar os dados
-      setNome("");
-      setCongregacao("");
-      setCargoId("");
-      setDataNascimento("");
-      setInstrumentoTexto("");
-      const textoSucesso = (
-        instrumento?.criado
-          ? `Membro cadastrado! Instrumento "${instrumento.nome}" criado${
-              instrumento.familiaNome
-                ? ` na família ${instrumento.familiaNome}`
-                : " (família a ser classificada por um administrador)"
-            }.`
-          : "Membro cadastrado com sucesso!"
+      const complemento = instrumento?.criado
+        ? ` Instrumento "${instrumento.nome}" criado${
+            instrumento.familiaNome
+              ? ` na família ${instrumento.familiaNome}`
+              : " (família ainda não classificada)"
+          }.`
+        : "";
+      await onSalvo(
+        editando
+          ? `Membro "${dados.nome}" atualizado.${complemento}`
+          : `Membro "${dados.nome}" cadastrado.${complemento}`
       );
-      await onMembroAdicionado(textoSucesso);
     } catch (e) {
-      setErroForm(
-        `Não foi possível salvar o membro: ${
-          e instanceof Error ? e.message : "erro desconhecido."
-        }`
-      );
+      setErroForm(e instanceof Error ? e.message : "Não foi possível salvar o membro.");
     } finally {
       setSalvando(false);
     }
@@ -236,45 +158,25 @@ export default function FormularioMembro({
 
   // ---------- Estados da tela ----------
 
-  // Carregando: skeleton
   if (carregando) {
-    return (
-      <div
-        role="status"
-        aria-live="polite"
-        className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-      >
-        <span className="sr-only">Carregando formulário...</span>
-        <div className="h-6 w-1/2 animate-pulse rounded bg-slate-200" />
-        <div className="h-10 animate-pulse rounded-lg bg-slate-200" />
-        <div className="h-10 animate-pulse rounded-lg bg-slate-200" />
-        <div className="h-10 animate-pulse rounded-lg bg-slate-200" />
-      </div>
-    );
+    return <p className="text-sm text-slate-600">Carregando os dados do formulário...</p>;
   }
 
-  // Erro ao buscar dados (o botão "Tentar novamente" fica na lista ao lado)
   if (erro) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Novo membro</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          Formulário indisponível porque os dados não puderam ser carregados.
-        </p>
-      </div>
+      <p className="text-sm text-slate-600">
+        Formulário indisponível porque os dados não puderam ser carregados.
+      </p>
     );
   }
 
-  // Sem cargos: o seed do schema.sql ainda não foi aplicado
+  // Sem cargos: a migração do banco ainda não foi aplicada
   if (cargos.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Novo membro</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          Nenhum cargo encontrado. Execute o arquivo supabase/schema.sql no SQL Editor do Supabase
-          para criar os cargos padrão.
-        </p>
-      </div>
+      <p className="text-sm text-slate-600">
+        Nenhum cargo encontrado. Aplique as migrações do banco (pasta supabase/migrations) para criar
+        os cargos padrão.
+      </p>
     );
   }
 
@@ -282,10 +184,7 @@ export default function FormularioMembro({
   const hoje = new Date().toLocaleDateString("sv-SE");
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4"
-    >
+    <form onSubmit={salvar} className="space-y-5">
       <div className="space-y-1.5">
         <label htmlFor="nome" className="text-sm font-medium text-slate-700">
           Nome
@@ -356,7 +255,7 @@ export default function FormularioMembro({
                     ? "text-red-600"
                     : instrumentoExistente
                       ? "text-slate-500"
-                      : "text-indigo-600")
+                      : "text-brand-700")
                 }
               >
                 {digitadoEhFamilia
@@ -416,24 +315,34 @@ export default function FormularioMembro({
         />
       </div>
 
+      {/* Status: só na edição (todo membro novo nasce "Ativo") */}
+      {editando && (
+        <div className="space-y-1.5">
+          <label htmlFor="status" className="text-sm font-medium text-slate-700">
+            Status
+          </label>
+          <select
+            id="status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            disabled={salvando}
+            className={classeInput}
+          >
+            <option value="Ativo">Ativo</option>
+            <option value="Inativo">Inativo</option>
+          </select>
+        </div>
+      )}
+
       {erroForm && (
         <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
           {erroForm}
         </p>
       )}
-      {mensagemSucesso && (
-        <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-          {mensagemSucesso}
-        </p>
-      )}
 
-      <button
-        type="submit"
-        disabled={salvando}
-        className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {salvando ? "Salvando..." : "Cadastrar membro"}
-      </button>
+      <Button type="submit" disabled={salvando} className="w-full">
+        {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Cadastrar membro"}
+      </Button>
     </form>
   );
 }

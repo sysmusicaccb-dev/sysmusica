@@ -1,20 +1,22 @@
 "use client";
 
 /**
- * SysMúsica — Página /instrumentos: tabela de instrumentos e famílias (largura total).
- *
- * Quem pode corrigir a família de um instrumento é definido pelo GRUPO do usuário
- * (permissão instrumentos.editar). A regra de verdade está no banco (RLS).
- * Os instrumentos NASCEM no cadastro de membros; botões de novo/editar/excluir
- * chegam na próxima etapa.
+ * SysMúsica — Página /instrumentos: tabela de instrumentos e famílias com novo, editar e excluir.
+ * Cada botão só aparece para quem tem a permissão (grupo do usuário); o banco confere de novo.
+ * Os instrumentos também nascem no cadastro de membros (digitando um instrumento novo).
  */
 import { useCallback, useEffect, useState } from "react";
+import { Plus } from "lucide-react";
 import {
-  atualizarFamiliaDoInstrumento,
   buscarInstrumentosEFamilias,
+  excluirInstrumento,
 } from "@/modules/instrumentos/services/instrumentos";
+import FormularioInstrumento from "@/modules/instrumentos/components/FormularioInstrumento";
 import TabelaInstrumentos from "@/modules/instrumentos/components/TabelaInstrumentos";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
+import Button from "@/components/ui/Button";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import Drawer from "@/components/ui/Drawer";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import Notificacao from "@/components/ui/Notificacao";
@@ -22,15 +24,20 @@ import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
 import type { Familia, Instrumento } from "@/types/database";
 
+// Qual painel lateral está aberto: novo instrumento, ou edição de um instrumento
+type PainelInstrumento = { tipo: "novo" } | { tipo: "editar"; instrumento: Instrumento };
+
 export default function InstrumentosPage() {
   const { pode } = useSessao();
   const [instrumentos, setInstrumentos] = useState<Instrumento[]>([]);
   const [familias, setFamilias] = useState<Familia[]>([]);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
+  const [painel, setPainel] = useState<PainelInstrumento | null>(null);
+  const [alvoExclusao, setAlvoExclusao] = useState<Instrumento | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+  const [erroExclusao, setErroExclusao] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
-  const [salvandoId, setSalvandoId] = useState<string | null>(null);
-  const [erroEdicao, setErroEdicao] = useState<string | null>(null);
 
   // Busca instrumentos e famílias
   const carregar = useCallback(async () => {
@@ -62,23 +69,27 @@ export default function InstrumentosPage() {
     void carregar();
   }
 
-  // Corrige a família de um instrumento (o banco confere a permissão)
-  async function alterarFamilia(instrumento: Instrumento, novaFamiliaId: string) {
-    setErroEdicao(null);
-    setSalvandoId(instrumento.id);
+  // Depois de salvar: recarrega a lista, fecha o painel e mostra o aviso de sucesso
+  async function aoSalvar(mensagem: string) {
+    await carregar();
+    setPainel(null);
+    setAviso(mensagem);
+  }
+
+  // Confirma a exclusão do instrumento escolhido (o banco recusa se algum membro ainda usar)
+  async function confirmarExclusao() {
+    if (!alvoExclusao) return;
+    setExcluindo(true);
+    setErroExclusao(null);
     try {
-      await atualizarFamiliaDoInstrumento(instrumento.id, novaFamiliaId || null);
-      // Atualiza a tela sem recarregar tudo
-      setInstrumentos((anterior) =>
-        anterior.map((item) =>
-          item.id === instrumento.id ? { ...item, familia_id: novaFamiliaId || null } : item
-        )
-      );
-      setAviso(`Família de "${instrumento.nome}" atualizada.`);
+      await excluirInstrumento(alvoExclusao.id);
+      await carregar();
+      setAviso(`Instrumento "${alvoExclusao.nome}" excluído.`);
+      setAlvoExclusao(null);
     } catch (e) {
-      setErroEdicao(e instanceof Error ? e.message : "Não foi possível salvar a alteração.");
+      setErroExclusao(e instanceof Error ? e.message : "Não foi possível excluir o instrumento.");
     } finally {
-      setSalvandoId(null);
+      setExcluindo(false);
     }
   }
 
@@ -87,13 +98,19 @@ export default function InstrumentosPage() {
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <PageHeader
           titulo="Instrumentos e famílias"
-          descricao={`A família de cada instrumento é definida automaticamente no cadastro de membros.${
+          descricao={`A família de cada instrumento é definida automaticamente pelo nome.${
             !carregando && !erro ? ` ${instrumentos.length} instrumento(s).` : ""
           }`}
+          acoes={
+            pode("instrumentos.criar") ? (
+              <Button icone={Plus} onClick={() => setPainel({ tipo: "novo" })} disabled={carregando || !!erro}>
+                Novo instrumento
+              </Button>
+            ) : undefined
+          }
         />
 
         {carregando ? (
-          // Carregando: skeleton
           <div role="status" aria-live="polite" className="space-y-3">
             <span className="sr-only">Carregando instrumentos...</span>
             <Skeleton className="h-14 rounded-2xl" />
@@ -110,21 +127,63 @@ export default function InstrumentosPage() {
         ) : instrumentos.length === 0 ? (
           <EmptyState
             titulo="Nenhum instrumento cadastrado ainda."
-            descricao="Os instrumentos são criados automaticamente quando você cadastra um membro com instrumento."
+            descricao="Clique em “Novo instrumento” ou cadastre um membro com instrumento."
           />
         ) : (
           <TabelaInstrumentos
             instrumentos={instrumentos}
             familias={familias}
             podeEditar={pode("instrumentos.editar")}
-            salvandoId={salvandoId}
-            erroEdicao={erroEdicao}
-            onAlterarFamilia={(instrumento, novaFamiliaId) =>
-              void alterarFamilia(instrumento, novaFamiliaId)
-            }
+            podeExcluir={pode("instrumentos.excluir")}
+            onEditar={(instrumento) => setPainel({ tipo: "editar", instrumento })}
+            onExcluir={(instrumento) => {
+              setErroExclusao(null);
+              setAlvoExclusao(instrumento);
+            }}
           />
         )}
       </div>
+
+      {/* Painel lateral: novo instrumento ou edição */}
+      <Drawer
+        aberto={painel !== null}
+        onFechar={() => setPainel(null)}
+        titulo={painel?.tipo === "editar" ? "Editar instrumento" : "Novo instrumento"}
+        descricao="A família é sugerida automaticamente pelo nome."
+      >
+        {painel && (
+          <FormularioInstrumento
+            instrumento={painel.tipo === "editar" ? painel.instrumento : null}
+            instrumentos={instrumentos}
+            familias={familias}
+            podeEscolherFamilia={pode("instrumentos.editar")}
+            onSalvo={aoSalvar}
+          />
+        )}
+      </Drawer>
+
+      {/* Confirmação de exclusão */}
+      <ConfirmDialog
+        aberto={alvoExclusao !== null}
+        titulo="Excluir instrumento?"
+        mensagem={
+          <>
+            <p>
+              O instrumento <strong>{alvoExclusao?.nome}</strong> será excluído. Esta ação não pode ser
+              desfeita. Se algum membro ainda usar este instrumento, a exclusão será recusada.
+            </p>
+            {erroExclusao && (
+              <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-red-700">
+                {erroExclusao}
+              </p>
+            )}
+          </>
+        }
+        textoConfirmar="Excluir"
+        processando={excluindo}
+        onConfirmar={() => void confirmarExclusao()}
+        onCancelar={() => setAlvoExclusao(null)}
+      />
 
       <Notificacao mensagem={aviso} onFechar={() => setAviso(null)} />
     </main>
