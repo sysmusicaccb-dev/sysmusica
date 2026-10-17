@@ -1,27 +1,29 @@
 "use client";
 
 /**
- * SysMúsica — Página /presencas: histórico de presenças agrupado por evento (largura total).
- * O botão "Registrar presenças" abre o formulário de lançamento em um painel lateral.
- * Busca eventos, membros, presenças e instrumentos de uma só vez e distribui os dados.
+ * SysMúsica — Página /portaria: histórico de presenças agrupado por evento (largura total).
+ * "Registrar presenças" abre o formulário de lançamento em um painel lateral; cada presença
+ * tem editar e excluir. Cada botão só aparece para quem tem a permissão (grupo do usuário);
+ * o banco confere de novo em toda operação.
+ * Excluir é exclusão lógica: o registro some da portaria e dos relatórios e fica guardado no banco.
  */
 import { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import {
-  COLUNAS_MEMBRO_PUBLICO,
-  type Evento,
-  type Instrumento,
-  type MembroPublico,
-  type Presenca,
-} from "@/types/database";
+import { buscarDadosPortaria, excluirPresenca } from "@/modules/portaria/services/portaria";
+import FormularioEdicaoPresenca from "@/modules/portaria/components/FormularioEdicaoPresenca";
+import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import Button from "@/components/ui/Button";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Drawer from "@/components/ui/Drawer";
 import Notificacao from "@/components/ui/Notificacao";
 import PageHeader from "@/components/ui/PageHeader";
-import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import FormularioPresenca from "@/components/FormularioPresenca";
 import ListaPresencas from "@/components/ListaPresencas";
+import { formatarDataHora } from "@/lib/datas";
+import type { Evento, Instrumento, MembroPublico, Presenca } from "@/types/database";
+
+// Qual painel lateral está aberto: lançar presenças, ou editar uma presença
+type PainelPortaria = { tipo: "registrar" } | { tipo: "editar"; presenca: Presenca };
 
 export default function PortariaPage() {
   const { pode } = useSessao();
@@ -31,37 +33,24 @@ export default function PortariaPage() {
   const [presencas, setPresencas] = useState<Presenca[]>([]);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
-  const [painelAberto, setPainelAberto] = useState(false);
+  const [painel, setPainel] = useState<PainelPortaria | null>(null);
+  const [alvoExclusao, setAlvoExclusao] = useState<Presenca | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+  const [erroExclusao, setErroExclusao] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
-  // Busca as quatro tabelas em paralelo
-  const buscarDados = useCallback(async () => {
+  // Busca eventos, membros, presenças e instrumentos
+  const carregar = useCallback(async () => {
     try {
-      const [resEventos, resMembros, resPresencas, resInstrumentos] = await Promise.all([
-        supabase.from("eventos").select("*").order("data_evento", { ascending: false }),
-        // Lista explícita de colunas: select("*") falharia por causa do qr_secret (protegido)
-        supabase
-          .from("membros")
-          .select(COLUNAS_MEMBRO_PUBLICO)
-          .order("nome", { ascending: true }),
-        supabase.from("presencas").select("*"),
-        supabase.from("instrumentos").select("*"),
-      ]);
-
-      // Se qualquer uma das consultas falhar, trata como erro único
-      const erroBanco =
-        resEventos.error ?? resMembros.error ?? resPresencas.error ?? resInstrumentos.error;
-      if (erroBanco) throw new Error(erroBanco.message);
-
-      setEventos((resEventos.data ?? []) as Evento[]);
-      // Cast duplo: com lista de colunas, o cliente (sem tipagem gerada) não infere a linha
-      setMembros((resMembros.data ?? []) as unknown as MembroPublico[]);
-      setPresencas((resPresencas.data ?? []) as Presenca[]);
-      setInstrumentos((resInstrumentos.data ?? []) as Instrumento[]);
+      const dados = await buscarDadosPortaria();
+      setEventos(dados.eventos);
+      setMembros(dados.membros);
+      setInstrumentos(dados.instrumentos);
+      setPresencas(dados.presencas);
       setErro(null);
     } catch (e) {
       // O detalhe técnico vai só para o console; a tela mostra uma mensagem simples
-      console.error("Falha ao carregar presenças:", e);
+      console.error("Falha ao carregar a portaria:", e);
       setErro("Não foi possível carregar os dados. Verifique a conexão e tente novamente.");
     } finally {
       setCarregando(false);
@@ -73,20 +62,47 @@ export default function PortariaPage() {
     // O setState só roda DEPOIS do await (nunca de forma síncrona), então o aviso da regra
     // set-state-in-effect não se aplica a esta carga inicial. Ignorado apenas nesta linha.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void buscarDados();
-  }, [buscarDados]);
+    void carregar();
+  }, [carregar]);
 
   // Botão "Tentar novamente": volta ao estado de loading e busca de novo
   function tentarNovamente() {
     setCarregando(true);
-    void buscarDados();
+    void carregar();
   }
 
   // Depois de salvar: recarrega os dados, fecha o painel e mostra o aviso de sucesso
-  async function aoRegistrar(mensagem: string) {
-    await buscarDados();
-    setPainelAberto(false);
+  async function aoSalvar(mensagem: string) {
+    await carregar();
+    setPainel(null);
     setAviso(mensagem);
+  }
+
+  // Textos de identificação usados na edição e na confirmação de exclusão
+  const nomeDoMembro = (membroId: string) =>
+    membros.find((membro) => membro.id === membroId)?.nome ?? "Membro excluído";
+  const descricaoDoEvento = (eventoId: string) => {
+    const evento = eventos.find((item) => item.id === eventoId);
+    return evento
+      ? `${evento.tipo} · ${formatarDataHora(evento.data_evento)} · ${evento.local}`
+      : "Evento";
+  };
+
+  // Confirma a exclusão (lógica) da presença escolhida
+  async function confirmarExclusao() {
+    if (!alvoExclusao) return;
+    setExcluindo(true);
+    setErroExclusao(null);
+    try {
+      await excluirPresenca(alvoExclusao.id);
+      await carregar();
+      setAviso(`Presença de "${nomeDoMembro(alvoExclusao.membro_id)}" excluída.`);
+      setAlvoExclusao(null);
+    } catch (e) {
+      setErroExclusao(e instanceof Error ? e.message : "Não foi possível excluir o registro.");
+    } finally {
+      setExcluindo(false);
+    }
   }
 
   return (
@@ -99,7 +115,7 @@ export default function PortariaPage() {
           }`}
           acoes={
             pode("portaria.registrar") ? (
-              <Button icone={Plus} onClick={() => setPainelAberto(true)} disabled={carregando || !!erro}>
+              <Button icone={Plus} onClick={() => setPainel({ tipo: "registrar" })} disabled={carregando || !!erro}>
                 Registrar presenças
               </Button>
             ) : undefined
@@ -114,25 +130,71 @@ export default function PortariaPage() {
           carregando={carregando}
           erro={erro}
           onTentarNovamente={tentarNovamente}
+          podeEditar={pode("portaria.editar")}
+          podeExcluir={pode("portaria.excluir")}
+          onEditar={(presenca) => setPainel({ tipo: "editar", presenca })}
+          onExcluir={(presenca) => {
+            setErroExclusao(null);
+            setAlvoExclusao(presenca);
+          }}
         />
       </div>
 
+      {/* Painel lateral: lançar presenças ou editar uma presença */}
       <Drawer
-        aberto={painelAberto}
-        onFechar={() => setPainelAberto(false)}
-        titulo="Registrar presenças"
-        descricao="Escolha o evento e marque cada membro."
+        aberto={painel !== null}
+        onFechar={() => setPainel(null)}
+        titulo={painel?.tipo === "editar" ? "Editar presença" : "Registrar presenças"}
+        descricao={
+          painel?.tipo === "editar"
+            ? "Corrija o status ou os horários deste registro."
+            : "Escolha o evento e marque cada membro."
+        }
       >
-        <FormularioPresenca
-          eventos={eventos}
-          membros={membros}
-          instrumentos={instrumentos}
-          presencas={presencas}
-          carregando={carregando}
-          erro={erro}
-          onPresencaAdicionada={aoRegistrar}
-        />
+        {painel?.tipo === "registrar" && (
+          <FormularioPresenca
+            eventos={eventos}
+            membros={membros}
+            instrumentos={instrumentos}
+            presencas={presencas}
+            carregando={carregando}
+            erro={erro}
+            onPresencaAdicionada={aoSalvar}
+          />
+        )}
+        {painel?.tipo === "editar" && (
+          <FormularioEdicaoPresenca
+            presenca={painel.presenca}
+            nomeMembro={nomeDoMembro(painel.presenca.membro_id)}
+            descricaoEvento={descricaoDoEvento(painel.presenca.evento_id)}
+            onSalvo={aoSalvar}
+          />
+        )}
       </Drawer>
+
+      {/* Confirmação de exclusão */}
+      <ConfirmDialog
+        aberto={alvoExclusao !== null}
+        titulo="Excluir presença?"
+        mensagem={
+          <>
+            <p>
+              O registro de <strong>{alvoExclusao ? nomeDoMembro(alvoExclusao.membro_id) : ""}</strong> em{" "}
+              {alvoExclusao ? descricaoDoEvento(alvoExclusao.evento_id) : ""} deixará de aparecer na
+              portaria e nos relatórios. Para apenas corrigir o status ou os horários, use Editar.
+            </p>
+            {erroExclusao && (
+              <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-red-700">
+                {erroExclusao}
+              </p>
+            )}
+          </>
+        }
+        textoConfirmar="Excluir"
+        processando={excluindo}
+        onConfirmar={() => void confirmarExclusao()}
+        onCancelar={() => setAlvoExclusao(null)}
+      />
 
       <Notificacao mensagem={aviso} onFechar={() => setAviso(null)} />
     </main>

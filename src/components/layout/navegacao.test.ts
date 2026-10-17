@@ -3,6 +3,7 @@ import {
   GRUPOS_MENU,
   filtrarMenu,
   itemAtivo,
+  migalhasVisiveis,
   montarMigalhas,
   primeiraRotaPermitida,
 } from "@/components/layout/navegacao";
@@ -102,5 +103,33 @@ describe("menu de Administração", () => {
       { rotulo: "Administração" },
       { rotulo: "Usuários" },
     ]);
+  });
+});
+
+describe("migalhasVisiveis", () => {
+  const caminho = montarMigalhas("/portaria");
+
+  it("quem acessa o dashboard continua vendo o 'Início'", () => {
+    const visiveis = migalhasVisiveis(caminho, criarPode(["dashboard.visualizar", "portaria.visualizar"]));
+    expect(visiveis.map((migalha) => migalha.rotulo)).toEqual(["Início", "Operações", "Portaria"]);
+  });
+
+  it("quem só tem a Portaria não vê o 'Início'", () => {
+    const visiveis = migalhasVisiveis(caminho, criarPode(["portaria.visualizar", "portaria.registrar"]));
+    expect(visiveis.map((migalha) => migalha.rotulo)).toEqual(["Operações", "Portaria"]);
+  });
+});
+
+describe("usuário só com acesso à Portaria", () => {
+  const pode = criarPode(["portaria.visualizar", "portaria.registrar"]);
+
+  it("vê somente o item Portaria no menu e nenhum outro grupo", () => {
+    const menu = filtrarMenu(GRUPOS_MENU, pode);
+    const itens = menu.flatMap((grupo) => grupo.itens.map((item) => item.rotulo));
+    expect(itens).toEqual(["Portaria"]);
+  });
+
+  it("é levado direto para a Portaria ao entrar", () => {
+    expect(primeiraRotaPermitida(pode)).toBe("/portaria");
   });
 });

@@ -8,11 +8,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { montarMigalhas } from "./navegacao";
+import { useSessao } from "@/modules/autenticacao/SessaoProvider";
+import { migalhasVisiveis, montarMigalhas } from "./navegacao";
 
 export default function Breadcrumbs() {
   const caminho = usePathname() ?? "";
-  const migalhas = montarMigalhas(caminho);
+  const { pode } = useSessao();
+  // Quem não acessa o dashboard (ex: grupo Portaria) não vê o "Início" nos breadcrumbs
+  const migalhas = migalhasVisiveis(montarMigalhas(caminho), pode);
 
   return (
     <nav aria-label="Você está em" className="min-w-0">

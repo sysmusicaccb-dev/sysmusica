@@ -1,10 +1,13 @@
 /**
- * SysMúsica — Histórico de presenças (componente de apresentação).
+ * SysMúsica — Histórico da Portaria (componente de apresentação).
  *
- * Não acessa o banco: recebe presenças, membros e eventos da página e faz o
+ * Não acessa o banco: recebe presenças, membros, instrumentos e eventos da página e faz o
  * cruzamento (join) em memória, agrupando por evento (mais recente primeiro).
+ * Ações por linha (só aparecem para quem tem a permissão): editar e excluir.
  * Trata quatro cenários: carregando, erro, vazio e lista com dados.
  */
+import { Pencil, Trash2 } from "lucide-react";
+import BotaoIcone from "@/components/ui/BotaoIcone";
 import type { Evento, Instrumento, MembroPublico, Presenca } from "@/types/database";
 
 interface ListaPresencasProps {
@@ -15,6 +18,10 @@ interface ListaPresencasProps {
   carregando: boolean;
   erro: string | null;
   onTentarNovamente: () => void;
+  podeEditar: boolean; // mostra o botão Editar em cada linha
+  podeExcluir: boolean; // mostra o botão Excluir em cada linha
+  onEditar: (presenca: Presenca) => void;
+  onExcluir: (presenca: Presenca) => void;
 }
 
 // Selo de status (Presente / Ausente / Justificado)
@@ -28,9 +35,14 @@ function classeStatus(status: string): string {
 // Selo do tipo de evento (mesmas cores do módulo de eventos)
 function classeTipo(tipo: string): string {
   const normalizado = tipo.trim().toLowerCase();
-  if (normalizado === "ensaio") return "bg-indigo-100 text-indigo-700";
+  if (normalizado === "ensaio") return "bg-brand-50 text-brand-700";
   if (normalizado === "culto") return "bg-amber-100 text-amber-700";
   return "bg-slate-100 text-slate-600";
+}
+
+// "2026-10-18T17:05:00Z" -> "14:05" (no fuso do navegador)
+function formatarHora(iso: string): string {
+  return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
 // Os três status usados no resumo de cada evento
@@ -44,6 +56,10 @@ export default function ListaPresencas({
   carregando,
   erro,
   onTentarNovamente,
+  podeEditar,
+  podeExcluir,
+  onEditar,
+  onExcluir,
 }: ListaPresencasProps) {
   // 1) Carregando: placeholders animados (skeleton)
   if (carregando) {
@@ -107,29 +123,24 @@ export default function ListaPresencas({
           .map((presenca) => ({
             presenca,
             nome: membroPorId.get(presenca.membro_id)?.nome ?? "Membro excluído",
-            categoria: instrumentos.find(
-              (instrumento) =>
-                instrumento.id === membroPorId.get(presenca.membro_id)?.instrumento_id
-            )?.nome ?? "",
+            categoria:
+              instrumentos.find(
+                (instrumento) =>
+                  instrumento.id === membroPorId.get(presenca.membro_id)?.instrumento_id
+              )?.nome ?? "",
           }))
           .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
         // O banco devolve ISO 8601 (UTC); o navegador exibe no fuso local
-        const dataHora = new Date(evento.data_evento)
-          .toLocaleString("pt-BR", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-          .replace(", ", " às ");
+        const dia = new Date(evento.data_evento).toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
+        const dataHora = `${dia} às ${formatarHora(evento.data_evento)}`;
 
         return (
-          <li
-            key={evento.id}
-            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-          >
+          <li key={evento.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             {/* Cabeçalho do evento */}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="min-w-0">
@@ -157,22 +168,47 @@ export default function ListaPresencas({
               ))}
             </div>
 
-            {/* Membros e seus status */}
+            {/* Membros, status, horários e ações */}
             <ul className="mt-3 divide-y divide-slate-100">
               {linhas.map(({ presenca, nome, categoria }) => (
-                <li key={presenca.id} className="flex items-center justify-between gap-2 py-2">
-                  <p className="min-w-0 truncate text-sm text-slate-900">
-                    {nome}
-                    {categoria && <span className="ml-2 text-xs text-slate-500">{categoria}</span>}
-                  </p>
-                  <span
-                    className={
-                      "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium " +
-                      classeStatus(presenca.status)
-                    }
-                  >
-                    {presenca.status}
-                  </span>
+                <li key={presenca.id} className="flex items-center justify-between gap-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-slate-900">
+                      {nome}
+                      {categoria && <span className="ml-2 text-xs text-slate-500">{categoria}</span>}
+                    </p>
+                    {/* Horários só fazem sentido para quem esteve presente */}
+                    {presenca.status === "Presente" && (
+                      <p className="text-xs text-slate-500">
+                        Entrada {formatarHora(presenca.hora_entrada)}
+                        {presenca.hora_saida && ` · Saída ${formatarHora(presenca.hora_saida)}`}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <span
+                      className={
+                        "rounded-full px-2 py-0.5 text-xs font-medium " + classeStatus(presenca.status)
+                      }
+                    >
+                      {presenca.status}
+                    </span>
+                    {podeEditar && (
+                      <BotaoIcone
+                        icone={Pencil}
+                        rotulo={`Editar a presença de ${nome}`}
+                        onClick={() => onEditar(presenca)}
+                      />
+                    )}
+                    {podeExcluir && (
+                      <BotaoIcone
+                        icone={Trash2}
+                        variante="perigo"
+                        rotulo={`Excluir a presença de ${nome}`}
+                        onClick={() => onExcluir(presenca)}
+                      />
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

@@ -122,3 +122,14 @@ export function montarMigalhas(caminho: string): Migalha[] {
   // Rota fora do menu: mostra só o caminho de volta ao início
   return [{ rotulo: "Início", href: "/" }];
 }
+
+/**
+ * Remove dos breadcrumbs o link "Início" para quem não acessa o dashboard (ex: grupo Portaria):
+ * para essa pessoa o menu mostra somente o que o grupo permite, e nada além disso.
+ */
+export function migalhasVisiveis(
+  migalhas: Migalha[],
+  pode: (permissao: CodigoPermissao) => boolean
+): Migalha[] {
+  return migalhas.filter((migalha) => migalha.href !== "/" || pode("dashboard.visualizar"));
+}
