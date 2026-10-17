@@ -14,6 +14,7 @@ Aplique **em ordem numérica**, cada arquivo **uma única vez**, no SQL Editor d
 | `0007_portarias.sql` | Portarias: criação, aprovação, cota diária, abrangência por cidade e presença só em portaria aprovada | já aplicado |
 | `0008_atendimento_portaria.sql` | Atendimento da portaria: QR Code, busca pelo nome, fotografia do membro (bucket privado) e permissão membros.foto | aplicar agora |
 | `0009_controle_total_portarias.sql` | Permissão Controle total de portarias (aprovar a própria, sem limite diário e sem restrição de abrangência) | aplicar agora |
+| `0010_duplicidade_por_evento.sql` | Duplicidade de presença por evento (inclui registros antigos), mensagem clara e conferência na portaria | aplicar agora |
 
 Atenção: **não reexecute o `0001` depois do `0002`**. O 0001 recria as políticas antigas, que liberavam
 o acesso anônimo. Novas alterações de banco entram sempre como um novo arquivo numerado.

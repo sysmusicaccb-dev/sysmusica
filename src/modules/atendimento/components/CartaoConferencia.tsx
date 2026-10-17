@@ -87,7 +87,7 @@ export default function CartaoConferencia({
           )}
           {jaRegistrado && membro.ja_registrado_em && (
             <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
-              A entrada deste membro já foi registrada nesta portaria às {horaCurta(membro.ja_registrado_em)}.
+              Este membro já tem entrada registrada neste evento às {horaCurta(membro.ja_registrado_em)} (pode ser um registro antigo, de antes das portarias).
             </p>
           )}
           {erro && (

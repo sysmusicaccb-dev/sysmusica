@@ -19,7 +19,7 @@ export default function EntradasRecentes({ entradas }: { entradas: EntradaRecent
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-slate-900">{entrada.membro_nome}</p>
                 <p className="text-xs text-slate-500">
-                  {entrada.origem === "QR" ? "QR Code" : "Pelo nome"} · {entrada.status}
+                  {entrada.origem === "QR" ? "QR Code" : entrada.origem === "ANTIGO" ? "Registro antigo" : "Pelo nome"} · {entrada.status}
                 </p>
               </div>
               <span className="shrink-0 text-sm tabular-nums text-slate-600">{horaCurta(entrada.hora_entrada)}</span>
