@@ -19,10 +19,12 @@ import Button from "@/components/ui/Button";
 import Drawer from "@/components/ui/Drawer";
 import Notificacao from "@/components/ui/Notificacao";
 import PageHeader from "@/components/ui/PageHeader";
+import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import FormularioMembro from "@/components/FormularioMembro";
 import ListaMembros from "@/components/ListaMembros";
 
 export default function MembrosPage() {
+  const { pode } = useSessao();
   const [cargos, setCargos] = useState<Cargo[]>([]);
   const [instrumentos, setInstrumentos] = useState<Instrumento[]>([]);
   const [familias, setFamilias] = useState<Familia[]>([]);
@@ -96,9 +98,11 @@ export default function MembrosPage() {
             !carregando && !erro ? ` ${membros.length} cadastrado(s).` : ""
           }`}
           acoes={
-            <Button icone={Plus} onClick={() => setPainelAberto(true)} disabled={carregando || !!erro}>
-              Novo membro
-            </Button>
+            pode("membros.criar") ? (
+              <Button icone={Plus} onClick={() => setPainelAberto(true)} disabled={carregando || !!erro}>
+                Novo membro
+              </Button>
+            ) : undefined
           }
         />
 

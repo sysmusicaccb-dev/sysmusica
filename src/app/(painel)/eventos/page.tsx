@@ -12,10 +12,12 @@ import Button from "@/components/ui/Button";
 import Drawer from "@/components/ui/Drawer";
 import Notificacao from "@/components/ui/Notificacao";
 import PageHeader from "@/components/ui/PageHeader";
+import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import FormularioEvento from "@/components/FormularioEvento";
 import ListaEventos from "@/components/ListaEventos";
 
 export default function EventosPage() {
+  const { pode } = useSessao();
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
@@ -73,9 +75,11 @@ export default function EventosPage() {
             !carregando && !erro ? ` ${eventos.length} cadastrado(s).` : ""
           }`}
           acoes={
-            <Button icone={Plus} onClick={() => setPainelAberto(true)} disabled={carregando || !!erro}>
-              Novo evento
-            </Button>
+            pode("eventos.criar") ? (
+              <Button icone={Plus} onClick={() => setPainelAberto(true)} disabled={carregando || !!erro}>
+                Novo evento
+              </Button>
+            ) : undefined
           }
         />
 

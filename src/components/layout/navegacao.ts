@@ -3,21 +3,24 @@
  *
  * Para incluir uma tela no menu, basta adicionar um item aqui: o menu lateral e os
  * breadcrumbs são gerados a partir desta lista. Só devem entrar telas que EXISTEM.
- * Fase 3: cada item ganhará a permissão necessária para aparecer.
+ * Cada item informa a permissão necessária: quem não a tem não vê o item no menu
+ * (e a própria tela também é protegida por RequerPermissao).
  */
 import {
   CalendarDays,
-  ClipboardCheck,
+  DoorOpen,
   Guitar,
   LayoutDashboard,
   Users,
   type LucideIcon,
 } from "lucide-react";
+import type { CodigoPermissao } from "@/lib/permissoes";
 
 export interface ItemMenu {
   href: string;
   rotulo: string;
   icone: LucideIcon;
+  permissao: CodigoPermissao; // quem não tem esta permissão não vê o item
 }
 
 export interface GrupoMenu {
@@ -28,21 +31,48 @@ export interface GrupoMenu {
 export const GRUPOS_MENU: GrupoMenu[] = [
   {
     titulo: null,
-    itens: [{ href: "/", rotulo: "Dashboard", icone: LayoutDashboard }],
+    itens: [
+      { href: "/", rotulo: "Dashboard", icone: LayoutDashboard, permissao: "dashboard.visualizar" },
+    ],
   },
   {
     titulo: "Cadastros",
     itens: [
-      { href: "/membros", rotulo: "Membros", icone: Users },
-      { href: "/eventos", rotulo: "Eventos", icone: CalendarDays },
-      { href: "/instrumentos", rotulo: "Instrumentos e famílias", icone: Guitar },
+      { href: "/membros", rotulo: "Membros", icone: Users, permissao: "membros.visualizar" },
+      { href: "/eventos", rotulo: "Eventos", icone: CalendarDays, permissao: "eventos.visualizar" },
+      {
+        href: "/instrumentos",
+        rotulo: "Instrumentos e famílias",
+        icone: Guitar,
+        permissao: "instrumentos.visualizar",
+      },
     ],
   },
   {
     titulo: "Operações",
-    itens: [{ href: "/presencas", rotulo: "Presenças", icone: ClipboardCheck }],
+    itens: [{ href: "/portaria", rotulo: "Portaria", icone: DoorOpen, permissao: "portaria.visualizar" }],
   },
 ];
+
+/** Filtra o menu pelas permissões do usuário, removendo também os grupos que ficarem vazios. */
+export function filtrarMenu(
+  grupos: GrupoMenu[],
+  pode: (permissao: CodigoPermissao) => boolean
+): GrupoMenu[] {
+  return grupos
+    .map((grupo) => ({ ...grupo, itens: grupo.itens.filter((item) => pode(item.permissao)) }))
+    .filter((grupo) => grupo.itens.length > 0);
+}
+
+/** Primeira tela (fora do dashboard) que o usuário pode acessar; null se não puder nenhuma. */
+export function primeiraRotaPermitida(pode: (permissao: CodigoPermissao) => boolean): string | null {
+  for (const grupo of GRUPOS_MENU) {
+    for (const item of grupo.itens) {
+      if (item.href !== "/" && pode(item.permissao)) return item.href;
+    }
+  }
+  return null;
+}
 
 /** O item está ativo na rota atual? A raiz "/" só é ativa exatamente em "/". */
 export function itemAtivo(href: string, caminho: string): boolean {

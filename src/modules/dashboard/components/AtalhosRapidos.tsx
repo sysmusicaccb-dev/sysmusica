@@ -10,7 +10,7 @@ import Card from "@/components/ui/Card";
 const ATALHOS: { href: string; rotulo: string; descricao: string; icone: LucideIcon }[] = [
   { href: "/membros", rotulo: "Cadastrar membro", descricao: "Novo membro, cargo e instrumento", icone: UserPlus },
   { href: "/eventos", rotulo: "Cadastrar evento", descricao: "Ensaio, culto ou outro evento", icone: CalendarPlus },
-  { href: "/presencas", rotulo: "Registrar presenças", descricao: "Lançar a presença de um evento", icone: ClipboardCheck },
+  { href: "/portaria", rotulo: "Portaria", descricao: "Registrar a entrada dos membros no evento", icone: ClipboardCheck },
 ];
 
 export default function AtalhosRapidos() {

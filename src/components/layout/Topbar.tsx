@@ -7,6 +7,7 @@
 import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/cn";
 import Breadcrumbs from "./Breadcrumbs";
+import UserMenu from "./UserMenu";
 
 interface TopbarProps {
   recolhida: boolean;
@@ -60,6 +61,11 @@ export default function Topbar({
 
       <div className="hidden min-w-0 sm:block">
         <Breadcrumbs />
+      </div>
+
+      {/* Menu do usuário: nome, grupo e botão Sair */}
+      <div className="ml-auto">
+        <UserMenu />
       </div>
     </header>
   );

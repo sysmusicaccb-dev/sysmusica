@@ -10,7 +10,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Music, X } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { GRUPOS_MENU, itemAtivo } from "./navegacao";
+import { useSessao } from "@/modules/autenticacao/SessaoProvider";
+import { GRUPOS_MENU, filtrarMenu, itemAtivo } from "./navegacao";
 
 interface SidebarProps {
   recolhida: boolean; // desktop: mostra só os ícones
@@ -20,6 +21,8 @@ interface SidebarProps {
 
 export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
   const caminho = usePathname() ?? "";
+  const { pode } = useSessao();
+  const gruposVisiveis = filtrarMenu(GRUPOS_MENU, pode); // só o que o grupo do usuário pode ver
 
   return (
     <>
@@ -78,7 +81,7 @@ export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
 
         {/* Itens agrupados por categoria */}
         <nav aria-label="Principal" className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
-          {GRUPOS_MENU.map((grupo) => (
+          {gruposVisiveis.map((grupo) => (
             <div key={grupo.titulo ?? "principal"}>
               {grupo.titulo && (
                 <p

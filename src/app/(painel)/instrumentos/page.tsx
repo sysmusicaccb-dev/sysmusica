@@ -3,23 +3,18 @@
 /**
  * SysMúsica — Página /instrumentos: tabela de instrumentos e famílias (largura total).
  *
- * Qualquer pessoa vê a classificação. Os instrumentos NASCEM no cadastro de membros (por isso não
- * há botão "novo" aqui). O botão de acesso administrativo abre o painel de login: somente um
- * ADMINISTRADOR (usuário do Supabase Auth com app_metadata.papel = "admin") vê os selects para
- * corrigir a família. A regra de verdade está no banco (política admin_update_instrumentos).
+ * Quem pode corrigir a família de um instrumento é definido pelo GRUPO do usuário
+ * (permissão instrumentos.editar). A regra de verdade está no banco (RLS).
+ * Os instrumentos NASCEM no cadastro de membros; botões de novo/editar/excluir
+ * chegam na próxima etapa.
  */
 import { useCallback, useEffect, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
-import { KeyRound, ShieldCheck } from "lucide-react";
 import {
   atualizarFamiliaDoInstrumento,
   buscarInstrumentosEFamilias,
 } from "@/modules/instrumentos/services/instrumentos";
-import AcessoAdministrativo from "@/modules/instrumentos/components/AcessoAdministrativo";
 import TabelaInstrumentos from "@/modules/instrumentos/components/TabelaInstrumentos";
-import { supabase } from "@/lib/supabase";
-import Button from "@/components/ui/Button";
-import Drawer from "@/components/ui/Drawer";
+import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import Notificacao from "@/components/ui/Notificacao";
@@ -28,24 +23,14 @@ import Skeleton from "@/components/ui/Skeleton";
 import type { Familia, Instrumento } from "@/types/database";
 
 export default function InstrumentosPage() {
-  // ---------- Dados ----------
+  const { pode } = useSessao();
   const [instrumentos, setInstrumentos] = useState<Instrumento[]>([]);
   const [familias, setFamilias] = useState<Familia[]>([]);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
-
-  // ---------- Sessão (login do administrador) ----------
-  const [sessao, setSessao] = useState<Session | null>(null);
-  const [carregandoSessao, setCarregandoSessao] = useState(true);
-
-  // ---------- Interface ----------
-  const [painelAberto, setPainelAberto] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [salvandoId, setSalvandoId] = useState<string | null>(null);
   const [erroEdicao, setErroEdicao] = useState<string | null>(null);
-
-  // O papel vem do token do login (app_metadata só pode ser definido pelo painel/SQL do Supabase)
-  const ehAdmin = sessao?.user.app_metadata?.papel === "admin";
 
   // Busca instrumentos e famílias
   const carregar = useCallback(async () => {
@@ -71,23 +56,13 @@ export default function InstrumentosPage() {
     void carregar();
   }, [carregar]);
 
-  // Acompanha a sessão: o Supabase avisa a sessão salva no navegador (evento INITIAL_SESSION)
-  // logo ao se inscrever e, depois, cada login/logout.
-  useEffect(() => {
-    const { data: assinatura } = supabase.auth.onAuthStateChange((_evento, novaSessao) => {
-      setSessao(novaSessao);
-      setCarregandoSessao(false);
-    });
-    return () => assinatura.subscription.unsubscribe();
-  }, []);
-
   // Botão "Tentar novamente": volta ao estado de loading e busca de novo
   function tentarNovamente() {
     setCarregando(true);
     void carregar();
   }
 
-  // Corrige a família de um instrumento (só funciona para administrador: o banco confere)
+  // Corrige a família de um instrumento (o banco confere a permissão)
   async function alterarFamilia(instrumento: Instrumento, novaFamiliaId: string) {
     setErroEdicao(null);
     setSalvandoId(instrumento.id);
@@ -107,15 +82,6 @@ export default function InstrumentosPage() {
     }
   }
 
-  // Texto do botão de acesso conforme a situação do login
-  const rotuloAcesso = carregandoSessao
-    ? "Acesso"
-    : !sessao
-      ? "Acesso administrativo"
-      : ehAdmin
-        ? "Administrador"
-        : "Minha conta";
-
   return (
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -124,15 +90,6 @@ export default function InstrumentosPage() {
           descricao={`A família de cada instrumento é definida automaticamente no cadastro de membros.${
             !carregando && !erro ? ` ${instrumentos.length} instrumento(s).` : ""
           }`}
-          acoes={
-            <Button
-              variante="secundario"
-              icone={sessao ? ShieldCheck : KeyRound}
-              onClick={() => setPainelAberto(true)}
-            >
-              {rotuloAcesso}
-            </Button>
-          }
         />
 
         {carregando ? (
@@ -159,7 +116,7 @@ export default function InstrumentosPage() {
           <TabelaInstrumentos
             instrumentos={instrumentos}
             familias={familias}
-            podeEditar={ehAdmin}
+            podeEditar={pode("instrumentos.editar")}
             salvandoId={salvandoId}
             erroEdicao={erroEdicao}
             onAlterarFamilia={(instrumento, novaFamiliaId) =>
@@ -168,28 +125,6 @@ export default function InstrumentosPage() {
           />
         )}
       </div>
-
-      <Drawer
-        aberto={painelAberto}
-        onFechar={() => setPainelAberto(false)}
-        titulo="Acesso administrativo"
-        descricao="Somente administradores podem corrigir a família de um instrumento."
-      >
-        <AcessoAdministrativo
-          sessao={sessao}
-          carregando={carregandoSessao}
-          ehAdmin={ehAdmin}
-          onEntrou={() => {
-            setPainelAberto(false);
-            setAviso("Login realizado com sucesso.");
-          }}
-          onSaiu={() => {
-            setPainelAberto(false);
-            setErroEdicao(null);
-            setAviso("Você saiu da conta.");
-          }}
-        />
-      </Drawer>
 
       <Notificacao mensagem={aviso} onFechar={() => setAviso(null)} />
     </main>

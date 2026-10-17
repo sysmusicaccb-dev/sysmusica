@@ -40,6 +40,6 @@ export async function atualizarFamiliaDoInstrumento(
 
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) {
-    throw new Error("Sem permissão para alterar este instrumento (é preciso ser administrador).");
+    throw new Error("Sem permissão para alterar este instrumento.");
   }
 }

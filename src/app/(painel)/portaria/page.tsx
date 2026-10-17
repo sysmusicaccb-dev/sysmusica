@@ -19,10 +19,12 @@ import Button from "@/components/ui/Button";
 import Drawer from "@/components/ui/Drawer";
 import Notificacao from "@/components/ui/Notificacao";
 import PageHeader from "@/components/ui/PageHeader";
+import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import FormularioPresenca from "@/components/FormularioPresenca";
 import ListaPresencas from "@/components/ListaPresencas";
 
-export default function PresencasPage() {
+export default function PortariaPage() {
+  const { pode } = useSessao();
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [membros, setMembros] = useState<MembroPublico[]>([]);
   const [instrumentos, setInstrumentos] = useState<Instrumento[]>([]);
@@ -91,14 +93,16 @@ export default function PresencasPage() {
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <PageHeader
-          titulo="Presenças"
-          descricao={`Registre e acompanhe a presença dos membros nos eventos.${
+          titulo="Portaria"
+          descricao={`Controle de entrada dos membros nos eventos.${
             !carregando && !erro ? ` ${presencas.length} registro(s).` : ""
           }`}
           acoes={
-            <Button icone={Plus} onClick={() => setPainelAberto(true)} disabled={carregando || !!erro}>
-              Registrar presenças
-            </Button>
+            pode("portaria.registrar") ? (
+              <Button icone={Plus} onClick={() => setPainelAberto(true)} disabled={carregando || !!erro}>
+                Registrar presenças
+              </Button>
+            ) : undefined
           }
         />
 

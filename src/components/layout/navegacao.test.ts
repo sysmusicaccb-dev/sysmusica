@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { itemAtivo, montarMigalhas } from "@/components/layout/navegacao";
+import {
+  GRUPOS_MENU,
+  filtrarMenu,
+  itemAtivo,
+  montarMigalhas,
+  primeiraRotaPermitida,
+} from "@/components/layout/navegacao";
+import type { CodigoPermissao } from "@/lib/permissoes";
+
+// Cria a função "pode" a partir de uma lista de permissões (como o contexto de sessão faz)
+function criarPode(permitidas: CodigoPermissao[]) {
+  return (permissao: CodigoPermissao) => permitidas.includes(permissao);
+}
 
 describe("itemAtivo", () => {
   it("a raiz só fica ativa exatamente em '/'", () => {
@@ -28,10 +40,10 @@ describe("montarMigalhas", () => {
       { rotulo: "Cadastros" },
       { rotulo: "Membros" },
     ]);
-    expect(montarMigalhas("/presencas")).toEqual([
+    expect(montarMigalhas("/portaria")).toEqual([
       { rotulo: "Início", href: "/" },
       { rotulo: "Operações" },
-      { rotulo: "Presenças" },
+      { rotulo: "Portaria" },
     ]);
   });
 
@@ -41,5 +53,35 @@ describe("montarMigalhas", () => {
 
   it("rota desconhecida volta ao início", () => {
     expect(montarMigalhas("/inexistente")).toEqual([{ rotulo: "Início", href: "/" }]);
+  });
+});
+
+describe("filtrarMenu", () => {
+  it("o grupo Portaria enxerga apenas o item Portaria", () => {
+    const menu = filtrarMenu(GRUPOS_MENU, criarPode(["portaria.visualizar", "portaria.registrar"]));
+    expect(menu.map((grupo) => grupo.titulo)).toEqual(["Operações"]);
+    expect(menu[0].itens.map((item) => item.rotulo)).toEqual(["Portaria"]);
+  });
+
+  it("remove os grupos que ficam vazios", () => {
+    const menu = filtrarMenu(GRUPOS_MENU, criarPode(["dashboard.visualizar"]));
+    expect(menu.map((grupo) => grupo.titulo)).toEqual([null]);
+  });
+
+  it("sem permissões, o menu fica vazio", () => {
+    expect(filtrarMenu(GRUPOS_MENU, criarPode([]))).toEqual([]);
+  });
+});
+
+describe("primeiraRotaPermitida", () => {
+  it("devolve a primeira tela permitida, ignorando o dashboard", () => {
+    expect(primeiraRotaPermitida(criarPode(["portaria.visualizar"]))).toBe("/portaria");
+    expect(primeiraRotaPermitida(criarPode(["eventos.visualizar", "portaria.visualizar"]))).toBe(
+      "/eventos"
+    );
+  });
+
+  it("devolve null quando não há nenhuma tela permitida", () => {
+    expect(primeiraRotaPermitida(criarPode(["dashboard.visualizar"]))).toBeNull();
   });
 });
