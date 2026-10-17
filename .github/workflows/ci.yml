@@ -1,0 +1,32 @@
+# SysMúsica — Integração contínua: valida o projeto a cada push na main e em pull requests.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .   # pasta do projeto dentro do repositório
+    env:
+      # Valores FICTÍCIOS: o build só precisa que as variáveis existam (não há chamadas de rede no build).
+      # Nunca coloque chaves reais neste arquivo.
+      NEXT_PUBLIC_SUPABASE_URL: https://exemplo.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: chave-ficticia-apenas-para-o-build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ./package-lock.json
+      - run: npm ci
+      - run: npx next typegen
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
