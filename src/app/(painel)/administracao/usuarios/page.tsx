@@ -15,11 +15,14 @@ import ErrorState from "@/components/ui/ErrorState";
 import Notificacao from "@/components/ui/Notificacao";
 import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
+import FormularioAbrangencia from "@/modules/administracao/components/FormularioAbrangencia";
 import FormularioSenha from "@/modules/administracao/components/FormularioSenha";
 import FormularioUsuario from "@/modules/administracao/components/FormularioUsuario";
 import TabelaUsuarios from "@/modules/administracao/components/TabelaUsuarios";
 import {
   atualizarUsuario,
+  listarAbrangencias,
+  listarCidadesConhecidas,
   listarGrupos,
   listarUsuarios,
 } from "@/modules/administracao/services/acesso";
@@ -30,7 +33,8 @@ import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 type PainelUsuario =
   | { tipo: "novo" }
   | { tipo: "editar"; usuario: UsuarioSistema }
-  | { tipo: "senha"; usuario: UsuarioSistema };
+  | { tipo: "senha"; usuario: UsuarioSistema }
+  | { tipo: "abrangencia"; usuario: UsuarioSistema };
 
 export default function UsuariosPage() {
   const { pode, sessao } = useSessao();
@@ -38,6 +42,8 @@ export default function UsuariosPage() {
 
   const [usuarios, setUsuarios] = useState<UsuarioSistema[]>([]);
   const [grupos, setGrupos] = useState<GrupoAcesso[]>([]);
+  const [abrangencias, setAbrangencias] = useState<Record<string, string[]>>({});
+  const [cidadesConhecidas, setCidadesConhecidas] = useState<string[]>([]);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
   const [painel, setPainel] = useState<PainelUsuario | null>(null);
@@ -49,9 +55,17 @@ export default function UsuariosPage() {
   // Busca usuários e grupos em paralelo
   const carregar = useCallback(async () => {
     try {
-      const [listaUsuarios, listaGrupos] = await Promise.all([listarUsuarios(), listarGrupos()]);
+      const [listaUsuarios, listaGrupos, mapaAbrangencias, listaCidades] = await Promise.all([
+        listarUsuarios(),
+        listarGrupos(),
+        listarAbrangencias(),
+        // só quem edita usuários lista as cidades; para os demais a lista fica vazia
+        listarCidadesConhecidas().catch(() => [] as string[]),
+      ]);
       setUsuarios(listaUsuarios);
       setGrupos(listaGrupos);
+      setAbrangencias(mapaAbrangencias);
+      setCidadesConhecidas(listaCidades);
       setErro(null);
     } catch (e) {
       console.error("Falha ao carregar usuários:", e);
@@ -108,6 +122,10 @@ export default function UsuariosPage() {
     novo: { titulo: "Novo usuário", descricao: "Crie a conta de login e escolha o grupo de acesso." },
     editar: { titulo: "Editar usuário", descricao: "Altere o nome ou o grupo de acesso." },
     senha: { titulo: "Redefinir senha", descricao: "Defina uma nova senha para este usuário." },
+    abrangencia: {
+      titulo: "Abrangência de atuação",
+      descricao: "Cidades em que o usuário aprova portarias e registra presenças.",
+    },
   } as const;
 
   return (
@@ -153,6 +171,8 @@ export default function UsuariosPage() {
               podeEditar={pode("usuarios.editar")}
               onEditar={(usuario) => setPainel({ tipo: "editar", usuario })}
               onRedefinirSenha={(usuario) => setPainel({ tipo: "senha", usuario })}
+              cidadesPorUsuario={abrangencias}
+              onAbrangencia={(usuario) => setPainel({ tipo: "abrangencia", usuario })}
               onAlterarStatus={(usuario) => {
                 setErroStatus(null);
                 setAlvoStatus(usuario);
@@ -176,6 +196,14 @@ export default function UsuariosPage() {
           <FormularioUsuario usuario={painel.usuario} grupos={grupos} meuId={meuId} onSalvo={aoSalvar} />
         )}
         {painel?.tipo === "senha" && <FormularioSenha usuario={painel.usuario} onSalvo={aoSalvar} />}
+        {painel?.tipo === "abrangencia" && (
+          <FormularioAbrangencia
+            usuario={painel.usuario}
+            cidadesConhecidas={cidadesConhecidas}
+            selecionadasIniciais={abrangencias[painel.usuario.id] ?? []}
+            onSalvo={aoSalvar}
+          />
+        )}
       </Drawer>
 
       {/* Confirmação de ativar/desativar */}

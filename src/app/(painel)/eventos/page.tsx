@@ -21,6 +21,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import FormularioEvento from "@/components/FormularioEvento";
 import ListaEventos from "@/components/ListaEventos";
 import { formatarDataHora } from "@/lib/datas";
+import { valoresDistintos } from "@/lib/listas";
 import type { Evento, FinalidadeEvento } from "@/types/database";
 
 // Qual painel lateral está aberto: novo evento, ou edição de um evento
@@ -135,6 +136,7 @@ export default function EventosPage() {
         {painel && (
           <FormularioEvento
             evento={painel.tipo === "editar" ? painel.evento : null}
+            sugestoesCidade={valoresDistintos(eventos.flatMap((item) => (item.cidade ? [item.cidade] : [])))}
             finalidades={finalidades}
             onSalvo={aoSalvar}
           />

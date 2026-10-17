@@ -18,6 +18,7 @@ import Drawer from "@/components/ui/Drawer";
 import Notificacao from "@/components/ui/Notificacao";
 import PageHeader from "@/components/ui/PageHeader";
 import FormularioPresenca from "@/components/FormularioPresenca";
+import type { PortariaDetalhada } from "@/modules/portarias/tipos";
 import ListaPresencas from "@/components/ListaPresencas";
 import { formatarDataHora } from "@/lib/datas";
 import type { Evento, Instrumento, MembroPublico, Presenca } from "@/types/database";
@@ -31,6 +32,7 @@ export default function PortariaPage() {
   const [membros, setMembros] = useState<MembroPublico[]>([]);
   const [instrumentos, setInstrumentos] = useState<Instrumento[]>([]);
   const [presencas, setPresencas] = useState<Presenca[]>([]);
+  const [portarias, setPortarias] = useState<PortariaDetalhada[]>([]);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
   const [painel, setPainel] = useState<PainelPortaria | null>(null);
@@ -47,6 +49,7 @@ export default function PortariaPage() {
       setMembros(dados.membros);
       setInstrumentos(dados.instrumentos);
       setPresencas(dados.presencas);
+      setPortarias(dados.portarias);
       setErro(null);
     } catch (e) {
       // O detalhe técnico vai só para o console; a tela mostra uma mensagem simples
@@ -153,6 +156,7 @@ export default function PortariaPage() {
       >
         {painel?.tipo === "registrar" && (
           <FormularioPresenca
+            portarias={portarias.filter((portaria) => portaria.status === "APROVADA")}
             eventos={eventos}
             membros={membros}
             instrumentos={instrumentos}

@@ -8,6 +8,7 @@
  */
 import {
   CalendarDays,
+  ClipboardList,
   DoorOpen,
   Guitar,
   KeyRound,
@@ -23,6 +24,7 @@ export interface ItemMenu {
   rotulo: string;
   icone: LucideIcon;
   permissao: CodigoPermissao; // quem não tem esta permissão não vê o item
+  qualquer?: CodigoPermissao[]; // ...a não ser que tenha QUALQUER uma destas
 }
 
 export interface GrupoMenu {
@@ -52,7 +54,16 @@ export const GRUPOS_MENU: GrupoMenu[] = [
   },
   {
     titulo: "Operações",
-    itens: [{ href: "/portaria", rotulo: "Portaria", icone: DoorOpen, permissao: "portaria.visualizar" }],
+    itens: [
+      {
+        href: "/portarias",
+        rotulo: "Gestão de portarias",
+        icone: ClipboardList,
+        permissao: "portarias.visualizar",
+        qualquer: ["portarias.criar", "portarias.aprovar"],
+      },
+      { href: "/portaria", rotulo: "Portaria", icone: DoorOpen, permissao: "portaria.visualizar" },
+    ],
   },
   {
     titulo: "Administração",
@@ -73,13 +84,18 @@ export const GRUPOS_MENU: GrupoMenu[] = [
   },
 ];
 
+/** O usuário pode ver o item? (a permissão principal ou qualquer uma das alternativas) */
+function itemPermitido(item: ItemMenu, pode: (permissao: CodigoPermissao) => boolean): boolean {
+  return pode(item.permissao) || (item.qualquer ?? []).some((permissao) => pode(permissao));
+}
+
 /** Filtra o menu pelas permissões do usuário, removendo também os grupos que ficarem vazios. */
 export function filtrarMenu(
   grupos: GrupoMenu[],
   pode: (permissao: CodigoPermissao) => boolean
 ): GrupoMenu[] {
   return grupos
-    .map((grupo) => ({ ...grupo, itens: grupo.itens.filter((item) => pode(item.permissao)) }))
+    .map((grupo) => ({ ...grupo, itens: grupo.itens.filter((item) => itemPermitido(item, pode)) }))
     .filter((grupo) => grupo.itens.length > 0);
 }
 
@@ -87,7 +103,7 @@ export function filtrarMenu(
 export function primeiraRotaPermitida(pode: (permissao: CodigoPermissao) => boolean): string | null {
   for (const grupo of GRUPOS_MENU) {
     for (const item of grupo.itens) {
-      if (item.href !== "/" && pode(item.permissao)) return item.href;
+      if (item.href !== "/" && itemPermitido(item, pode)) return item.href;
     }
   }
   return null;

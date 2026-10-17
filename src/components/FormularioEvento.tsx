@@ -23,6 +23,7 @@ import { obterOuCriarFinalidade } from "@/modules/eventos/services/finalidades";
 interface FormularioEventoProps {
   evento: Evento | null;
   finalidades: FinalidadeEvento[];
+  sugestoesCidade: string[]; // cidades já cadastradas em outros eventos
   /** Chamado após salvar com sucesso, com a mensagem para o aviso da tela. */
   onSalvo: (mensagem: string) => void | Promise<void>;
 }
@@ -35,7 +36,12 @@ const classeInput =
   "focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-60 " +
   "[color-scheme:light]";
 
-export default function FormularioEvento({ evento, finalidades, onSalvo }: FormularioEventoProps) {
+export default function FormularioEvento({
+  evento,
+  finalidades,
+  sugestoesCidade,
+  onSalvo,
+}: FormularioEventoProps) {
   const editando = evento !== null;
 
   const finalidadeInicial = evento?.finalidade_id
@@ -46,6 +52,7 @@ export default function FormularioEvento({ evento, finalidades, onSalvo }: Formu
   const [finalidadeTexto, setFinalidadeTexto] = useState(finalidadeInicial);
   const [dataEvento, setDataEvento] = useState(evento ? isoParaDatetimeLocal(evento.data_evento) : "");
   const [local, setLocal] = useState(evento?.local ?? "");
+  const [cidade, setCidade] = useState(evento?.cidade ?? "");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -83,6 +90,7 @@ export default function FormularioEvento({ evento, finalidades, onSalvo }: Formu
         data_evento: dataIso,
         local: local.trim(),
         finalidade_id: finalidade.id,
+        cidade: cidade.trim() || null,
       };
       if (evento) await atualizarEvento(evento.id, dados);
       else await criarEvento(dados);
@@ -184,6 +192,28 @@ export default function FormularioEvento({ evento, finalidades, onSalvo }: Formu
           onChange={(e) => setLocal(e.target.value)}
           disabled={salvando}
           placeholder="Ex: Congregação Central"
+          className={classeInput}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="cidade-evento" className="text-sm font-medium text-slate-700">
+          Cidade <span className="font-normal text-slate-400">(necessária para criar a portaria)</span>
+        </label>
+        <datalist id="sugestoes-cidade-evento">
+          {sugestoesCidade.map((sugestao) => (
+            <option key={sugestao} value={sugestao} />
+          ))}
+        </datalist>
+        <input
+          id="cidade-evento"
+          type="text"
+          list="sugestoes-cidade-evento"
+          autoComplete="off"
+          value={cidade}
+          onChange={(e) => setCidade(e.target.value)}
+          disabled={salvando}
+          placeholder="Ex: Lauro de Freitas"
           className={classeInput}
         />
       </div>

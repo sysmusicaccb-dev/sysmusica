@@ -1,12 +1,13 @@
 /**
- * SysMúsica — Serviço de dados da Portaria.
- *
- * Em "membros" só se lêem colunas liberadas (nunca "*": o qr_secret é protegido).
- * Excluir é EXCLUSÃO LÓGICA: o registro some da portaria e dos relatórios e fica guardado no banco.
- * Editar altera só status, hora de entrada e hora de saída (o banco libera só estas colunas).
+ * SysMúsica — Serviço de dados da Portaria (registro de entrada e histórico).
+ * Em "membros" só se lêem colunas liberadas (nunca "*": qr_secret e CPF completo são protegidos).
+ * As portarias APROVADAS que o usuário pode usar vêm de listarPortarias (o banco já filtra pela
+ * permissão e pela abrangência). Excluir é EXCLUSÃO LÓGICA. Editar altera só status e horários.
  */
 import { supabase } from "@/lib/supabase";
 import { mensagemDoErro } from "@/lib/erros";
+import { listarPortarias } from "@/modules/portarias/services/portarias";
+import type { PortariaDetalhada } from "@/modules/portarias/tipos";
 import {
   COLUNAS_MEMBRO_PUBLICO,
   type Evento,
@@ -20,15 +21,17 @@ export interface DadosPortaria {
   membros: MembroPublico[];
   instrumentos: Instrumento[];
   presencas: Presenca[];
+  portarias: PortariaDetalhada[]; // as que o usuário pode ver (a tela usa só as APROVADAS)
 }
 
-/** Busca eventos, membros, instrumentos e presenças em paralelo. Lança erro se qualquer consulta falhar. */
+/** Busca eventos, membros, instrumentos, presenças e portarias em paralelo. Lança erro se algo falhar. */
 export async function buscarDadosPortaria(): Promise<DadosPortaria> {
-  const [resEventos, resMembros, resPresencas, resInstrumentos] = await Promise.all([
+  const [resEventos, resMembros, resPresencas, resInstrumentos, portarias] = await Promise.all([
     supabase.from("eventos").select("*").order("data_evento", { ascending: false }),
     supabase.from("membros").select(COLUNAS_MEMBRO_PUBLICO).order("nome", { ascending: true }),
     supabase.from("presencas").select("*"),
     supabase.from("instrumentos").select("*"),
+    listarPortarias(),
   ]);
 
   const erroBanco = resEventos.error ?? resMembros.error ?? resPresencas.error ?? resInstrumentos.error;
@@ -40,6 +43,7 @@ export async function buscarDadosPortaria(): Promise<DadosPortaria> {
     membros: (resMembros.data ?? []) as unknown as MembroPublico[],
     instrumentos: (resInstrumentos.data ?? []) as Instrumento[],
     presencas: (resPresencas.data ?? []) as Presenca[],
+    portarias,
   };
 }
 
@@ -54,7 +58,7 @@ export async function atualizarPresenca(id: string, dados: DadosAtualizacaoPrese
   // .select("id") devolve as linhas alteradas: se o RLS negar, o update não dá erro, só não altera nada
   const { data, error } = await supabase.from("presencas").update(dados).eq("id", id).select("id");
   if (error) {
-    // 23514 = a regra do banco "saída depois da entrada" (a mensagem nativa é técnica)
+    // 23514 = regra do banco "saída depois da entrada" (a mensagem nativa é técnica)
     if (error.code === "23514") {
       throw new Error("A hora de saída não pode ser anterior à hora de entrada.");
     }

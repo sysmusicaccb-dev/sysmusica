@@ -1,54 +1,38 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de registro de presenças (lançamento manual).
- *
- * Fluxo: escolher o evento -> marcar o status de cada membro -> salvar.
- * Os registros são enviados em LOTE (um único insert com vários itens) para a
- * tabela "presencas": ou salva todos, ou nenhum.
- *
- * Regras:
- *  - Só são salvos os membros que tiverem um status marcado.
- *  - Membros que já têm presença registrada no evento ficam travados
- *    (o banco só aceita uma entrada em aberto por membro/evento e o RLS atual não permite UPDATE).
+ * SysMúsica — Formulário de lançamento de presenças na Portaria (painel lateral).
+ * Fluxo: escolher a PORTARIA aprovada -> marcar o status de cada membro -> salvar (em lote: ou
+ * salva todos, ou nenhum). Só aparecem portarias APROVADAS que o usuário pode usar. O banco confere
+ * de novo tudo (aprovada, mesma cidade, membro ativo, sem duplicidade) e define a hora de entrada,
+ * quem registrou e a origem. Membros já registrados no evento ficam travados (corrigir: Editar/Excluir).
  */
 import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
+import Button from "@/components/ui/Button";
+import { formatarDataHora } from "@/lib/datas";
+import { mensagemDoErro } from "@/lib/erros";
 import { supabase } from "@/lib/supabase";
-import type {
-  Evento,
-  Instrumento,
-  MembroPublico,
-  Presenca,
-  PresencaInsert,
-} from "@/types/database";
+import type { PortariaDetalhada } from "@/modules/portarias/tipos";
+import type { Evento, Instrumento, MembroPublico, Presenca, PresencaInsert } from "@/types/database";
 
 interface FormularioPresencaProps {
-  eventos: Evento[];
+  portarias: PortariaDetalhada[]; // somente as APROVADAS
+  eventos?: Evento[]; // (obsoleto) a página ainda envia; a portaria já traz os dados do evento
   membros: MembroPublico[];
   instrumentos: Instrumento[]; // usado para exibir o nome do instrumento de cada membro
   presencas: Presenca[]; // usado para travar quem já foi registrado no evento
   carregando: boolean;
   erro: string | null;
-  /** Chamado após salvar com sucesso, para a página recarregar os dados. */
+  /** Chamado após salvar com sucesso, com a mensagem para o aviso da tela. */
   onPresencaAdicionada: (mensagem: string) => void | Promise<void>;
 }
 
-// Opções de status e a cor de cada botão quando selecionado.
-// (Classes escritas por extenso para o Tailwind conseguir detectá-las.)
-const STATUS_PRESENCA = [
-  {
-    valor: "Presente",
-    classe: "peer-checked:border-emerald-600 peer-checked:bg-emerald-600 peer-checked:text-white",
-  },
-  {
-    valor: "Ausente",
-    classe: "peer-checked:border-red-600 peer-checked:bg-red-600 peer-checked:text-white",
-  },
-  {
-    valor: "Justificado",
-    classe: "peer-checked:border-amber-500 peer-checked:bg-amber-500 peer-checked:text-white",
-  },
+// Opções de status e a cor de cada botão quando selecionado (classes por extenso para o Tailwind).
+const OPCOES_STATUS = [
+  { valor: "Presente", classe: "peer-checked:border-emerald-600 peer-checked:bg-emerald-600 peer-checked:text-white" },
+  { valor: "Ausente", classe: "peer-checked:border-red-600 peer-checked:bg-red-600 peer-checked:text-white" },
+  { valor: "Justificado", classe: "peer-checked:border-amber-500 peer-checked:bg-amber-500 peer-checked:text-white" },
 ] as const;
 
 // Selo de status para membros já registrados
@@ -59,32 +43,22 @@ function classeStatus(status: string): string {
   return "bg-slate-100 text-slate-600";
 }
 
-// Texto de cada opção do select: "Ensaio · 13/10/2026 às 19:30 · Local"
-function rotuloEvento(evento: Evento): string {
-  const data = new Date(evento.data_evento)
-    .toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-    .replace(", ", " às ");
-  return `${evento.tipo} · ${data} · ${evento.local}`;
+// Texto de cada opção do select: "Ensaio · 18/10/2026 14:00 · Local (Cidade)"
+function rotuloPortaria(portaria: PortariaDetalhada): string {
+  const data = portaria.evento_data ? formatarDataHora(portaria.evento_data) : "Evento removido";
+  return `${portaria.evento_tipo ?? "Evento"} · ${data} · ${portaria.evento_local ?? ""} (${portaria.cidade})`;
 }
 
-// Mesma identidade visual dos demais módulos
 const classeInput =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 " +
-  "shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 " +
-  "disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm " +
+  "focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-60";
 
 const classeBotaoSecundario =
   "rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 " +
   "transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60";
 
 export default function FormularioPresenca({
-  eventos,
+  portarias,
   membros,
   instrumentos,
   presencas,
@@ -92,36 +66,35 @@ export default function FormularioPresenca({
   erro,
   onPresencaAdicionada,
 }: FormularioPresencaProps) {
-  const [eventoId, setEventoId] = useState("");
-  // Mapa membro_id -> status marcado na tela (ainda não salvo)
-  const [marcacoes, setMarcacoes] = useState<Record<string, string>>({});
+  const [portariaId, setPortariaId] = useState("");
+  const [marcacoes, setMarcacoes] = useState<Record<string, string>>({}); // membro_id -> status (não salvo)
   const [salvando, setSalvando] = useState(false);
   const [erroForm, setErroForm] = useState<string | null>(null);
-  const [sucesso, setSucesso] = useState(false);
 
-  // Presenças já gravadas para o evento selecionado: membro_id -> status
+  const portaria = portarias.find((item) => item.id === portariaId);
+
+  // Presenças já gravadas para o evento da portaria escolhida: membro_id -> status
   const jaRegistrados = useMemo(() => {
     const mapa = new Map<string, string>();
+    if (!portaria) return mapa;
     for (const presenca of presencas) {
-      if (presenca.evento_id === eventoId) mapa.set(presenca.membro_id, presenca.status);
+      if (presenca.evento_id === portaria.evento_id) mapa.set(presenca.membro_id, presenca.status);
     }
     return mapa;
-  }, [presencas, eventoId]);
+  }, [presencas, portaria]);
 
   const pendentes = membros.filter((membro) => !jaRegistrados.has(membro.id));
   const qtdMarcados = Object.keys(marcacoes).length;
 
-  // Ao trocar de evento, zera marcações e mensagens
-  function trocarEvento(novoEventoId: string) {
-    setEventoId(novoEventoId);
+  // Ao trocar de portaria, zera marcações e mensagens
+  function trocarPortaria(novaPortariaId: string) {
+    setPortariaId(novaPortariaId);
     setMarcacoes({});
     setErroForm(null);
-    setSucesso(false);
   }
 
   function marcar(membroId: string, status: string) {
     setMarcacoes((anterior) => ({ ...anterior, [membroId]: status }));
-    setSucesso(false);
   }
 
   // Atalho: marca todos os membros pendentes como "Presente"
@@ -129,143 +102,106 @@ export default function FormularioPresenca({
     const todos: Record<string, string> = {};
     for (const membro of pendentes) todos[membro.id] = "Presente";
     setMarcacoes(todos);
-    setSucesso(false);
   }
 
-  async function handleSubmit(submissao: FormEvent<HTMLFormElement>) {
+  async function salvar(submissao: FormEvent<HTMLFormElement>) {
     submissao.preventDefault();
+    if (salvando) return; // evita envio duplicado
     setErroForm(null);
-    setSucesso(false);
 
-    if (!eventoId) {
-      setErroForm("Selecione um evento.");
-      return;
-    }
+    if (!portaria) return setErroForm("Selecione uma portaria aprovada.");
 
-    // Monta o lote tipado com PresencaInsert (ignora quem já estava registrado).
-    // hora_entrada e hora_saida ficam por conta do banco (now() e null).
+    // Lote tipado (ignora quem já estava registrado). Hora, autor e origem ficam por conta do banco.
     const registros: PresencaInsert[] = Object.entries(marcacoes)
       .filter(([membroId]) => !jaRegistrados.has(membroId))
       .map(([membroId, status]) => ({
         membro_id: membroId,
-        evento_id: eventoId,
+        evento_id: portaria.evento_id,
         status,
+        portaria_id: portaria.id,
       }));
 
-    if (registros.length === 0) {
-      setErroForm("Marque a presença de pelo menos um membro.");
-      return;
-    }
+    if (registros.length === 0) return setErroForm("Marque a presença de pelo menos um membro.");
 
     setSalvando(true);
     try {
       const { error } = await supabase.from("presencas").insert(registros);
       if (error) {
-        // 23505 = violação de UNIQUE: já existe presença em aberto para algum membro neste evento
         throw new Error(
-          error.code === "23505"
-            ? "Alguma presença deste evento já foi registrada por outra pessoa. Recarregue a página e tente novamente."
-            : error.message
+          mensagemDoErro(
+            error,
+            "Não foi possível salvar as presenças.",
+            "Algum membro já tem presença registrada nesta portaria. Recarregue a página e tente novamente."
+          )
         );
       }
-
-      // Sucesso: limpa as marcações (o evento continua selecionado) e recarrega os dados
+      // Sucesso: limpa as marcações (a portaria continua selecionada) e recarrega os dados
       setMarcacoes({});
-      setSucesso(true);
       await onPresencaAdicionada("Presenças registradas com sucesso!");
     } catch (e) {
-      setErroForm(
-        `Não foi possível salvar as presenças: ${
-          e instanceof Error ? e.message : "erro desconhecido."
-        }`
-      );
+      setErroForm(e instanceof Error ? e.message : "Não foi possível salvar as presenças.");
     } finally {
       setSalvando(false);
     }
   }
 
   // ---------- Estados da tela ----------
+  if (carregando) return <p className="text-sm text-slate-600">Carregando os dados do formulário...</p>;
 
-  // Carregando: skeleton
-  if (carregando) {
-    return (
-      <div
-        role="status"
-        aria-live="polite"
-        className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-      >
-        <span className="sr-only">Carregando formulário...</span>
-        <div className="h-6 w-1/2 animate-pulse rounded bg-slate-200" />
-        <div className="h-10 animate-pulse rounded-lg bg-slate-200" />
-        <div className="h-24 animate-pulse rounded-lg bg-slate-200" />
-        <div className="h-10 animate-pulse rounded-lg bg-slate-200" />
-      </div>
-    );
-  }
-
-  // Erro ao buscar dados (o botão "Tentar novamente" fica na lista ao lado)
   if (erro) {
+    return <p className="text-sm text-slate-600">Formulário indisponível porque os dados não puderam ser carregados.</p>;
+  }
+
+  // Sem portaria aprovada disponível: explica o caminho
+  if (portarias.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Registrar presenças</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          Formulário indisponível porque os dados não puderam ser carregados.
+      <div className="space-y-3 text-sm text-slate-600">
+        <p>
+          Não há portarias <strong>aprovadas</strong> disponíveis para você. Só é possível registrar presenças em
+          uma portaria aprovada, da sua abrangência.
         </p>
+        <Link href="/portarias" className="font-semibold text-brand-700 hover:underline">
+          Ver as portarias
+        </Link>
       </div>
     );
   }
 
-  // Pré-requisitos: precisa haver pelo menos um evento e um membro
-  if (eventos.length === 0 || membros.length === 0) {
+  if (membros.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Registrar presenças</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          Para registrar presenças é preciso ter ao menos um evento e um membro cadastrados.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {eventos.length === 0 && (
-            <Link href="/eventos" className="text-sm font-semibold text-indigo-600 hover:underline">
-              Cadastrar evento
-            </Link>
-          )}
-          {membros.length === 0 && (
-            <Link href="/membros" className="text-sm font-semibold text-indigo-600 hover:underline">
-              Cadastrar membro
-            </Link>
-          )}
-        </div>
+      <div className="space-y-3 text-sm text-slate-600">
+        <p>Para registrar presenças é preciso ter ao menos um membro cadastrado.</p>
+        <Link href="/membros" className="font-semibold text-brand-700 hover:underline">
+          Cadastrar membro
+        </Link>
       </div>
     );
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4"
-    >
+    <form onSubmit={salvar} className="space-y-5">
       <div className="space-y-1.5">
-        <label htmlFor="evento" className="text-sm font-medium text-slate-700">
-          Evento
+        <label htmlFor="portaria" className="text-sm font-medium text-slate-700">
+          Portaria
         </label>
         <select
-          id="evento"
-          value={eventoId}
-          onChange={(e) => trocarEvento(e.target.value)}
+          id="portaria"
+          value={portariaId}
+          onChange={(e) => trocarPortaria(e.target.value)}
           disabled={salvando}
           className={classeInput}
         >
-          <option value="">Selecione um evento</option>
-          {eventos.map((evento) => (
-            <option key={evento.id} value={evento.id}>
-              {rotuloEvento(evento)}
+          <option value="">Selecione uma portaria aprovada</option>
+          {portarias.map((item) => (
+            <option key={item.id} value={item.id}>
+              {rotuloPortaria(item)}
             </option>
           ))}
         </select>
       </div>
 
-      {/* Lista de membros: aparece depois de escolher o evento */}
-      {eventoId && (
+      {/* Lista de membros: aparece depois de escolher a portaria */}
+      {portaria && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-medium text-slate-700">
@@ -295,38 +231,27 @@ export default function FormularioPresenca({
             {membros.map((membro) => {
               const statusRegistrado = jaRegistrados.get(membro.id);
               const statusAtual = marcacoes[membro.id];
+              const instrumento = instrumentos.find((item) => item.id === membro.instrumento_id);
 
               return (
                 <li key={membro.id} className="rounded-xl border border-slate-200 p-3">
                   <p className="truncate text-sm font-medium text-slate-900">
                     {membro.nome}
-                    {membro.instrumento_id && (
-                      <span className="ml-2 text-xs font-normal text-slate-500">
-                        {instrumentos.find((instrumento) => instrumento.id === membro.instrumento_id)?.nome}
-                      </span>
-                    )}
+                    {instrumento && <span className="ml-2 text-xs font-normal text-slate-500">{instrumento.nome}</span>}
                   </p>
 
                   {statusRegistrado ? (
                     // Já registrado neste evento: somente leitura
                     <p className="mt-2 text-xs text-slate-500">
                       Já registrado:{" "}
-                      <span
-                        className={
-                          "rounded-full px-2 py-0.5 font-medium " + classeStatus(statusRegistrado)
-                        }
-                      >
+                      <span className={"rounded-full px-2 py-0.5 font-medium " + classeStatus(statusRegistrado)}>
                         {statusRegistrado}
                       </span>
                     </p>
                   ) : (
                     // Botões de seleção (radio escondido + rótulo estilizado)
-                    <div
-                      role="radiogroup"
-                      aria-label={`Presença de ${membro.nome}`}
-                      className="mt-2 flex flex-wrap gap-1.5"
-                    >
-                      {STATUS_PRESENCA.map((opcao) => (
+                    <div role="radiogroup" aria-label={`Presença de ${membro.nome}`} className="mt-2 flex flex-wrap gap-1.5">
+                      {OPCOES_STATUS.map((opcao) => (
                         <label key={opcao.valor} className="cursor-pointer">
                           <input
                             type="radio"
@@ -341,7 +266,7 @@ export default function FormularioPresenca({
                             className={
                               "block rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 " +
                               "text-xs font-medium text-slate-600 transition " +
-                              "peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-300 " +
+                              "peer-focus-visible:ring-2 peer-focus-visible:ring-brand-300 " +
                               "peer-disabled:opacity-60 " +
                               opcao.classe
                             }
@@ -364,23 +289,10 @@ export default function FormularioPresenca({
           {erroForm}
         </p>
       )}
-      {sucesso && (
-        <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-          Presenças registradas com sucesso!
-        </p>
-      )}
 
-      <button
-        type="submit"
-        disabled={salvando || !eventoId}
-        className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {salvando
-          ? "Salvando..."
-          : qtdMarcados > 0
-            ? `Salvar presenças (${qtdMarcados})`
-            : "Salvar presenças"}
-      </button>
+      <Button type="submit" disabled={salvando || !portaria} className="w-full">
+        {salvando ? "Salvando..." : qtdMarcados > 0 ? `Salvar presenças (${qtdMarcados})` : "Salvar presenças"}
+      </Button>
     </form>
   );
 }

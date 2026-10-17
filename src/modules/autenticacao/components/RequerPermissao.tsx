@@ -13,13 +13,15 @@ import { useSessao } from "../SessaoProvider";
 
 interface RequerPermissaoProps {
   permissao: CodigoPermissao;
+  /** Alternativa: basta ter QUALQUER uma destas permissões. */
+  ou?: CodigoPermissao[];
   children: ReactNode;
 }
 
-export default function RequerPermissao({ permissao, children }: RequerPermissaoProps) {
+export default function RequerPermissao({ permissao, ou, children }: RequerPermissaoProps) {
   const { pode } = useSessao();
 
-  if (!pode(permissao)) {
+  if (!pode(permissao) && !(ou ?? []).some((alternativa) => pode(alternativa))) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-16">
         <EmptyState

@@ -132,4 +132,25 @@ describe("usuário só com acesso à Portaria", () => {
   it("é levado direto para a Portaria ao entrar", () => {
     expect(primeiraRotaPermitida(pode)).toBe("/portaria");
   });
+
+  it("não vê a Gestão de portarias (criar/aprovar é outra responsabilidade)", () => {
+    const itens = filtrarMenu(GRUPOS_MENU, pode).flatMap((grupo) => grupo.itens.map((item) => item.href));
+    expect(itens).not.toContain("/portarias");
+  });
+});
+
+describe("Gestão de portarias no menu", () => {
+  const podeCom = (permissoes: string[]) => (permissao: string) => permissoes.includes(permissao);
+  const hrefs = (permissoes: string[]) =>
+    filtrarMenu(GRUPOS_MENU, podeCom(permissoes)).flatMap((grupo) => grupo.itens.map((item) => item.href));
+
+  it("aparece para quem só cria, só aprova ou só visualiza portarias", () => {
+    for (const permissao of ["portarias.criar", "portarias.aprovar", "portarias.visualizar"]) {
+      expect(hrefs([permissao]), permissao).toContain("/portarias");
+    }
+  });
+
+  it("quem só cria portarias não vê a Portaria (registro de entrada)", () => {
+    expect(hrefs(["portarias.criar"])).toEqual(["/portarias"]);
+  });
 });

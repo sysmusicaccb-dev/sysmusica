@@ -103,11 +103,12 @@ export interface Evento {
   data_evento: string; // timestamptz (ISO 8601)
   local: string;
   finalidade_id: string | null; // FK -> finalidades_evento.id (nula em eventos antigos)
+  cidade?: string | null; // município do evento (a portaria herda; define quem atua nela)
 }
 
 /** Payload para INSERT: o id é gerado pelo banco; a finalidade é opcional (eventos antigos não têm). */
 export type EventoInsert = Pick<Evento, "tipo" | "data_evento" | "local"> &
-  Partial<Pick<Evento, "id" | "finalidade_id">>;
+  Partial<Pick<Evento, "id" | "finalidade_id" | "cidade">>;
 
 // ---------------------------------------------------------------------
 // Tabela: finalidades_evento (catálogo reaproveitável de finalidades)
@@ -131,17 +132,21 @@ export interface Presenca {
   status: string; // ex: "Presente", "Ausente", "Justificado"
   hora_entrada: string; // timestamptz (padrão no banco: now())
   hora_saida: string | null; // timestamptz; null = entrada ainda em aberto
+  portaria_id?: string | null; // FK -> portarias.id (nula em presenças antigas)
+  registrado_por?: string | null; // quem registrou (definido pelo banco)
+  origem?: string; // "MANUAL" ou "QR" (definida pelo banco)
 }
 
 /** Payload para INSERT: hora_entrada, hora_saida e id são opcionais (valores padrão do banco). */
 export type PresencaInsert = Pick<Presenca, "membro_id" | "evento_id" | "status"> &
-  Partial<Pick<Presenca, "id" | "hora_entrada" | "hora_saida">>;
+  Partial<Pick<Presenca, "id" | "hora_entrada" | "hora_saida" | "portaria_id">>;
 
 // ---------------------------------------------------------------------
-// RPC: registrar_presenca_qr(p_membro_id, p_evento_id)
-// Uso: supabase.rpc("registrar_presenca_qr", args) -> devolve a Presenca criada
+// RPC: registrar_entrada(p_portaria_id, p_membro_id, p_origem) — só em portaria APROVADA
+// Uso: supabase.rpc("registrar_entrada", args) -> devolve a Presenca criada
 // ---------------------------------------------------------------------
-export interface RegistrarPresencaQrArgs {
+export interface RegistrarEntradaArgs {
+  p_portaria_id: string;
   p_membro_id: string;
-  p_evento_id: string;
+  p_origem?: "MANUAL" | "QR";
 }

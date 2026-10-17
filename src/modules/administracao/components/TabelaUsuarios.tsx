@@ -6,7 +6,7 @@
  * Ninguém desativa a própria conta por aqui (o banco também recusa).
  */
 import { useState } from "react";
-import { KeyRound, Pencil, Power, Search } from "lucide-react";
+import { KeyRound, MapPin, Pencil, Power, Search } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import BotaoIcone from "@/components/ui/BotaoIcone";
 import { formatarDataHora } from "@/lib/datas";
@@ -21,6 +21,8 @@ interface TabelaUsuariosProps {
   onEditar: (usuario: UsuarioSistema) => void;
   onRedefinirSenha: (usuario: UsuarioSistema) => void;
   onAlterarStatus: (usuario: UsuarioSistema) => void;
+  cidadesPorUsuario: Record<string, string[]>; // abrangência: cidades em que cada usuário atua
+  onAbrangencia: (usuario: UsuarioSistema) => void;
 }
 
 // Valor especial do filtro de grupo: usuários que ainda não têm grupo
@@ -37,6 +39,8 @@ export default function TabelaUsuarios({
   onEditar,
   onRedefinirSenha,
   onAlterarStatus,
+  cidadesPorUsuario,
+  onAbrangencia,
 }: TabelaUsuariosProps) {
   const [busca, setBusca] = useState("");
   const [grupoFiltro, setGrupoFiltro] = useState(""); // "" = todos
@@ -112,6 +116,9 @@ export default function TabelaUsuarios({
               <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>
                 Último acesso
               </th>
+              <th scope="col" className={classeCabecalho + " hidden lg:table-cell"}>
+                Abrangência
+              </th>
               {podeEditar && (
                 <th scope="col" className={classeCabecalho + " text-right"}>
                   Ações
@@ -122,7 +129,7 @@ export default function TabelaUsuarios({
           <tbody className="divide-y divide-slate-100">
             {filtrados.length === 0 ? (
               <tr>
-                <td colSpan={podeEditar ? 5 : 4} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td colSpan={podeEditar ? 6 : 5} className="px-4 py-10 text-center text-sm text-slate-500">
                   Nenhum usuário encontrado com os filtros atuais.
                 </td>
               </tr>
@@ -161,6 +168,9 @@ export default function TabelaUsuarios({
                     <td className="hidden px-4 py-3 text-slate-600 md:table-cell">
                       {usuario.ultimo_acesso ? formatarDataHora(usuario.ultimo_acesso) : "Nunca acessou"}
                     </td>
+                    <td className="hidden max-w-[16rem] px-4 py-3 text-slate-600 lg:table-cell">
+                      {(cidadesPorUsuario[usuario.id] ?? []).join(", ") || "—"}
+                    </td>
                     {podeEditar && (
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
@@ -173,6 +183,11 @@ export default function TabelaUsuarios({
                             icone={KeyRound}
                             rotulo={`Redefinir a senha de ${usuario.nome}`}
                             onClick={() => onRedefinirSenha(usuario)}
+                          />
+                          <BotaoIcone
+                            icone={MapPin}
+                            rotulo={`Definir a abrangência de ${usuario.nome}`}
+                            onClick={() => onAbrangencia(usuario)}
                           />
                           <BotaoIcone
                             icone={Power}

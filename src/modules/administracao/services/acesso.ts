@@ -134,6 +134,33 @@ export async function criarUsuario(dados: DadosNovoUsuario): Promise<void> {
   await chamarRotaAdmin("/api/admin/usuarios", dados);
 }
 
+// ---------- Abrangência (cidades em que o usuário atua) ----------
+
+/** Cidades de cada usuário: { idDoUsuario: ["Cidade A", ...] } (exige usuarios.visualizar). */
+export async function listarAbrangencias(): Promise<Record<string, string[]>> {
+  const { data, error } = await supabase.rpc("listar_abrangencias");
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar a abrangência dos usuários."));
+
+  const mapa: Record<string, string[]> = {};
+  for (const linha of (data ?? []) as { usuario_id: string; cidades: string[] }[]) {
+    mapa[linha.usuario_id] = linha.cidades;
+  }
+  return mapa;
+}
+
+/** Define as cidades de um usuário, substituindo a lista anterior (exige usuarios.editar). */
+export async function definirAbrangencia(usuarioId: string, cidades: string[]): Promise<void> {
+  const { error } = await supabase.rpc("definir_abrangencia", { p_usuario_id: usuarioId, p_cidades: cidades });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível salvar a abrangência."));
+}
+
+/** Cidades já conhecidas (eventos, membros e abrangências) para sugerir na tela (exige usuarios.editar). */
+export async function listarCidadesConhecidas(): Promise<string[]> {
+  const { data, error } = await supabase.rpc("listar_cidades_conhecidas");
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar as cidades."));
+  return ((data ?? []) as { cidade: string }[]).map((linha) => linha.cidade);
+}
+
 export async function redefinirSenha(usuarioId: string, senha: string): Promise<void> {
   await chamarRotaAdmin(`/api/admin/usuarios/${usuarioId}/senha`, { senha });
 }

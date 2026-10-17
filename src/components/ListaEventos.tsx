@@ -190,7 +190,7 @@ export default function ListaEventos({
                           <p className="text-slate-700">{formatarDataHora(evento.data_evento)}</p>
                           {/* Telas pequenas: finalidade e local aparecem aqui */}
                           <p className="line-clamp-2 text-xs text-slate-500 md:hidden">
-                            {[finalidade, evento.local].filter(Boolean).join(" · ")}
+                            {[finalidade, evento.local, evento.cidade].filter(Boolean).join(" · ")}
                           </p>
                         </div>
                       </div>
@@ -203,6 +203,9 @@ export default function ListaEventos({
                     </td>
                     <td className="hidden px-4 py-3 font-medium text-slate-900 md:table-cell">
                       {evento.local}
+                        {evento.cidade && (
+                          <span className="block text-xs font-normal text-slate-500">{evento.cidade}</span>
+                        )}
                     </td>
                     {mostrarAcoes && (
                       <td className="px-4 py-3">
