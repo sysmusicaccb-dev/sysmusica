@@ -9,6 +9,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import Notificacao from "@/components/ui/Notificacao";
@@ -46,6 +47,10 @@ function guardarPortaria(id: string | null) {
 }
 
 export default function AtendimentoPortaria() {
+  // O link para "Registros e correções" só aparece para quem pode editar ou excluir registros
+  const { pode } = useSessao();
+  const podeCorrigir = pode("portaria.editar") || pode("portaria.excluir");
+
   const [portarias, setPortarias] = useState<PortariaDetalhada[]>([]);
   const [portariaId, setPortariaId] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
@@ -234,9 +239,9 @@ export default function AtendimentoPortaria() {
         </>
       )}
 
-      <div className="text-sm">
+      <div className={podeCorrigir ? "text-sm" : "hidden"}>
         <Link href="/portaria/registros" className="font-semibold text-brand-700 hover:underline">
-          Registros, histórico e lançamento em lote
+          Registros e correções
         </Link>
       </div>
 

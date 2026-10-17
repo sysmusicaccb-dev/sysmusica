@@ -112,8 +112,8 @@ export default function PortariaPage() {
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <PageHeader
-          titulo="Portaria"
-          descricao={`Controle de entrada dos membros nos eventos.${
+          titulo="Registros da portaria"
+          descricao={`Histórico e correção dos registros de entrada (editar, excluir e lançamento em lote).${
             !carregando && !erro ? ` ${presencas.length} registro(s).` : ""
           }`}
           acoes={
