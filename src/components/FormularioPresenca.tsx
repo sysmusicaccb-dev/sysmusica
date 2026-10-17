@@ -31,7 +31,7 @@ interface FormularioPresencaProps {
   carregando: boolean;
   erro: string | null;
   /** Chamado após salvar com sucesso, para a página recarregar os dados. */
-  onPresencaAdicionada: () => void | Promise<void>;
+  onPresencaAdicionada: (mensagem: string) => void | Promise<void>;
 }
 
 // Opções de status e a cor de cada botão quando selecionado.
@@ -172,7 +172,7 @@ export default function FormularioPresenca({
       // Sucesso: limpa as marcações (o evento continua selecionado) e recarrega os dados
       setMarcacoes({});
       setSucesso(true);
-      await onPresencaAdicionada();
+      await onPresencaAdicionada("Presenças registradas com sucesso!");
     } catch (e) {
       setErroForm(
         `Não foi possível salvar as presenças: ${
@@ -242,13 +242,8 @@ export default function FormularioPresenca({
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+      className="space-y-4"
     >
-      <div>
-        <h2 className="text-lg font-semibold text-slate-900">Registrar presenças</h2>
-        <p className="text-sm text-slate-500">Escolha o evento e marque cada membro.</p>
-      </div>
-
       <div className="space-y-1.5">
         <label htmlFor="evento" className="text-sm font-medium text-slate-700">
           Evento

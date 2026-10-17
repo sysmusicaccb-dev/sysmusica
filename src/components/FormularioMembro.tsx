@@ -34,7 +34,7 @@ interface FormularioMembroProps {
   carregando: boolean;
   erro: string | null;
   /** Chamado após salvar com sucesso, para a página recarregar os dados (inclui instrumentos novos). */
-  onMembroAdicionado: () => void | Promise<void>;
+  onMembroAdicionado: (mensagem: string) => void | Promise<void>;
 }
 
 // Classe compartilhada pelos campos (mesma identidade visual dos demais módulos).
@@ -213,7 +213,7 @@ export default function FormularioMembro({
       setCargoId("");
       setDataNascimento("");
       setInstrumentoTexto("");
-      setMensagemSucesso(
+      const textoSucesso = (
         instrumento?.criado
           ? `Membro cadastrado! Instrumento "${instrumento.nome}" criado${
               instrumento.familiaNome
@@ -222,7 +222,7 @@ export default function FormularioMembro({
             }.`
           : "Membro cadastrado com sucesso!"
       );
-      await onMembroAdicionado();
+      await onMembroAdicionado(textoSucesso);
     } catch (e) {
       setErroForm(
         `Não foi possível salvar o membro: ${
@@ -284,13 +284,8 @@ export default function FormularioMembro({
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+      className="space-y-4"
     >
-      <div>
-        <h2 className="text-lg font-semibold text-slate-900">Novo membro</h2>
-        <p className="text-sm text-slate-500">Preencha os dados para cadastrar.</p>
-      </div>
-
       <div className="space-y-1.5">
         <label htmlFor="nome" className="text-sm font-medium text-slate-700">
           Nome

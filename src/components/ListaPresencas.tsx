@@ -92,7 +92,7 @@ export default function ListaPresencas({
       <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
         <p className="font-medium text-slate-700">Nenhuma presença registrada ainda.</p>
         <p className="mt-1 text-sm text-slate-500">
-          Escolha um evento no formulário para registrar a primeira.
+          Clique em “Registrar presenças” para lançar a primeira.
         </p>
       </div>
     );
@@ -100,7 +100,7 @@ export default function ListaPresencas({
 
   // 4) Histórico agrupado por evento
   return (
-    <ul className="grid gap-4">
+    <ul className="grid gap-4 xl:grid-cols-2">
       {eventosComPresenca.map((evento) => {
         // Monta as linhas (presença + dados do membro) em ordem alfabética
         const linhas = (presencasPorEvento.get(evento.id) ?? [])

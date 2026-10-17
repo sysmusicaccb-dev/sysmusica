@@ -1,14 +1,17 @@
 "use client";
 
 /**
- * SysMúsica — Página /eventos (listagem + cadastro).
- *
- * Client Component: o cliente Supabase usa a chave anon pública e roda no
- * navegador, então a busca e os estados (loading/erro) ficam aqui.
+ * SysMúsica — Página /eventos: listagem em tabela (largura total), do evento mais recente
+ * para o mais antigo. O botão "Novo evento" abre o formulário em um painel lateral.
  */
 import { useCallback, useEffect, useState } from "react";
+import { Plus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Evento } from "@/types/database";
+import Button from "@/components/ui/Button";
+import Drawer from "@/components/ui/Drawer";
+import Notificacao from "@/components/ui/Notificacao";
+import PageHeader from "@/components/ui/PageHeader";
 import FormularioEvento from "@/components/FormularioEvento";
 import ListaEventos from "@/components/ListaEventos";
 
@@ -16,6 +19,8 @@ export default function EventosPage() {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
+  const [painelAberto, setPainelAberto] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
 
   // Busca todos os eventos, do mais recente para o mais antigo
   const buscarEventos = useCallback(async () => {
@@ -30,7 +35,9 @@ export default function EventosPage() {
       setEventos((data ?? []) as Evento[]);
       setErro(null);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro desconhecido ao buscar eventos.");
+      // O detalhe técnico vai só para o console; a tela mostra uma mensagem simples
+      console.error("Falha ao carregar eventos:", e);
+      setErro("Não foi possível carregar os eventos. Verifique a conexão e tente novamente.");
     } finally {
       setCarregando(false);
     }
@@ -50,33 +57,46 @@ export default function EventosPage() {
     void buscarEventos();
   }
 
+  // Depois de salvar: recarrega a lista, fecha o painel e mostra o aviso de sucesso
+  async function aoCadastrar(mensagem: string) {
+    await buscarEventos();
+    setPainelAberto(false);
+    setAviso(mensagem);
+  }
+
   return (
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Eventos</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Cadastre e acompanhe os ensaios e cultos do SysMúsica.
-            {!carregando && !erro && ` ${eventos.length} cadastrado(s).`}
-          </p>
-        </header>
+        <PageHeader
+          titulo="Eventos"
+          descricao={`Cadastre e acompanhe os ensaios e cultos do SysMúsica.${
+            !carregando && !erro ? ` ${eventos.length} cadastrado(s).` : ""
+          }`}
+          acoes={
+            <Button icone={Plus} onClick={() => setPainelAberto(true)} disabled={carregando || !!erro}>
+              Novo evento
+            </Button>
+          }
+        />
 
-        {/* Mobile: empilhado | Desktop: formulário (1/3) + lista (2/3) */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          <section className="lg:col-span-1">
-            <FormularioEvento onEventoAdicionado={buscarEventos} />
-          </section>
-
-          <section className="lg:col-span-2">
-            <ListaEventos
-              eventos={eventos}
-              carregando={carregando}
-              erro={erro}
-              onTentarNovamente={tentarNovamente}
-            />
-          </section>
-        </div>
+        <ListaEventos
+          eventos={eventos}
+          carregando={carregando}
+          erro={erro}
+          onTentarNovamente={tentarNovamente}
+        />
       </div>
+
+      <Drawer
+        aberto={painelAberto}
+        onFechar={() => setPainelAberto(false)}
+        titulo="Novo evento"
+        descricao="Preencha os dados para cadastrar."
+      >
+        <FormularioEvento onEventoAdicionado={aoCadastrar} />
+      </Drawer>
+
+      <Notificacao mensagem={aviso} onFechar={() => setAviso(null)} />
     </main>
   );
 }

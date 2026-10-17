@@ -12,7 +12,7 @@ import type { EventoInsert } from "@/types/database";
 
 interface FormularioEventoProps {
   /** Chamado após salvar com sucesso, para a página recarregar a lista. */
-  onEventoAdicionado: () => void | Promise<void>;
+  onEventoAdicionado: (mensagem: string) => void | Promise<void>;
 }
 
 // Classe compartilhada pelos três campos (mesma identidade visual do módulo de músicos).
@@ -68,7 +68,7 @@ export default function FormularioEvento({ onEventoAdicionado }: FormularioEvent
       setDataEvento("");
       setLocal("");
       setSucesso(true);
-      await onEventoAdicionado();
+      await onEventoAdicionado("Evento cadastrado com sucesso!");
     } catch (e) {
       setErro(
         `Não foi possível salvar o evento: ${
@@ -83,13 +83,8 @@ export default function FormularioEvento({ onEventoAdicionado }: FormularioEvent
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+      className="space-y-4"
     >
-      <div>
-        <h2 className="text-lg font-semibold text-slate-900">Novo evento</h2>
-        <p className="text-sm text-slate-500">Preencha os dados para cadastrar.</p>
-      </div>
-
       <div className="space-y-1.5">
         <label htmlFor="tipo" className="text-sm font-medium text-slate-700">
           Tipo

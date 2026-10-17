@@ -1,9 +1,20 @@
+"use client";
+
 /**
- * SysMúsica — Lista de eventos (componente de apresentação).
+ * SysMúsica — Lista de eventos em tabela (largura total), com busca por local ou tipo.
  *
  * Não acessa o banco: recebe os dados e os estados (loading/erro) da página.
- * Trata quatro cenários: carregando, erro, lista vazia e lista com dados.
+ * Os eventos chegam ordenados do mais recente para o mais antigo.
+ * Trata quatro cenários: carregando, erro, nenhum evento e tabela com dados.
  */
+import { useState } from "react";
+import { Search } from "lucide-react";
+import Badge from "@/components/ui/Badge";
+import EmptyState from "@/components/ui/EmptyState";
+import ErrorState from "@/components/ui/ErrorState";
+import Skeleton from "@/components/ui/Skeleton";
+import { formatarDataHora, partesDaData } from "@/lib/datas";
+import { normalizarTexto } from "@/lib/texto";
 import type { Evento } from "@/types/database";
 
 interface ListaEventosProps {
@@ -13,13 +24,16 @@ interface ListaEventosProps {
   onTentarNovamente: () => void;
 }
 
-// Cor do selo conforme o tipo do evento (tipos desconhecidos usam o cinza padrão)
-function classeTipo(tipo: string): string {
+// Cor do selo conforme o tipo do evento (tipos desconhecidos usam o neutro)
+function varianteTipo(tipo: string): "marca" | "alerta" | "neutro" {
   const normalizado = tipo.trim().toLowerCase();
-  if (normalizado === "ensaio") return "bg-indigo-100 text-indigo-700";
-  if (normalizado === "culto") return "bg-amber-100 text-amber-700";
-  return "bg-slate-100 text-slate-600";
+  if (normalizado === "ensaio") return "marca";
+  if (normalizado === "culto") return "alerta";
+  return "neutro";
 }
+
+const classeCabecalho =
+  "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500";
 
 export default function ListaEventos({
   eventos,
@@ -27,14 +41,25 @@ export default function ListaEventos({
   erro,
   onTentarNovamente,
 }: ListaEventosProps) {
-  // 1) Carregando: placeholders animados (skeleton)
+  const [busca, setBusca] = useState("");
+
+  // 1) Carregando: skeleton (barra de ferramentas + linhas)
   if (carregando) {
     return (
-      <div role="status" aria-live="polite" className="grid gap-3">
+      <div
+        role="status"
+        aria-live="polite"
+        className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+      >
         <span className="sr-only">Carregando eventos...</span>
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-200" />
-        ))}
+        <div className="border-b border-slate-200 p-4">
+          <Skeleton className="h-10 max-w-md" />
+        </div>
+        <div className="space-y-3 p-4">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-10" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -42,74 +67,111 @@ export default function ListaEventos({
   // 2) Erro na comunicação com o banco
   if (erro) {
     return (
-      <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-6">
-        <p className="font-semibold text-red-800">Não foi possível carregar os eventos.</p>
-        <p className="mt-1 text-sm text-red-700">{erro}</p>
-        <button
-          type="button"
-          onClick={onTentarNovamente}
-          className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
-        >
-          Tentar novamente
-        </button>
-      </div>
+      <ErrorState
+        titulo="Não foi possível carregar os eventos."
+        mensagem={erro}
+        onTentarNovamente={onTentarNovamente}
+      />
     );
   }
 
   // 3) Nenhum evento cadastrado
   if (eventos.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-        <p className="font-medium text-slate-700">Nenhum evento cadastrado ainda.</p>
-        <p className="mt-1 text-sm text-slate-500">Use o formulário para cadastrar o primeiro.</p>
-      </div>
+      <EmptyState
+        titulo="Nenhum evento cadastrado ainda."
+        descricao="Clique em “Novo evento” para cadastrar o primeiro."
+      />
     );
   }
 
-  // 4) Lista de eventos (já chega ordenada do mais recente para o mais antigo)
+  // Busca por local ou tipo (sem acento e sem diferenciar maiúsculas)
+  const termo = normalizarTexto(busca);
+  const filtrados = eventos.filter(
+    (evento) =>
+      termo === "" ||
+      normalizarTexto(evento.local).includes(termo) ||
+      normalizarTexto(evento.tipo).includes(termo)
+  );
+
+  // 4) Tabela
   return (
-    <ul className="grid gap-3">
-      {eventos.map((evento) => {
-        // O banco devolve ISO 8601 (UTC); o navegador exibe no fuso local do usuário
-        const data = new Date(evento.data_evento);
-        const dia = data.toLocaleDateString("pt-BR", { day: "2-digit" });
-        const mes = data.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
-        const diaSemanaData = data.toLocaleDateString("pt-BR", {
-          weekday: "long",
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        });
-        const hora = data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      {/* Barra de ferramentas */}
+      <div className="border-b border-slate-200 p-4">
+        <div className="relative max-w-md">
+          <label htmlFor="busca-evento" className="sr-only">
+            Pesquisar por local ou tipo
+          </label>
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            aria-hidden="true"
+          />
+          <input
+            id="busca-evento"
+            type="search"
+            autoComplete="off"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Pesquisar por local ou tipo..."
+            className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+          />
+        </div>
+      </div>
 
-        return (
-          <li
-            key={evento.id}
-            className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-          >
-            {/* Bloco de data: dia e mês abreviado */}
-            <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
-              <span className="text-lg font-bold leading-none">{dia}</span>
-              <span className="mt-0.5 text-xs font-medium uppercase">{mes}</span>
-            </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-slate-50">
+            <tr>
+              <th scope="col" className={classeCabecalho}>
+                Data e hora
+              </th>
+              <th scope="col" className={classeCabecalho}>
+                Tipo
+              </th>
+              <th scope="col" className={classeCabecalho}>
+                Local
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filtrados.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="px-4 py-10 text-center text-sm text-slate-500">
+                  Nenhum evento encontrado com a pesquisa atual.
+                </td>
+              </tr>
+            ) : (
+              filtrados.map((evento) => {
+                const { dia, mes } = partesDaData(evento.data_evento);
 
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <p className="truncate font-semibold text-slate-900">{evento.local}</p>
-                <span
-                  className={
-                    "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium " + classeTipo(evento.tipo)
-                  }
-                >
-                  {evento.tipo}
-                </span>
-              </div>
-              <p className="text-sm capitalize text-slate-600">{diaSemanaData}</p>
-              <p className="text-xs text-slate-500">às {hora}</p>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+                return (
+                  <tr key={evento.id} className="transition hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        {/* Bloco de data: dia e mês abreviado */}
+                        <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                          <span className="text-sm font-bold leading-none">{dia}</span>
+                          <span className="mt-0.5 text-[10px] font-medium uppercase">{mes}</span>
+                        </div>
+                        <span className="text-slate-700">{formatarDataHora(evento.data_evento)}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variante={varianteTipo(evento.tipo)}>{evento.tipo}</Badge>
+                    </td>
+                    <td className="px-4 py-3 font-medium text-slate-900">{evento.local}</td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+        Exibindo {filtrados.length} de {eventos.length} evento(s)
+      </div>
+    </div>
   );
 }

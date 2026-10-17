@@ -3,9 +3,10 @@
 /**
  * SysMúsica — Dashboard (página inicial "/").
  *
- * Mostra indicadores REAIS (contagens do banco), os próximos eventos e atalhos para
- * as telas de cadastro. Os dados vêm de src/modules/dashboard/services/indicadores.ts.
- * Trata carregamento (skeleton), erro (com "Tentar novamente") e lista vazia.
+ * Indicadores REAIS (contagens do banco), gráficos dos cadastros (membros por cargo, família,
+ * instrumento e congregação; presenças), próximos eventos e atalhos.
+ * Dados: src/modules/dashboard/services (indicadores.ts e graficos.ts).
+ * Trata carregamento (skeleton), erro (com "Tentar novamente") e listas vazias.
  */
 import { useCallback, useEffect, useState } from "react";
 import { CalendarDays, ClipboardCheck, Guitar, Users } from "lucide-react";
@@ -14,9 +15,12 @@ import {
   buscarProximosEventos,
   type Indicadores,
 } from "@/modules/dashboard/services/indicadores";
+import { buscarDadosGraficos, type DadosGraficos } from "@/modules/dashboard/services/graficos";
 import AtalhosRapidos from "@/modules/dashboard/components/AtalhosRapidos";
+import PainelGraficos from "@/modules/dashboard/components/PainelGraficos";
 import ProximosEventos from "@/modules/dashboard/components/ProximosEventos";
 import ErrorState from "@/components/ui/ErrorState";
+import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
 import StatCard from "@/components/ui/StatCard";
 import type { Evento } from "@/types/database";
@@ -24,15 +28,21 @@ import type { Evento } from "@/types/database";
 export default function DashboardPage() {
   const [indicadores, setIndicadores] = useState<Indicadores | null>(null);
   const [proximosEventos, setProximosEventos] = useState<Evento[]>([]);
+  const [graficos, setGraficos] = useState<DadosGraficos | null>(null);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
 
-  // Busca indicadores e próximos eventos em paralelo
+  // Busca indicadores, próximos eventos e dados dos gráficos em paralelo
   const carregar = useCallback(async () => {
     try {
-      const [totais, proximos] = await Promise.all([buscarIndicadores(), buscarProximosEventos(5)]);
+      const [totais, proximos, dadosGraficos] = await Promise.all([
+        buscarIndicadores(),
+        buscarProximosEventos(5),
+        buscarDadosGraficos(),
+      ]);
       setIndicadores(totais);
       setProximosEventos(proximos);
+      setGraficos(dadosGraficos);
       setErro(null);
     } catch (e) {
       // O detalhe técnico vai só para o console; a tela mostra uma mensagem simples
@@ -60,33 +70,34 @@ export default function DashboardPage() {
   return (
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-600">Visão geral do SysMúsica.</p>
-        </header>
+        <PageHeader titulo="Dashboard" descricao="Visão geral do SysMúsica." />
 
         {carregando ? (
           // Carregando: skeleton com o mesmo formato da tela final
-          <div role="status" aria-live="polite" className="space-y-8">
-            <span className="sr-only">Carregando indicadores...</span>
+          <div role="status" aria-live="polite" className="space-y-6">
+            <span className="sr-only">Carregando o dashboard...</span>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {[0, 1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-28 rounded-2xl" />
               ))}
             </div>
             <div className="grid gap-6 lg:grid-cols-3">
-              <Skeleton className="h-64 rounded-2xl lg:col-span-2" />
+              <Skeleton className="h-72 rounded-2xl lg:col-span-2" />
+              <Skeleton className="h-72 rounded-2xl" />
+            </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Skeleton className="h-64 rounded-2xl" />
               <Skeleton className="h-64 rounded-2xl" />
             </div>
           </div>
-        ) : erro || !indicadores ? (
+        ) : erro || !indicadores || !graficos ? (
           <ErrorState
             titulo="Não foi possível carregar o dashboard."
             mensagem={erro ?? "Tente novamente em instantes."}
             onTentarNovamente={tentarNovamente}
           />
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* Indicadores (cada cartão leva à tela correspondente) */}
             <section aria-label="Indicadores" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <StatCard
@@ -118,6 +129,8 @@ export default function DashboardPage() {
                 href="/instrumentos"
               />
             </section>
+
+            <PainelGraficos dados={graficos} />
 
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2">

@@ -1,13 +1,12 @@
 "use client";
 
 /**
- * SysMúsica — Página /presencas (registro + histórico).
- *
- * Client Component: o cliente Supabase usa a chave anon pública e roda no
- * navegador. A página busca eventos, membros e presenças de uma só vez e
- * distribui os dados para o formulário e para a lista.
+ * SysMúsica — Página /presencas: histórico de presenças agrupado por evento (largura total).
+ * O botão "Registrar presenças" abre o formulário de lançamento em um painel lateral.
+ * Busca eventos, membros, presenças e instrumentos de uma só vez e distribui os dados.
  */
 import { useCallback, useEffect, useState } from "react";
+import { Plus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
   COLUNAS_MEMBRO_PUBLICO,
@@ -16,6 +15,10 @@ import {
   type MembroPublico,
   type Presenca,
 } from "@/types/database";
+import Button from "@/components/ui/Button";
+import Drawer from "@/components/ui/Drawer";
+import Notificacao from "@/components/ui/Notificacao";
+import PageHeader from "@/components/ui/PageHeader";
 import FormularioPresenca from "@/components/FormularioPresenca";
 import ListaPresencas from "@/components/ListaPresencas";
 
@@ -26,8 +29,10 @@ export default function PresencasPage() {
   const [presencas, setPresencas] = useState<Presenca[]>([]);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
+  const [painelAberto, setPainelAberto] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
 
-  // Busca as três tabelas em paralelo
+  // Busca as quatro tabelas em paralelo
   const buscarDados = useCallback(async () => {
     try {
       const [resEventos, resMembros, resPresencas, resInstrumentos] = await Promise.all([
@@ -42,7 +47,8 @@ export default function PresencasPage() {
       ]);
 
       // Se qualquer uma das consultas falhar, trata como erro único
-      const erroBanco = resEventos.error ?? resMembros.error ?? resPresencas.error ?? resInstrumentos.error;
+      const erroBanco =
+        resEventos.error ?? resMembros.error ?? resPresencas.error ?? resInstrumentos.error;
       if (erroBanco) throw new Error(erroBanco.message);
 
       setEventos((resEventos.data ?? []) as Evento[]);
@@ -52,7 +58,9 @@ export default function PresencasPage() {
       setInstrumentos((resInstrumentos.data ?? []) as Instrumento[]);
       setErro(null);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro desconhecido ao buscar os dados.");
+      // O detalhe técnico vai só para o console; a tela mostra uma mensagem simples
+      console.error("Falha ao carregar presenças:", e);
+      setErro("Não foi possível carregar os dados. Verifique a conexão e tente novamente.");
     } finally {
       setCarregando(false);
     }
@@ -72,44 +80,57 @@ export default function PresencasPage() {
     void buscarDados();
   }
 
+  // Depois de salvar: recarrega os dados, fecha o painel e mostra o aviso de sucesso
+  async function aoRegistrar(mensagem: string) {
+    await buscarDados();
+    setPainelAberto(false);
+    setAviso(mensagem);
+  }
+
   return (
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Presenças</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Registre e acompanhe a presença dos membros nos eventos.
-            {!carregando && !erro && ` ${presencas.length} registro(s).`}
-          </p>
-        </header>
+        <PageHeader
+          titulo="Presenças"
+          descricao={`Registre e acompanhe a presença dos membros nos eventos.${
+            !carregando && !erro ? ` ${presencas.length} registro(s).` : ""
+          }`}
+          acoes={
+            <Button icone={Plus} onClick={() => setPainelAberto(true)} disabled={carregando || !!erro}>
+              Registrar presenças
+            </Button>
+          }
+        />
 
-        {/* Mobile: empilhado | Desktop: formulário (1/3) + histórico (2/3) */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          <section className="lg:col-span-1">
-            <FormularioPresenca
-              eventos={eventos}
-              membros={membros}
-              instrumentos={instrumentos}
-              presencas={presencas}
-              carregando={carregando}
-              erro={erro}
-              onPresencaAdicionada={buscarDados}
-            />
-          </section>
-
-          <section className="lg:col-span-2">
-            <ListaPresencas
-              presencas={presencas}
-              membros={membros}
-              instrumentos={instrumentos}
-              eventos={eventos}
-              carregando={carregando}
-              erro={erro}
-              onTentarNovamente={tentarNovamente}
-            />
-          </section>
-        </div>
+        <ListaPresencas
+          presencas={presencas}
+          membros={membros}
+          instrumentos={instrumentos}
+          eventos={eventos}
+          carregando={carregando}
+          erro={erro}
+          onTentarNovamente={tentarNovamente}
+        />
       </div>
+
+      <Drawer
+        aberto={painelAberto}
+        onFechar={() => setPainelAberto(false)}
+        titulo="Registrar presenças"
+        descricao="Escolha o evento e marque cada membro."
+      >
+        <FormularioPresenca
+          eventos={eventos}
+          membros={membros}
+          instrumentos={instrumentos}
+          presencas={presencas}
+          carregando={carregando}
+          erro={erro}
+          onPresencaAdicionada={aoRegistrar}
+        />
+      </Drawer>
+
+      <Notificacao mensagem={aviso} onFechar={() => setAviso(null)} />
     </main>
   );
 }

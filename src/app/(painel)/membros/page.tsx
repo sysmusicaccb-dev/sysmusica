@@ -1,13 +1,12 @@
 "use client";
 
 /**
- * SysMúsica — Página /membros (cadastro + tabela com filtros).
- *
- * Client Component: o cliente Supabase usa a chave anon pública e roda no
- * navegador. A página busca cargos, instrumentos e membros de uma vez e distribui
- * os dados para o formulário (selects/combobox) e para a tabela (nomes e filtros).
+ * SysMúsica — Página /membros: listagem em tabela (largura total) com busca e filtros.
+ * O botão "Novo membro" abre o formulário de cadastro em um painel lateral.
+ * Busca cargos, instrumentos, famílias e membros de uma vez e distribui os dados.
  */
 import { useCallback, useEffect, useState } from "react";
+import { Plus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
   COLUNAS_MEMBRO_PUBLICO,
@@ -16,6 +15,10 @@ import {
   type Instrumento,
   type MembroPublico,
 } from "@/types/database";
+import Button from "@/components/ui/Button";
+import Drawer from "@/components/ui/Drawer";
+import Notificacao from "@/components/ui/Notificacao";
+import PageHeader from "@/components/ui/PageHeader";
 import FormularioMembro from "@/components/FormularioMembro";
 import ListaMembros from "@/components/ListaMembros";
 
@@ -26,8 +29,10 @@ export default function MembrosPage() {
   const [membros, setMembros] = useState<MembroPublico[]>([]);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
+  const [painelAberto, setPainelAberto] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
 
-  // Busca as três tabelas em paralelo
+  // Busca as quatro tabelas em paralelo
   const buscarDados = useCallback(async () => {
     try {
       const [resCargos, resInstrumentos, resMembros, resFamilias] = await Promise.all([
@@ -42,7 +47,8 @@ export default function MembrosPage() {
       ]);
 
       // Se qualquer uma das consultas falhar, trata como erro único
-      const erroBanco = resCargos.error ?? resInstrumentos.error ?? resMembros.error ?? resFamilias.error;
+      const erroBanco =
+        resCargos.error ?? resInstrumentos.error ?? resMembros.error ?? resFamilias.error;
       if (erroBanco) throw new Error(erroBanco.message);
 
       setCargos((resCargos.data ?? []) as Cargo[]);
@@ -52,7 +58,9 @@ export default function MembrosPage() {
       setMembros((resMembros.data ?? []) as unknown as MembroPublico[]);
       setErro(null);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro desconhecido ao buscar os dados.");
+      // O detalhe técnico vai só para o console; a tela mostra uma mensagem simples
+      console.error("Falha ao carregar membros:", e);
+      setErro("Não foi possível carregar os dados. Verifique a conexão e tente novamente.");
     } finally {
       setCarregando(false);
     }
@@ -72,43 +80,56 @@ export default function MembrosPage() {
     void buscarDados();
   }
 
+  // Depois de salvar: recarrega a lista, fecha o painel e mostra o aviso de sucesso
+  async function aoCadastrar(mensagem: string) {
+    await buscarDados();
+    setPainelAberto(false);
+    setAviso(mensagem);
+  }
+
   return (
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Membros</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Cadastre e acompanhe os membros do SysMúsica.
-            {!carregando && !erro && ` ${membros.length} cadastrado(s).`}
-          </p>
-        </header>
+        <PageHeader
+          titulo="Membros"
+          descricao={`Cadastre e acompanhe os membros do SysMúsica.${
+            !carregando && !erro ? ` ${membros.length} cadastrado(s).` : ""
+          }`}
+          acoes={
+            <Button icone={Plus} onClick={() => setPainelAberto(true)} disabled={carregando || !!erro}>
+              Novo membro
+            </Button>
+          }
+        />
 
-        {/* Mobile: empilhado | Desktop: formulário (1/3) + tabela (2/3) */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          <section className="lg:col-span-1">
-            <FormularioMembro
-              cargos={cargos}
-              instrumentos={instrumentos}
-              familias={familias}
-              carregando={carregando}
-              erro={erro}
-              onMembroAdicionado={buscarDados}
-            />
-          </section>
-
-          <section className="min-w-0 lg:col-span-2">
-            <ListaMembros
-              membros={membros}
-              cargos={cargos}
-              instrumentos={instrumentos}
-              familias={familias}
-              carregando={carregando}
-              erro={erro}
-              onTentarNovamente={tentarNovamente}
-            />
-          </section>
-        </div>
+        <ListaMembros
+          membros={membros}
+          cargos={cargos}
+          instrumentos={instrumentos}
+          familias={familias}
+          carregando={carregando}
+          erro={erro}
+          onTentarNovamente={tentarNovamente}
+        />
       </div>
+
+      <Drawer
+        aberto={painelAberto}
+        onFechar={() => setPainelAberto(false)}
+        titulo="Novo membro"
+        descricao="Preencha os dados para cadastrar."
+      >
+        <FormularioMembro
+          cargos={cargos}
+          instrumentos={instrumentos}
+          familias={familias}
+          carregando={carregando}
+          erro={erro}
+          onMembroAdicionado={aoCadastrar}
+        />
+      </Drawer>
+
+      <Notificacao mensagem={aviso} onFechar={() => setAviso(null)} />
     </main>
   );
 }

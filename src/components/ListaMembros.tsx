@@ -97,7 +97,7 @@ export default function ListaMembros({
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
         <p className="font-medium text-slate-700">Nenhum membro cadastrado ainda.</p>
-        <p className="mt-1 text-sm text-slate-500">Use o formulário para cadastrar o primeiro.</p>
+        <p className="mt-1 text-sm text-slate-500">Clique em “Novo membro” para cadastrar o primeiro.</p>
       </div>
     );
   }
