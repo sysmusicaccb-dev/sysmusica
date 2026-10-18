@@ -161,6 +161,36 @@ export async function listarCidadesConhecidas(): Promise<string[]> {
   return ((data ?? []) as { cidade: string }[]).map((linha) => linha.cidade);
 }
 
+// ---------- Vários grupos por usuário ----------
+
+/** Grupos de cada usuário: { idDoUsuario: [idDoGrupo, ...] } (inclui o grupo principal). */
+export async function listarGruposDosUsuarios(): Promise<Record<string, string[]>> {
+  const { data, error } = await supabase.rpc("listar_grupos_dos_usuarios");
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar os grupos dos usuários."));
+
+  const mapa: Record<string, string[]> = {};
+  for (const linha of (data ?? []) as { usuario_id: string; grupos: string[] }[]) {
+    mapa[linha.usuario_id] = linha.grupos;
+  }
+  return mapa;
+}
+
+/** Salva nome, situação e TODOS os grupos do usuário de uma vez (o banco confere as regras). */
+export async function salvarUsuarioComGrupos(dados: {
+  id: string;
+  nome: string;
+  grupos: string[];
+  ativo: boolean;
+}): Promise<void> {
+  const { error } = await supabase.rpc("atualizar_usuario_grupos", {
+    p_id: dados.id,
+    p_nome: dados.nome,
+    p_grupos: dados.grupos,
+    p_ativo: dados.ativo,
+  });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível salvar o usuário."));
+}
+
 export async function redefinirSenha(usuarioId: string, senha: string): Promise<void> {
   await chamarRotaAdmin(`/api/admin/usuarios/${usuarioId}/senha`, { senha });
 }
