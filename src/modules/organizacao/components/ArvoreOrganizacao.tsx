@@ -6,7 +6,7 @@
  * Comuns que ainda não têm setor ficam numa seção própria, no fim, com o botão de transferir.
  */
 import { useState, type ReactNode } from "react";
-import { ArrowRightLeft, ChevronDown, ChevronRight, Pencil, Plus, Power } from "lucide-react";
+import { ArrowRightLeft, ChevronDown, ChevronRight, Pencil, Plus, Power, Trash2 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import BotaoIcone from "@/components/ui/BotaoIcone";
 import { FILHO_DE, ROTULO_NIVEL, filhosDe } from "../regras";
@@ -17,10 +17,12 @@ interface ArvoreOrganizacaoProps {
   podeCriar: boolean;
   podeEditar: boolean;
   podeTransferir: boolean;
+  podeExcluir: boolean;
   onNovo: (nivel: NivelOrganizacao, pai: NoOrganizacao | null) => void;
   onEditar: (no: NoOrganizacao) => void;
   onAlternar: (no: NoOrganizacao) => void;
   onTransferir: (no: NoOrganizacao) => void;
+  onExcluir: (no: NoOrganizacao) => void;
 }
 
 // Texto de contagem de cada item (ex.: "5 setores")
@@ -38,10 +40,12 @@ export default function ArvoreOrganizacao({
   podeCriar,
   podeEditar,
   podeTransferir,
+  podeExcluir,
   onNovo,
   onEditar,
   onAlternar,
   onTransferir,
+  onExcluir,
 }: ArvoreOrganizacaoProps) {
   // Começa com estados e regiões abertos
   const [abertos, setAbertos] = useState<Set<string>>(
@@ -117,6 +121,16 @@ export default function ArvoreOrganizacao({
                   icone={Power}
                   rotulo={`${inativo ? "Ativar" : "Inativar"} ${no.nome}`}
                   onClick={() => onAlternar(no)}
+                />
+              </>
+            )}
+            {podeExcluir && (
+              <>
+                <BotaoIcone
+                  icone={Trash2}
+                  variante="perigo"
+                  rotulo={`Excluir ${no.nome}`}
+                  onClick={() => onExcluir(no)}
                 />
               </>
             )}

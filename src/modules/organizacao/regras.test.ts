@@ -5,6 +5,7 @@ import {
   chaveVinculo,
   filhosDe,
   lerChaveVinculo,
+  motivoBloqueioExclusao,
   rotulosPorUsuario,
   validarNomeNo,
 } from "@/modules/organizacao/regras";
@@ -83,6 +84,22 @@ describe("vínculos", () => {
     expect(
       rotulosPorUsuario({ u1: [{ nivel: "SETOR", alvo_id: "s1", rotulo: "Salvador › Setor 1" }], u2: [] })
     ).toEqual({ u1: ["Salvador › Setor 1"], u2: [] });
+  });
+});
+
+describe("motivoBloqueioExclusao", () => {
+  const base = { parent_id: null, ativo: true };
+
+  it("bloqueia o item que ainda tem itens dentro e explica o motivo", () => {
+    expect(motivoBloqueioExclusao({ ...base, nivel: "ESTADO", id: "e", nome: "Bahia", qtd_filhos: 2 })).toMatch(/2 regiões/);
+    expect(motivoBloqueioExclusao({ ...base, nivel: "REGIAO", id: "r", nome: "Salvador", qtd_filhos: 1 })).toMatch(/1 setor\b/);
+    expect(motivoBloqueioExclusao({ ...base, nivel: "SETOR", id: "s", nome: "Setor 1", qtd_filhos: 3 })).toMatch(/3 comuns/);
+    expect(motivoBloqueioExclusao({ ...base, nivel: "COMUM", id: "c", nome: "Itinga", qtd_membros: 4 })).toMatch(/4 membros/);
+  });
+
+  it("libera o item vazio", () => {
+    expect(motivoBloqueioExclusao({ ...base, nivel: "SETOR", id: "s", nome: "Setor 9", qtd_filhos: 0 })).toBeNull();
+    expect(motivoBloqueioExclusao({ ...base, nivel: "COMUM", id: "c", nome: "Vazia", qtd_membros: 0 })).toBeNull();
   });
 });
 

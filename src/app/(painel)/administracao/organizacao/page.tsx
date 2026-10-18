@@ -11,8 +11,8 @@ import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import ArvoreOrganizacao from "@/modules/organizacao/components/ArvoreOrganizacao";
 import FormularioNo, { type ModoNo } from "@/modules/organizacao/components/FormularioNo";
 import FormularioTransferencia from "@/modules/organizacao/components/FormularioTransferencia";
-import { ROTULO_NIVEL } from "@/modules/organizacao/regras";
-import { listarOrganizacao, salvarNo } from "@/modules/organizacao/services/organizacao";
+import { motivoBloqueioExclusao, ROTULO_NIVEL } from "@/modules/organizacao/regras";
+import { excluirNo, listarOrganizacao, salvarNo } from "@/modules/organizacao/services/organizacao";
 import type { NivelOrganizacao, NoOrganizacao } from "@/modules/organizacao/tipos";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -41,12 +41,15 @@ export default function OrganizacaoPage() {
   const podeCriar = pode("organizacao.criar");
   const podeEditar = pode("organizacao.editar");
   const podeTransferir = pode("organizacao.transferir");
+  const podeExcluir = pode("organizacao.excluir");
 
   const [nos, setNos] = useState<NoOrganizacao[]>([]);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
   const [painel, setPainel] = useState<Painel | null>(null);
   const [alvoAlternar, setAlvoAlternar] = useState<NoOrganizacao | null>(null);
+  const [alvoExcluir, setAlvoExcluir] = useState<NoOrganizacao | null>(null);
+  const [erroAcao, setErroAcao] = useState<string | null>(null);
   const [processando, setProcessando] = useState(false);
   const [erroConfirmacao, setErroConfirmacao] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -108,6 +111,35 @@ export default function OrganizacaoPage() {
     }
   }
 
+  // Pede a exclusão: se o item ainda tiver algo dentro, explica o motivo; senão abre a confirmação
+  function pedirExclusao(no: NoOrganizacao) {
+    const motivo = motivoBloqueioExclusao(no);
+    if (motivo) {
+      setErroAcao(motivo);
+      return;
+    }
+    setErroAcao(null);
+    setErroConfirmacao(null);
+    setAlvoExcluir(no);
+  }
+
+  // Exclui de vez o item (o banco confere de novo e informa se houver eventos, portarias ou usuários ligados)
+  async function confirmarExclusao() {
+    if (!alvoExcluir) return;
+    setProcessando(true);
+    setErroConfirmacao(null);
+    try {
+      await excluirNo(alvoExcluir.nivel, alvoExcluir.id);
+      await carregar();
+      setAviso(`"${alvoExcluir.nome}" excluído(a).`);
+      setAlvoExcluir(null);
+    } catch (e) {
+      setErroConfirmacao(e instanceof Error ? e.message : "Não foi possível excluir.");
+    } finally {
+      setProcessando(false);
+    }
+  }
+
   function abrirNovo(nivel: NivelOrganizacao, pai: NoOrganizacao | null) {
     setPainel({ tipo: "no", modo: { tipo: "novo", nivel, pai } });
   }
@@ -126,6 +158,12 @@ export default function OrganizacaoPage() {
             ) : undefined
           }
         />
+
+        {erroAcao && (
+          <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {erroAcao}
+          </p>
+        )}
 
         {carregando ? (
           <div role="status" aria-live="polite" className="space-y-3">
@@ -147,6 +185,8 @@ export default function OrganizacaoPage() {
             podeCriar={podeCriar}
             podeEditar={podeEditar}
             podeTransferir={podeTransferir}
+            podeExcluir={podeExcluir}
+            onExcluir={pedirExclusao}
             onNovo={abrirNovo}
             onEditar={(no) => setPainel({ tipo: "no", modo: { tipo: "editar", no } })}
             onAlternar={(no) => {
@@ -203,6 +243,28 @@ export default function OrganizacaoPage() {
         processando={processando}
         onConfirmar={() => void confirmarAlternar()}
         onCancelar={() => setAlvoAlternar(null)}
+      />
+
+      <ConfirmDialog
+        aberto={alvoExcluir !== null}
+        titulo="Excluir item?"
+        mensagem={
+          <>
+            <p>
+              <strong>{alvoExcluir?.nome}</strong> será excluído(a) de vez. Esta ação não pode ser desfeita. Se
+              preferir só esconder, use Inativar.
+            </p>
+            {erroConfirmacao && (
+              <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-red-700">
+                {erroConfirmacao}
+              </p>
+            )}
+          </>
+        }
+        textoConfirmar="Excluir"
+        processando={processando}
+        onConfirmar={() => void confirmarExclusao()}
+        onCancelar={() => setAlvoExcluir(null)}
       />
 
       <Notificacao mensagem={aviso} onFechar={() => setAviso(null)} />

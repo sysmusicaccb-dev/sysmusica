@@ -30,6 +30,30 @@ export function filhosDe(nos: NoOrganizacao[], pai: string | null, nivel: NivelO
   return nos.filter((no) => no.nivel === nivel && no.parent_id === pai).sort(porNome);
 }
 
+/**
+ * Se o item ainda tem algo dentro (itens filhos ou membros), explica por que não pode ser excluído;
+ * senão devolve null. É só uma resposta rápida da tela: o banco confere tudo de novo, inclusive eventos,
+ * portarias e usuários vinculados.
+ */
+export function motivoBloqueioExclusao(no: NoOrganizacao): string | null {
+  const filhos = no.qtd_filhos ?? 0;
+  const membros = no.qtd_membros ?? 0;
+
+  if (no.nivel === "ESTADO" && filhos > 0) {
+    return `"${no.nome}" ainda tem ${filhos} ${filhos === 1 ? "região" : "regiões"}. Exclua as regiões antes.`;
+  }
+  if (no.nivel === "REGIAO" && filhos > 0) {
+    return `"${no.nome}" ainda tem ${filhos} ${filhos === 1 ? "setor" : "setores"}. Exclua os setores antes.`;
+  }
+  if (no.nivel === "SETOR" && filhos > 0) {
+    return `"${no.nome}" ainda tem ${filhos} ${filhos === 1 ? "comum" : "comuns"}. Transfira as comuns para outro setor antes.`;
+  }
+  if (no.nivel === "COMUM" && membros > 0) {
+    return `"${no.nome}" ainda tem ${membros} ${membros === 1 ? "membro" : "membros"}. Mude os membros para outra comum (ou exclua-os) antes.`;
+  }
+  return null;
+}
+
 /** Valida o nome de um item da organização; devolve a mensagem de erro ou null. */
 export function validarNomeNo(nome: string): string | null {
   const tamanho = nome.trim().replace(/\s+/g, " ").length;

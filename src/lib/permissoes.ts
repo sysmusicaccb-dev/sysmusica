@@ -36,6 +36,7 @@ export const CATALOGO_PERMISSOES = [
   { codigo: "organizacao.criar", modulo: "Organização", acao: "Criar" },
   { codigo: "organizacao.editar", modulo: "Organização", acao: "Editar" },
   { codigo: "organizacao.transferir", modulo: "Organização", acao: "Transferir" },
+  { codigo: "organizacao.excluir", modulo: "Organização", acao: "Excluir" },
   { codigo: "organizacao.acesso_total", modulo: "Organização", acao: "Acesso total" },
   { codigo: "usuarios.vinculos", modulo: "Usuários", acao: "Vínculos" },
   { codigo: "membros.foto", modulo: "Membros", acao: "Fotografia" },

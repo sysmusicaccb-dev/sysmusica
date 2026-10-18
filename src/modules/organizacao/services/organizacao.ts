@@ -54,6 +54,12 @@ export async function salvarNo(dados: {
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível salvar."));
 }
 
+/** Exclui um item VAZIO da organização (o banco confere permissão, filhos, membros, eventos, portarias e vínculos). */
+export async function excluirNo(nivel: NivelOrganizacao, id: string): Promise<void> {
+  const { error } = await supabase.rpc("excluir_organizacao", { p_nivel: nivel, p_id: id });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível excluir."));
+}
+
 /** Muda uma comum de setor (fica no histórico e na auditoria). */
 export async function transferirComum(comumId: string, setorId: string, justificativa: string): Promise<void> {
   const { error } = await supabase.rpc("transferir_comum", {
