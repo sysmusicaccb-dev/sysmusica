@@ -34,6 +34,7 @@ const ROTULO_ACAO: Record<string, string> = {
   backup_excluido: "Excluiu um backup",
   backup_baixado: "Baixou um backup",
   backup_verificado: "Verificou um backup",
+  backup_aviso_testado: "Testou os avisos do backup",
   backup_configuracao_alterada: "Alterou a configuração do backup",
 };
 

@@ -29,6 +29,7 @@ import {
   obterUrlDeDownload,
   verificarBackup,
 } from "@/modules/backup/services/backupApi";
+import AbasBackup from "@/modules/backup/components/AbasBackup";
 import EtiquetaVerificacao from "@/modules/backup/components/EtiquetaVerificacao";
 import type { RegistroBackup } from "@/modules/backup/tipos";
 
@@ -135,6 +136,8 @@ export default function BackupPage() {
             ) : undefined
           }
         />
+
+        <AbasBackup />
 
         <p className="mb-4 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
           Cada backup é comprimido, criptografado e guardado no armazenamento privado do sistema. Os links de
