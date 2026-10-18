@@ -22,6 +22,24 @@ export function nomeCompletoValido(nome: string): boolean {
   return limpo.length >= 8 && limpo.split(" ").length >= 2;
 }
 
+/**
+ * Confere os dados do visitante antes de enviar; devolve a mensagem de erro ou null.
+ * É só uma resposta rápida da tela: o banco confere tudo de novo (inclusive nome repetido na comum).
+ */
+export function validarDadosVisitante(dados: {
+  nome: string;
+  cargoId: string;
+  igreja: string;
+  cidade: string;
+}): string | null {
+  if (!nomeCompletoValido(dados.nome)) return "Digite o nome completo do visitante (nome e sobrenome).";
+  if (!dados.cargoId) return "Escolha o cargo ou ministério do visitante.";
+  if (dados.igreja.trim() === "" && dados.cidade.trim() === "") {
+    return "Informe de onde o visitante vem (igreja, cidade, estado ou país).";
+  }
+  return null;
+}
+
 /** Hora no fuso de Salvador, no formato "18h42". */
 export function horaCurta(iso: string): string {
   const hora = new Intl.DateTimeFormat("pt-BR", {

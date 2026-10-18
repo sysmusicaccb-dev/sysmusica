@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
+import Drawer from "@/components/ui/Drawer";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import Notificacao from "@/components/ui/Notificacao";
@@ -23,6 +24,7 @@ import type { CartaoMembro, EntradaRecente, OrigemEntrada } from "../tipos";
 import BuscaPorNome from "./BuscaPorNome";
 import CartaoConferencia from "./CartaoConferencia";
 import EntradasRecentes from "./EntradasRecentes";
+import FormularioVisitante from "./FormularioVisitante";
 import LeitorQr from "./LeitorQr";
 import SelecaoPortaria from "./SelecaoPortaria";
 
@@ -62,6 +64,7 @@ export default function AtendimentoPortaria() {
   const [erroCartao, setErroCartao] = useState<string | null>(null);
   const [erroLeitura, setErroLeitura] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [cadastrandoVisitante, setCadastrandoVisitante] = useState(false);
 
   // Portarias aprovadas disponíveis, da mais próxima do horário atual para a mais distante
   const carregar = useCallback(async () => {
@@ -148,6 +151,13 @@ export default function AtendimentoPortaria() {
     }
   }
 
+  // Visitante cadastrado: abre a conferência para registrar a entrada
+  function aoCadastrarVisitante(membro: CartaoMembro) {
+    setCadastrandoVisitante(false);
+    setErroCartao(null);
+    setCartao({ membro, origem: "MANUAL" });
+  }
+
   // Membro localizado pelo nome: abre a conferência
   function aoEscolherPorNome(membro: CartaoMembro) {
     setErroCartao(null);
@@ -230,6 +240,24 @@ export default function AtendimentoPortaria() {
               )}
 
               <BuscaPorNome portariaId={portaria.id} desabilitado={cartao !== null} onEscolher={aoEscolherPorNome} />
+
+              {pode("portaria.cadastrar_visitante") && (
+                <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 shadow-sm">
+                  <h2 className="text-sm font-semibold text-slate-900">Irmão de outra região ou sem cadastro?</h2>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Cadastre o visitante aqui mesmo: ele entra na comum desta portaria e você já confere e
+                    registra a entrada.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCadastrandoVisitante(true)}
+                    disabled={cartao !== null}
+                    className="mt-3 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Cadastrar visitante
+                  </button>
+                </section>
+              )}
             </div>
 
             <aside>
@@ -257,6 +285,17 @@ export default function AtendimentoPortaria() {
           onCancelar={() => setCartao(null)}
         />
       )}
+
+      <Drawer
+        aberto={cadastrandoVisitante}
+        onFechar={() => setCadastrandoVisitante(false)}
+        titulo="Cadastrar visitante"
+        descricao="O visitante vale só para a comum e a região desta portaria."
+      >
+        {cadastrandoVisitante && portaria && (
+          <FormularioVisitante portariaId={portaria.id} onCadastrado={aoCadastrarVisitante} />
+        )}
+      </Drawer>
 
       <Notificacao mensagem={aviso} onFechar={() => setAviso(null)} />
     </div>

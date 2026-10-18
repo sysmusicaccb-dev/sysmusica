@@ -18,6 +18,12 @@ export interface CartaoMembro {
   ja_registrado_em: string | null;
 }
 
+/** Opções do formulário de visitante (cargos e instrumentos, já filtrados pelo banco). */
+export interface OpcoesVisitante {
+  cargos: { id: string; nome: string; permite_instrumento: boolean }[];
+  instrumentos: { id: string; nome: string }[];
+}
+
 /** Uma entrada recente da portaria. */
 export interface EntradaRecente {
   presenca_id: string;

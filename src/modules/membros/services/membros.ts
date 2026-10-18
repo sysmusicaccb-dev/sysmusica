@@ -64,6 +64,7 @@ export interface DadosAtualizacaoMembro {
   status: string;
   cidade: string | null;
   bairro: string | null;
+  comum_id?: string | null; // a comum escolhida (o banco ajusta o nome da congregação)
   /** Só enviar quando o usuário tem a permissão membros.cpf (null = apagar o CPF). */
   cpf?: string | null;
 }

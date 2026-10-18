@@ -18,6 +18,7 @@
  */
 import { useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
+import SeletorComum from "@/modules/organizacao/components/SeletorComum";
 import { formatarCpf, limparCpf, validarCpf } from "@/lib/cpf";
 import { ehNomeDeFamilia, inferirFamilia } from "@/lib/familias";
 import { normalizarTexto } from "@/lib/texto";
@@ -76,6 +77,7 @@ export default function FormularioMembro({
 
   const [nome, setNome] = useState(membro?.nome ?? "");
   const [congregacao, setCongregacao] = useState(membro?.congregacao ?? "");
+  const [comumId, setComumId] = useState(membro?.comum_id ?? ""); // a comum define o nome da congregação
   const [cidade, setCidade] = useState(membro?.cidade ?? "");
   const [bairro, setBairro] = useState(membro?.bairro ?? "");
   const [cpf, setCpf] = useState(cpfInicial ? formatarCpf(cpfInicial) : "");
@@ -128,8 +130,8 @@ export default function FormularioMembro({
     setErroForm(null);
 
     // Barra campos obrigatórios vazios ou preenchidos só com espaços
-    if (!nome.trim() || !congregacao.trim() || !cargoId) {
-      return setErroForm("Preencha nome, cargo e congregação.");
+    if (!nome.trim() || !comumId || !cargoId) {
+      return setErroForm("Preencha nome, cargo e comum.");
     }
 
     // CPF (opcional): se preenchido, precisa ser válido
@@ -157,6 +159,7 @@ export default function FormularioMembro({
       const dados = {
         nome: nome.trim(),
         congregacao: congregacao.trim(),
+        comum_id: comumId,
         cidade: cidade.trim() || null,
         bairro: bairro.trim() || null,
         cargo_id: cargoId,
@@ -346,26 +349,21 @@ export default function FormularioMembro({
 
       {/* Localidade: congregação (comum), cidade e bairro, com sugestões dos já cadastrados */}
       <div className="space-y-1.5">
-        <label htmlFor="congregacao" className="text-sm font-medium text-slate-700">
-          Comum / congregação
+        <label htmlFor="comum-membro" className="text-sm font-medium text-slate-700">
+          Comum
         </label>
-        <input
-          id="congregacao"
-          type="text"
-          list="sugestoes-congregacao"
-          autoComplete="off"
-          required
-          value={congregacao}
-          onChange={(e) => setCongregacao(e.target.value)}
+        <SeletorComum
+          id="comum-membro"
+          valor={comumId}
+          onChange={setComumId}
+          onEscolherNome={setCongregacao}
           disabled={salvando}
-          placeholder="Ex: Central"
           className={classeInput}
         />
-        <datalist id="sugestoes-congregacao">
-          {sugestoes.congregacoes.map((valor) => (
-            <option key={valor} value={valor} />
-          ))}
-        </datalist>
+        <p className="text-xs text-slate-500">
+          A comum define o setor e quem enxerga o cadastro. Se a comum não aparecer, peça a um administrador para
+          cadastrá-la em Administração &gt; Organização.
+        </p>
       </div>
 
       <div className="space-y-1.5">

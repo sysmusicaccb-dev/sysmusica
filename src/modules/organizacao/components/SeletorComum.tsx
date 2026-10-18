@@ -14,11 +14,20 @@ interface SeletorComumProps {
   id?: string;
   valor: string; // id da comum escolhida ("" = nenhuma)
   onChange: (comumId: string) => void;
+  /** Opcional: devolve também o nome da comum escolhida (vazio quando nenhuma). */
+  onEscolherNome?: (nome: string) => void;
   disabled?: boolean;
   className?: string;
 }
 
-export default function SeletorComum({ id, valor, onChange, disabled, className }: SeletorComumProps) {
+export default function SeletorComum({
+  id,
+  valor,
+  onChange,
+  onEscolherNome,
+  disabled,
+  className,
+}: SeletorComumProps) {
   const [nos, setNos] = useState<NoOrganizacao[] | null>(null); // nulo = ainda carregando
   const [erro, setErro] = useState<string | null>(null);
 
@@ -48,7 +57,11 @@ export default function SeletorComum({ id, valor, onChange, disabled, className 
       <select
         id={id}
         value={valor}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          const novoId = e.target.value;
+          onChange(novoId);
+          onEscolherNome?.((nos ?? []).find((no) => no.nivel === "COMUM" && no.id === novoId)?.nome ?? "");
+        }}
         disabled={disabled || nos === null}
         className={className}
       >

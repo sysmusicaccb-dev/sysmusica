@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   horaCurta,
+  validarDadosVisitante,
   mensagemCamera,
   nomeCompletoValido,
   ordenarPorProximidade,
@@ -25,6 +26,27 @@ describe("nomeCompletoValido", () => {
     expect(nomeCompletoValido("Jo Li")).toBe(false);
     expect(nomeCompletoValido("Maria Silva")).toBe(true);
     expect(nomeCompletoValido("  Ana   Lima ")).toBe(true);
+  });
+});
+
+describe("validarDadosVisitante", () => {
+  const completo = { nome: "Maria da Silva", cargoId: "c1", igreja: "Central", cidade: "" };
+
+  it("aceita os dados completos (basta igreja ou cidade de origem)", () => {
+    expect(validarDadosVisitante(completo)).toBeNull();
+    expect(validarDadosVisitante({ ...completo, igreja: "", cidade: "Lisboa, Portugal" })).toBeNull();
+  });
+
+  it("exige nome e sobrenome", () => {
+    expect(validarDadosVisitante({ ...completo, nome: "Maria" })).toMatch(/nome completo/);
+  });
+
+  it("exige o cargo ou ministério", () => {
+    expect(validarDadosVisitante({ ...completo, cargoId: "" })).toMatch(/cargo/);
+  });
+
+  it("exige de onde ele vem", () => {
+    expect(validarDadosVisitante({ ...completo, igreja: " ", cidade: "" })).toMatch(/de onde/);
   });
 });
 

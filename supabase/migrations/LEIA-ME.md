@@ -18,6 +18,7 @@ Aplique **em ordem numérica**, cada arquivo **uma única vez**, no SQL Editor d
 | `0011_varios_grupos_por_usuario.sql` | Vários grupos por usuário (as permissões somam), com proteção do último administrador | aplicar agora |
 | `0012_hierarquia_organizacional.sql` | Estado > Região > Setor > Comum, vínculos dos usuários e acesso por região (membros, eventos, presenças, portarias) | aplicar agora |
 | `0013_excluir_organizacao.sql` | Lixeira na Organização: excluir estado, região, setor ou comum vazios (permissão organizacao.excluir) | aplicar agora |
+| `0014_visitantes_portaria.sql` | Cadastro rápido de visitante na portaria (permissão portaria.cadastrar_visitante) e marca de visitante nos membros | aplicar agora |
 
 Atenção: **não reexecute o `0001` depois do `0002`**. O 0001 recria as políticas antigas, que liberavam
 o acesso anônimo. Novas alterações de banco entram sempre como um novo arquivo numerado.

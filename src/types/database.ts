@@ -69,6 +69,7 @@ export interface Membro {
   cidade: string | null; // município da congregação
   bairro: string | null; // bairro ou igreja de referência
   atualizado_em: string; // timestamptz, atualizado automaticamente a cada alteração
+  comum_id?: string | null; // FK -> comuns.id: a comum do membro (define quem enxerga o cadastro)
 }
 
 /**
@@ -83,14 +84,14 @@ export type MembroPublico = Omit<Membro, "qr_secret" | "excluido_em" | "cpf">;
  * Usada no lugar de select("*"), que falha porque inclui o qr_secret.
  */
 export const COLUNAS_MEMBRO_PUBLICO =
-  "id, nome, congregacao, cargo_id, data_nascimento, instrumento_id, status, data_cadastro, cidade, bairro, atualizado_em, cpf_mascarado" as const;
+  "id, nome, congregacao, cargo_id, data_nascimento, instrumento_id, status, data_cadastro, cidade, bairro, atualizado_em, cpf_mascarado, comum_id" as const;
 
 /** Payload para INSERT: o qr_secret é sempre gerado pelo banco e não pode ser enviado. */
 export type MembroInsert = Pick<Membro, "nome" | "congregacao" | "cargo_id"> &
   Partial<
     Pick<
       Membro,
-      "id" | "data_nascimento" | "instrumento_id" | "status" | "data_cadastro" | "cidade" | "bairro" | "cpf"
+      "id" | "data_nascimento" | "instrumento_id" | "status" | "data_cadastro" | "cidade" | "bairro" | "cpf" | "comum_id"
     >
   >;
 
