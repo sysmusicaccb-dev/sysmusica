@@ -13,6 +13,7 @@ import { Download, Eye, Printer } from "lucide-react";
 import Notificacao from "@/components/ui/Notificacao";
 import PageHeader from "@/components/ui/PageHeader";
 import { abrirJanelaImpressao, baixarCsv, escreverImpressao, gerarCsv } from "@/lib/exportacao";
+import { MARCA } from "@/lib/marca";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import { registrarUso } from "@/modules/auditoria/services/auditoria";
 import { DEFINICOES_RELATORIO } from "@/modules/relatorios/catalogo";
@@ -69,6 +70,13 @@ const classeBotaoPrimario =
   "transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60";
 
 const classeSecao = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
+
+// Endereço da logomarca para a janela de impressão: completo (https) quando possível
+function enderecoDaLogo(): string {
+  return window.location.protocol === "https:"
+    ? `${window.location.origin}${MARCA.logoCaminho}`
+    : MARCA.logoCaminho;
+}
 
 export default function RelatoriosPage() {
   const { pode, conta } = useSessao();
@@ -229,6 +237,7 @@ export default function RelatoriosPage() {
           informacoes,
           rodapeItens,
           marca: pagina.cabecalho.marca ? NOME_DO_SISTEMA : undefined,
+          logoUrl: pagina.cabecalho.marca ? enderecoDaLogo() : undefined,
           paginacao: pagina.rodapeMarcado.paginacao,
           assinaturas: lerAssinaturas(pagina.assinaturas, pagina.nomesAssinaturas),
           margem: margemEmMm(pagina.margem),

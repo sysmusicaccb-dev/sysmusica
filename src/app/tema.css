@@ -1,0 +1,140 @@
+/* =====================================================================
+   SysMúsica — Aparência: tamanho da letra, cor principal e modo escuro.
+   Os atributos data-tema, data-cor e data-fonte são colocados na página (tag html) pelo painel de
+   Configurações. Este arquivo NÃO está em nenhuma camada do Tailwind, então vale sobre as cores padrão.
+   - Tamanho da letra: o sistema usa medidas em rem, então tudo cresce junto.
+   - Cor principal: troca a escala "brand" (o índigo é o padrão e não precisa de ajuste).
+   - Modo escuro: inverte a escala de cinzas (slate) e escurece os avisos coloridos; poucas superfícies
+     que precisam continuar escuras (câmera, fundos de janelas) são fixadas à mão no fim.
+   ===================================================================== */
+
+/* ---------- Tamanho da letra ---------- */
+html[data-fonte="media"] {
+  font-size: 112.5%;
+}
+html[data-fonte="grande"] {
+  font-size: 125%;
+}
+
+/* ---------- Cor principal ---------- */
+:root[data-cor="azul"] {
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+  --color-brand-950: #172554;
+}
+:root[data-cor="verde"] {
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+  --color-brand-950: #022c22;
+}
+:root[data-cor="vinho"] {
+  --color-brand-50: #fdf2f4;
+  --color-brand-100: #fbe6ea;
+  --color-brand-200: #f6ccd5;
+  --color-brand-300: #ee9fb0;
+  --color-brand-400: #e26984;
+  --color-brand-500: #cf3f62;
+  --color-brand-600: #b02a4e;
+  --color-brand-700: #8f2140;
+  --color-brand-800: #741d38;
+  --color-brand-900: #5f1a32;
+  --color-brand-950: #350a19;
+}
+:root[data-cor="grafite"] {
+  --color-brand-50: #f8fafc;
+  --color-brand-100: #f1f5f9;
+  --color-brand-200: #e2e8f0;
+  --color-brand-300: #cbd5e1;
+  --color-brand-400: #94a3b8;
+  --color-brand-500: #64748b;
+  --color-brand-600: #475569;
+  --color-brand-700: #334155;
+  --color-brand-800: #1e293b;
+  --color-brand-900: #0f172a;
+  --color-brand-950: #020617;
+}
+
+/* ---------- Modo escuro (vem DEPOIS da cor principal, para ajustar os tons claros dela) ---------- */
+:root[data-tema="escuro"] {
+  color-scheme: dark;
+
+  /* Escala de cinzas invertida: o que era claro fica escuro e o que era escuro fica claro */
+  --color-slate-50: #020617;
+  --color-slate-100: #0f172a;
+  --color-slate-200: #1e293b;
+  --color-slate-300: #334155;
+  --color-slate-400: #475569;
+  --color-slate-500: #64748b;
+  --color-slate-600: #94a3b8;
+  --color-slate-700: #cbd5e1;
+  --color-slate-800: #e2e8f0;
+  --color-slate-900: #f1f5f9;
+  --color-slate-950: #f8fafc;
+
+  /* Avisos coloridos: fundos claros viram tons escuros e os textos escuros ficam claros
+     (os tons 500 e 600, usados em botões, não mudam) */
+  --color-red-50: #2b1115;
+  --color-red-100: #3d161c;
+  --color-red-200: #5c1f29;
+  --color-red-700: #fca5a5;
+  --color-amber-50: #2a1d06;
+  --color-amber-100: #3b2907;
+  --color-amber-200: #5c400c;
+  --color-amber-700: #fcd34d;
+  --color-emerald-50: #06281f;
+  --color-emerald-100: #08392c;
+  --color-emerald-200: #0b5242;
+  --color-emerald-700: #6ee7b7;
+
+  /* Tons claros da cor principal viram tons escuros da mesma cor; o 700 (links) fica mais claro */
+  --color-brand-50: color-mix(in srgb, var(--color-brand-600) 14%, #0f172a);
+  --color-brand-100: color-mix(in srgb, var(--color-brand-600) 22%, #0f172a);
+  --color-brand-200: color-mix(in srgb, var(--color-brand-600) 38%, #0f172a);
+  --color-brand-700: color-mix(in srgb, var(--color-brand-600) 70%, #ffffff);
+}
+
+/* Superfícies brancas (cartões, tabelas, campos) viram um azul bem escuro */
+:root[data-tema="escuro"] .bg-white {
+  background-color: #0f172a;
+}
+:root[data-tema="escuro"] [class*="bg-white/"] {
+  background-color: rgb(15 23 42 / 0.92);
+}
+
+/* Superfícies que são escuras de propósito (câmera, painéis) continuam escuras */
+:root[data-tema="escuro"] .bg-slate-800 {
+  background-color: #1e293b;
+}
+:root[data-tema="escuro"] .bg-slate-900 {
+  background-color: #0f172a;
+}
+:root[data-tema="escuro"] .bg-slate-950 {
+  background-color: #020617;
+}
+
+/* Fundos escuros das janelas (a camada sobre a tela) continuam escuros e translúcidos */
+:root[data-tema="escuro"] [class*="bg-slate-900/"],
+:root[data-tema="escuro"] [class*="bg-slate-950/"] {
+  background-color: rgb(0 0 0 / 0.65);
+}
+
+/* Seletor de data com o ícone claro */
+:root[data-tema="escuro"] input[type="date"] {
+  color-scheme: dark;
+}

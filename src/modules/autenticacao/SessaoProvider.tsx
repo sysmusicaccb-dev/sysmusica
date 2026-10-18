@@ -19,6 +19,8 @@ import {
 } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import BotaoConfiguracoes from "@/modules/preferencias/components/BotaoConfiguracoes";
+import { PreferenciasProvider } from "@/modules/preferencias/components/PreferenciasProvider";
 import type { CodigoPermissao } from "@/lib/permissoes";
 
 export interface Conta {
@@ -107,5 +109,13 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
     [carregando, sessao, conta, erroConta, pode, sair]
   );
 
-  return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
+  return (
+    <Contexto.Provider value={valor}>
+      {/* Aparência (modo, cor e letra) e botão de Configurações: o botão só aparece depois do login */}
+      <PreferenciasProvider logado={sessao !== null && contaPronta}>
+        {children}
+        {sessao !== null && <BotaoConfiguracoes />}
+      </PreferenciasProvider>
+    </Contexto.Provider>
+  );
 }
