@@ -29,6 +29,11 @@ const ROTULO_ACAO: Record<string, string> = {
   relatorio_exportado: "Exportou relatório",
   auditoria_impressa: "Imprimiu a auditoria",
   auditoria_exportada: "Exportou a auditoria",
+  backup_criado: "Fez um backup",
+  backup_restaurado: "Restaurou dados de um backup",
+  backup_excluido: "Excluiu um backup",
+  backup_baixado: "Baixou um backup",
+  backup_configuracao_alterada: "Alterou a configuração do backup",
 };
 
 const ROTULO_ENTIDADE: Record<string, string> = {
@@ -50,6 +55,7 @@ const ROTULO_ENTIDADE: Record<string, string> = {
   organizacao: "Organização",
   portaria: "Portaria",
   relatorio: "Relatório",
+  backup: "Backup",
 };
 
 const ROTULO_CAMPO: Record<string, string> = {

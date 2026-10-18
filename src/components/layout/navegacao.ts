@@ -10,6 +10,7 @@ import {
   CalendarDays,
   Building2,
   Camera,
+  DatabaseBackup,
   FileText,
   ScrollText,
   ClipboardList,
@@ -79,6 +80,12 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         rotulo: "Organização",
         icone: Building2,
         permissao: "organizacao.visualizar",
+      },
+      {
+        href: "/administracao/backup",
+        rotulo: "Backup",
+        icone: DatabaseBackup,
+        permissao: "backup.visualizar",
       },
       {
         href: "/administracao/auditoria",
