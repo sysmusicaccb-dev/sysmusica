@@ -4,10 +4,12 @@
  * SysMúsica — Tela de login (rota pública /login).
  * Se a pessoa já estiver logada, vai direto para o sistema.
  * Layout em duas colunas no desktop (marca à esquerda, formulário à direita); só o formulário no celular.
+ * A logomarca (emblema da CCB) aparece em uma plaquinha branca, para ficar nítida em qualquer fundo e em
+ * qualquer modo (claro ou escuro).
  */
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Music } from "lucide-react";
+import LogoMarca from "@/components/ui/LogoMarca";
 import FormularioLogin from "@/modules/autenticacao/components/FormularioLogin";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 
@@ -24,10 +26,8 @@ export default function LoginPage() {
     <main className="grid min-h-screen bg-slate-50 text-slate-900 lg:grid-cols-2">
       {/* Painel da marca (some no celular) */}
       <aside className="hidden flex-col justify-between bg-sidebar p-12 text-sidebar-fg lg:flex">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-white">
-            <Music className="h-6 w-6" aria-hidden="true" />
-          </span>
+        <div className="flex items-center gap-4">
+          <LogoMarca altura={64} comFundoBranco />
           <span className="text-2xl font-bold tracking-tight text-white">SysMúsica</span>
         </div>
         <div>
@@ -47,9 +47,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Marca no celular */}
           <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white">
-              <Music className="h-5 w-5" aria-hidden="true" />
-            </span>
+            <LogoMarca altura={44} comFundoBranco />
             <span className="text-xl font-bold tracking-tight">SysMúsica</span>
           </div>
 

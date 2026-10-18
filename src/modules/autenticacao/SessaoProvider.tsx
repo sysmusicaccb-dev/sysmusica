@@ -19,7 +19,7 @@ import {
 } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
-import BotaoConfiguracoes from "@/modules/preferencias/components/BotaoConfiguracoes";
+
 import { PreferenciasProvider } from "@/modules/preferencias/components/PreferenciasProvider";
 import type { CodigoPermissao } from "@/lib/permissoes";
 
@@ -111,10 +111,10 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
 
   return (
     <Contexto.Provider value={valor}>
-      {/* Aparência (modo, cor e letra) e botão de Configurações: o botão só aparece depois do login */}
+      {/* Aparência do sistema (modo, cor e tamanho da letra); o botão de Configurações fica na barra do topo */}
       <PreferenciasProvider logado={sessao !== null && contaPronta}>
         {children}
-        {sessao !== null && <BotaoConfiguracoes />}
+        
       </PreferenciasProvider>
     </Contexto.Provider>
   );

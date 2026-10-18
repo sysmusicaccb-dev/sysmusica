@@ -8,6 +8,19 @@
      que precisam continuar escuras (câmera, fundos de janelas) são fixadas à mão no fim.
    ===================================================================== */
 
+/* ---------- Fundo e texto da página: seguem o modo ESCOLHIDO, e não o do aparelho ----------
+   (o globals.css tem uma regra antiga que escurece a página sozinha quando o aparelho está no modo escuro;
+   estas regras, mais específicas, passam a mandar nela) */
+:root[data-tema="claro"] {
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #171717;
+}
+:root[data-tema="escuro"] {
+  --background: #020617;
+  --foreground: #f1f5f9;
+}
+
 /* ---------- Tamanho da letra ---------- */
 html[data-fonte="media"] {
   font-size: 112.5%;

@@ -6,18 +6,22 @@
  * Guarda o estado do menu:
  *  - recolhida: no desktop, o menu fica só com ícones;
  *  - menuAberto: no celular/tablet, o menu vira uma gaveta sobre a tela.
+ * Guarda também se a janela de Configurações (aparência) está aberta: ela fica aqui, fora da barra do
+ * topo, e o botão que a abre fica na barra.
  * O fundo claro fica neste wrapper (e não no <body>) para a interface continuar legível
  * mesmo com o navegador em tema escuro.
  * As páginas internas trazem o próprio <main>, por isso a área de conteúdo é um <div>.
  */
 import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import JanelaConfiguracoes from "@/modules/preferencias/components/JanelaConfiguracoes";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const [recolhida, setRecolhida] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
+  const [configuracoesAbertas, setConfiguracoesAbertas] = useState(false);
 
   // A tecla Esc fecha a gaveta do menu (só enquanto ela está aberta)
   useEffect(() => {
@@ -53,11 +57,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
           menuAberto={menuAberto}
           onAbrirMenu={() => setMenuAberto(true)}
           onAlternarRecolhimento={() => setRecolhida((atual) => !atual)}
+          onAbrirConfiguracoes={() => setConfiguracoesAbertas(true)}
         />
         <div id="conteudo" className="flex-1">
           {children}
         </div>
       </div>
+
+      <JanelaConfiguracoes aberto={configuracoesAbertas} onFechar={() => setConfiguracoesAbertas(false)} />
     </div>
   );
 }

@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * SysMúsica — Barra superior: botões do menu, identificação do sistema e breadcrumbs.
- * Fase 2: o menu do usuário (perfil, sair) entrará à direita, junto com o login real.
+ * SysMúsica — Barra superior: botões do menu, identificação do sistema, breadcrumbs, Configurações
+ * (engrenagem, que abre a aparência do sistema) e o menu do usuário.
  */
-import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Menu, PanelLeftClose, PanelLeftOpen, Settings } from "lucide-react";
 import { cn } from "@/lib/cn";
 import Breadcrumbs from "./Breadcrumbs";
 import UserMenu from "./UserMenu";
@@ -14,6 +14,7 @@ interface TopbarProps {
   menuAberto: boolean;
   onAbrirMenu: () => void;
   onAlternarRecolhimento: () => void;
+  onAbrirConfiguracoes: () => void;
 }
 
 // Estilo comum dos botões de ícone da barra
@@ -25,9 +26,10 @@ export default function Topbar({
   menuAberto,
   onAbrirMenu,
   onAlternarRecolhimento,
+  onAbrirConfiguracoes,
 }: TopbarProps) {
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6 print:hidden">
       {/* Celular/tablet: abre a gaveta do menu */}
       <button
         type="button"
@@ -63,8 +65,18 @@ export default function Topbar({
         <Breadcrumbs />
       </div>
 
-      {/* Menu do usuário: nome, grupo e botão Sair */}
-      <div className="ml-auto">
+      {/* Configurações (aparência) e menu do usuário: nome, grupo e botão Sair */}
+      <div className="ml-auto flex items-center gap-1">
+        <button
+          type="button"
+          onClick={onAbrirConfiguracoes}
+          aria-label="Abrir as configurações de aparência"
+          aria-haspopup="dialog"
+          title="Configurações"
+          className={classeBotao}
+        >
+          <Settings className="h-5 w-5" aria-hidden="true" />
+        </button>
         <UserMenu />
       </div>
     </header>

@@ -5,10 +5,13 @@
  *
  * Os itens vêm de ./navegacao.ts. No desktop (>= lg) é fixo e pode ser recolhido (só ícones);
  * no celular/tablet é uma gaveta que abre sobre a tela e fecha ao navegar, tocar fora ou apertar Esc.
+ * No canto de cima fica a logomarca (emblema da CCB, em uma plaquinha branca por causa do fundo escuro) e o
+ * nome do sistema; com o menu recolhido, aparece só o ícone compacto.
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Music, X } from "lucide-react";
+import LogoMarca from "@/components/ui/LogoMarca";
 import { cn } from "@/lib/cn";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import { GRUPOS_MENU, filtrarMenu, itemAtivo } from "./navegacao";
@@ -39,7 +42,7 @@ export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
         id="menu-lateral"
         aria-label="Menu lateral"
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar text-sidebar-fg shadow-xl transition-all duration-200 lg:shadow-none",
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar text-sidebar-fg shadow-xl transition-all duration-200 lg:shadow-none print:hidden",
           aberta ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
           recolhida ? "lg:w-[4.5rem]" : "lg:w-64"
         )}
@@ -52,9 +55,14 @@ export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
             title="SysMúsica — Dashboard"
             className="flex min-w-0 items-center gap-3"
           >
+            {/* Menu aberto: logomarca da CCB; recolhido (só no desktop): o ícone compacto */}
+            <LogoMarca altura={30} comFundoBranco className={cn(recolhida && "lg:hidden")} />
             <span
               aria-hidden="true"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white shadow-sm"
+              className={cn(
+                "hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white shadow-sm",
+                recolhida && "lg:flex"
+              )}
             >
               <Music className="h-5 w-5" />
             </span>
