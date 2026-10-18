@@ -58,13 +58,28 @@ export async function listarOpcoesVisitante(): Promise<OpcoesVisitante> {
   const { data, error } = await supabase.rpc("opcoes_visitante");
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar as opções do visitante."));
 
-  const linhas = (data ?? []) as { tipo: string; id: string; nome: string; permite_instrumento: boolean }[];
+  const linhas = (data ?? []) as {
+    tipo: string;
+    id: string;
+    nome: string;
+    permite_instrumento: boolean;
+    exige_instrumento: boolean;
+    familia_id: string | null;
+  }[];
   return {
     cargos: linhas
       .filter((linha) => linha.tipo === "CARGO")
-      .map((linha) => ({ id: linha.id, nome: linha.nome, permite_instrumento: linha.permite_instrumento })),
+      .map((linha) => ({
+        id: linha.id,
+        nome: linha.nome,
+        permite_instrumento: linha.permite_instrumento,
+        exige_instrumento: linha.exige_instrumento,
+      })),
     instrumentos: linhas
       .filter((linha) => linha.tipo === "INSTRUMENTO")
+      .map((linha) => ({ id: linha.id, nome: linha.nome, familia_id: linha.familia_id })),
+    familias: linhas
+      .filter((linha) => linha.tipo === "FAMILIA")
       .map((linha) => ({ id: linha.id, nome: linha.nome })),
   };
 }

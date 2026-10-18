@@ -3,14 +3,19 @@
 /**
  * SysMúsica — Cadastro rápido de visitante na portaria (painel lateral).
  * Para o irmão de outra região (ou sem cadastro) que vem congregar: nome completo, cargo ou ministério,
- * instrumento (opcional) e a IGREJA DE ORIGEM, escolhida em listas encadeadas que vêm do banco
+ * instrumento e a IGREJA DE ORIGEM, escolhida em listas encadeadas que vêm do banco
  * (Estado > Região > Setor > Comum, cadastrados em Organização): nada de origem digitada à mão.
+ *
+ * Instrumento: o MESMO seletor do cadastro de membro (lista por família), obrigatório nos cargos que
+ * exigem (o Músico), com a família preenchida automaticamente.
  * O visitante é cadastrado na COMUM da portaria em atendimento e só a região dela o enxerga.
  * Depois de salvar, abre a conferência para registrar a entrada.
- * O banco confere permissão, portaria aprovada, abrangência, origem cadastrada e nome repetido na comum.
+ * O banco confere permissão, portaria aprovada, abrangência, instrumento, origem e nome repetido na comum.
  */
 import { useEffect, useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
+import SeletorInstrumento, { FamiliaAutomatica } from "@/modules/instrumentos/components/SeletorInstrumento";
+import { validarInstrumentoDoCargo } from "@/modules/instrumentos/selecao";
 import { filhosDe } from "@/modules/organizacao/regras";
 import type { NoOrganizacao } from "@/modules/organizacao/tipos";
 import { validarDadosVisitante } from "../regras";
@@ -53,7 +58,7 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
       })
       .catch((e: unknown) => {
         if (cancelado) return;
-        setOpcoes({ cargos: [], instrumentos: [] });
+        setOpcoes({ cargos: [], instrumentos: [], familias: [] });
         setErro(e instanceof Error ? e.message : "Não foi possível carregar as opções.");
       });
     return () => {
@@ -63,6 +68,7 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const cargo = opcoes?.cargos.find((item) => item.id === cargoId);
+  const exigeInstrumento = cargo?.exige_instrumento === true;
 
   // Listas encadeadas: cada nível só mostra o que pertence à escolha anterior
   const estados = filhosDe(origens, null, "ESTADO");
@@ -101,6 +107,8 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
 
     const erroDados = validarDadosVisitante({ nome, cargoId, origemComumId: comumId });
     if (erroDados) return setErro(erroDados);
+    const erroInstrumento = validarInstrumentoDoCargo(exigeInstrumento, instrumentoId, cargo?.nome);
+    if (erroInstrumento) return setErro(erroInstrumento);
 
     setSalvando(true);
     try {
@@ -166,26 +174,36 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
         </select>
       </div>
 
+      {/* Instrumento: o mesmo seletor do cadastro de membro (obrigatório para Músico) + família automática */}
       {cargo?.permite_instrumento && (
-        <div className="space-y-1.5">
-          <label htmlFor="instrumento-visitante" className="text-sm font-medium text-slate-700">
-            Instrumento <span className="font-normal text-slate-400">(opcional)</span>
-          </label>
-          <select
-            id="instrumento-visitante"
-            value={instrumentoId}
-            onChange={(e) => setInstrumentoId(e.target.value)}
-            disabled={salvando}
-            className={classeInput}
-          >
-            <option value="">Sem instrumento / não informado</option>
-            {opcoes.instrumentos.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.nome}
-              </option>
-            ))}
-          </select>
-        </div>
+        <>
+          <div className="space-y-1.5">
+            <label htmlFor="instrumento-visitante" className="text-sm font-medium text-slate-700">
+              Instrumento{" "}
+              {exigeInstrumento ? (
+                <span className="font-normal text-red-600">(obrigatório)</span>
+              ) : (
+                <span className="font-normal text-slate-400">(opcional)</span>
+              )}
+            </label>
+            <SeletorInstrumento
+              id="instrumento-visitante"
+              valor={instrumentoId}
+              onChange={setInstrumentoId}
+              instrumentos={opcoes.instrumentos}
+              familias={opcoes.familias}
+              obrigatorio={exigeInstrumento}
+              disabled={salvando}
+              className={classeInput}
+            />
+          </div>
+
+          <FamiliaAutomatica
+            instrumentoId={instrumentoId}
+            instrumentos={opcoes.instrumentos}
+            familias={opcoes.familias}
+          />
+        </>
       )}
 
       {/* Origem: listas encadeadas que vêm do banco (Organização) */}

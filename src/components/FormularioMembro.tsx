@@ -4,27 +4,24 @@
  * SysMúsica — Formulário de membro (cadastro e edição) — conteúdo do painel lateral.
  * membro = null -> cadastrar; preenchido -> editar (inclui o status Ativo/Inativo).
  *
- * Localidade: congregação (comum), cidade e bairro, com sugestões dos valores já cadastrados.
+ * Comum: lista agrupada por Região › Setor (cadastrada em Organização). O nome da congregação sai da comum.
+ * Cidade e bairro: texto com sugestões dos valores já cadastrados.
  * CPF: só aparece para quem tem a permissão membros.cpf (o banco também confere). É opcional,
  *      validado pelos dígitos verificadores e não pode repetir entre os membros.
  *
- * Instrumento (combobox): o campo sugere os instrumentos cadastrados.
- *  - Se o texto digitado já existe (sem diferenciar maiúsculas/acentos), usa o instrumento existente.
- *  - Se não existe, o instrumento é criado automaticamente (com a família inferida pelo nome).
- *  - A FAMÍLIA é automática e somente leitura; quem corrige uma classificação errada é quem
- *    tem permissão de editar instrumentos (tela Instrumentos e famílias).
- *  - Nome de família (ex: "Madeiras") não é aceito como instrumento.
- * O campo de instrumento só aparece para cargos com permite_instrumento = true.
+ * Instrumento: lista suspensa agrupada por família, igual em todo o sistema (só instrumentos cadastrados).
+ *  - O campo só aparece para cargos com permite_instrumento = true.
+ *  - É OBRIGATÓRIO nos cargos que exigem instrumento (o Músico); o banco também recusa sem ele.
+ *  - A FAMÍLIA é automática e somente leitura (vem do cadastro do instrumento). Instrumento novo e
+ *    correção de família: tela Instrumentos e famílias.
  */
 import { useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
-import SeletorComum from "@/modules/organizacao/components/SeletorComum";
 import { formatarCpf, limparCpf, validarCpf } from "@/lib/cpf";
-import { ehNomeDeFamilia, inferirFamilia } from "@/lib/familias";
-import { normalizarTexto } from "@/lib/texto";
-import { formatarNomeInstrumento } from "@/modules/instrumentos/regras";
-import { obterOuCriarInstrumento } from "@/modules/instrumentos/services/instrumentos";
+import SeletorInstrumento, { FamiliaAutomatica } from "@/modules/instrumentos/components/SeletorInstrumento";
+import { validarInstrumentoDoCargo } from "@/modules/instrumentos/selecao";
 import { atualizarMembro, criarMembro } from "@/modules/membros/services/membros";
+import SeletorComum from "@/modules/organizacao/components/SeletorComum";
 import type { Cargo, Familia, Instrumento, MembroPublico } from "@/types/database";
 
 /** Listas de sugestões para os campos de localidade. */
@@ -71,10 +68,6 @@ export default function FormularioMembro({
   const editando = membro !== null;
 
   // Valores iniciais: vazios no cadastro; os dados do membro na edição
-  const instrumentoInicial = membro?.instrumento_id
-    ? (instrumentos.find((instrumento) => instrumento.id === membro.instrumento_id)?.nome ?? "")
-    : "";
-
   const [nome, setNome] = useState(membro?.nome ?? "");
   const [congregacao, setCongregacao] = useState(membro?.congregacao ?? "");
   const [comumId, setComumId] = useState(membro?.comum_id ?? ""); // a comum define o nome da congregação
@@ -83,45 +76,22 @@ export default function FormularioMembro({
   const [cpf, setCpf] = useState(cpfInicial ? formatarCpf(cpfInicial) : "");
   const [cargoId, setCargoId] = useState(membro?.cargo_id ?? "");
   const [dataNascimento, setDataNascimento] = useState(membro?.data_nascimento ?? ""); // "AAAA-MM-DD"
-  const [instrumentoTexto, setInstrumentoTexto] = useState(instrumentoInicial);
+  const [instrumentoId, setInstrumentoId] = useState(membro?.instrumento_id ?? "");
   const [status, setStatus] = useState(membro?.status ?? "Ativo");
   const [salvando, setSalvando] = useState(false);
   const [erroForm, setErroForm] = useState<string | null>(null);
 
-  // O cargo escolhido define se o campo de instrumento aparece
+  // O cargo escolhido define se o campo de instrumento aparece e se ele é obrigatório
   const cargoSelecionado = cargos.find((cargo) => cargo.id === cargoId);
   const permiteInstrumento = cargoSelecionado?.permite_instrumento ?? false;
-
-  // Instrumento digitado: já existe na tabela? (comparação sem acento e sem diferenciar maiúsculas)
-  const instrumentoDigitado = instrumentoTexto.trim();
-  const instrumentoExistente = instrumentoDigitado
-    ? instrumentos.find(
-        (instrumento) => normalizarTexto(instrumento.nome) === normalizarTexto(instrumentoDigitado)
-      )
-    : undefined;
-
-  // O texto digitado é o nome de uma família (ex: "Madeiras")? Isso não é um instrumento.
-  const digitadoEhFamilia = instrumentoDigitado !== "" && ehNomeDeFamilia(instrumentoDigitado, familias);
-
-  // Família AUTOMÁTICA: a do instrumento já cadastrado ou, se for novo, a inferida pelo nome
-  const familiaAutomatica: Familia | null = instrumentoExistente
-    ? (familias.find((familia) => familia.id === instrumentoExistente.familia_id) ?? null)
-    : instrumentoDigitado && !digitadoEhFamilia
-      ? inferirFamilia(instrumentoDigitado, familias)
-      : null;
-
-  // Texto mostrado no campo (somente leitura) "Família"
-  const textoFamilia = familiaAutomatica
-    ? familiaAutomatica.nome
-    : instrumentoDigitado && !digitadoEhFamilia
-      ? "Não identificada (poderá ser classificada depois)"
-      : "";
+  const exigeInstrumento =
+    (cargoSelecionado as (Cargo & { exige_instrumento?: boolean }) | undefined)?.exige_instrumento === true;
 
   // Ao trocar de cargo, limpa o instrumento se o novo cargo não usar instrumento
   function trocarCargo(novoCargoId: string) {
     setCargoId(novoCargoId);
     const novoCargo = cargos.find((cargo) => cargo.id === novoCargoId);
-    if (!novoCargo?.permite_instrumento) setInstrumentoTexto("");
+    if (!novoCargo?.permite_instrumento) setInstrumentoId("");
   }
 
   async function salvar(submissao: FormEvent<HTMLFormElement>) {
@@ -140,22 +110,12 @@ export default function FormularioMembro({
       return setErroForm("CPF inválido. Confira os números digitados.");
     }
 
-    // Família não é instrumento: pede o instrumento real
-    if (permiteInstrumento && digitadoEhFamilia) {
-      return setErroForm(
-        `"${instrumentoDigitado}" é uma família de instrumentos. Informe o instrumento (ex.: Clarinete).`
-      );
-    }
+    // Instrumento obrigatório nos cargos que exigem (o banco confere de novo)
+    const erroInstrumento = validarInstrumentoDoCargo(exigeInstrumento, instrumentoId, cargoSelecionado?.nome);
+    if (erroInstrumento) return setErroForm(erroInstrumento);
 
     setSalvando(true);
     try {
-      // Passo 1: resolve o instrumento (só se o cargo permitir e houver texto digitado)
-      const instrumento =
-        permiteInstrumento && instrumentoDigitado
-          ? await obterOuCriarInstrumento(instrumentoDigitado, instrumentos, familias)
-          : null;
-
-      // Passo 2: grava o membro (criar ou atualizar)
       const dados = {
         nome: nome.trim(),
         congregacao: congregacao.trim(),
@@ -164,7 +124,7 @@ export default function FormularioMembro({
         bairro: bairro.trim() || null,
         cargo_id: cargoId,
         data_nascimento: dataNascimento || null,
-        instrumento_id: instrumento?.id ?? null,
+        instrumento_id: permiteInstrumento && instrumentoId ? instrumentoId : null,
       };
       if (membro) {
         // O CPF só é enviado por quem tem a permissão (os demais nem tocam nele)
@@ -177,18 +137,7 @@ export default function FormularioMembro({
         await criarMembro({ ...dados, ...(podeCpf && cpfDigitos ? { cpf: cpfDigitos } : {}) });
       }
 
-      const complemento = instrumento?.criado
-        ? ` Instrumento "${instrumento.nome}" criado${
-            instrumento.familiaNome
-              ? ` na família ${instrumento.familiaNome}`
-              : " (família ainda não classificada)"
-          }.`
-        : "";
-      await onSalvo(
-        editando
-          ? `Membro "${dados.nome}" atualizado.${complemento}`
-          : `Membro "${dados.nome}" cadastrado.${complemento}`
-      );
+      await onSalvo(editando ? `Membro "${dados.nome}" atualizado.` : `Membro "${dados.nome}" cadastrado.`);
     } catch (e) {
       setErroForm(e instanceof Error ? e.message : "Não foi possível salvar o membro.");
     } finally {
@@ -285,69 +234,38 @@ export default function FormularioMembro({
         </select>
       </div>
 
-      {/* Instrumento (combobox) + Família automática (somente leitura) */}
+      {/* Instrumento (lista por família; obrigatório para Músico) + Família automática */}
       {permiteInstrumento && (
         <>
           <div className="space-y-1.5">
             <label htmlFor="instrumento" className="text-sm font-medium text-slate-700">
-              Instrumento <span className="font-normal text-slate-400">(opcional)</span>
+              Instrumento{" "}
+              {exigeInstrumento ? (
+                <span className="font-normal text-red-600">(obrigatório)</span>
+              ) : (
+                <span className="font-normal text-slate-400">(opcional)</span>
+              )}
             </label>
-            <input
+            <SeletorInstrumento
               id="instrumento"
-              type="text"
-              list="lista-instrumentos"
-              autoComplete="off"
-              value={instrumentoTexto}
-              onChange={(e) => setInstrumentoTexto(e.target.value)}
+              valor={instrumentoId}
+              onChange={setInstrumentoId}
+              instrumentos={instrumentos}
+              familias={familias}
+              obrigatorio={exigeInstrumento}
               disabled={salvando}
-              placeholder="Digite ou escolha um instrumento"
               className={classeInput}
             />
-            <datalist id="lista-instrumentos">
-              {instrumentos.map((instrumento) => (
-                <option key={instrumento.id} value={instrumento.nome} />
-              ))}
-            </datalist>
-
-            {/* Feedback ao vivo: família digitada, instrumento existente ou novo */}
-            {instrumentoDigitado && (
-              <p
-                className={
-                  "text-xs " +
-                  (digitadoEhFamilia
-                    ? "text-red-600"
-                    : instrumentoExistente
-                      ? "text-slate-500"
-                      : "text-brand-700")
-                }
-              >
-                {digitadoEhFamilia
-                  ? `"${instrumentoDigitado}" é uma família. Digite o instrumento (ex.: Clarinete).`
-                  : instrumentoExistente
-                    ? `Instrumento cadastrado: ${instrumentoExistente.nome}`
-                    : `Novo instrumento: "${formatarNomeInstrumento(instrumentoDigitado)}" será criado ao salvar.`}
-              </p>
-            )}
+            <p className="text-xs text-slate-500">
+              Escolha na lista. Para incluir um instrumento novo, cadastre em Instrumentos e famílias.
+            </p>
           </div>
 
-          <div className="space-y-1.5">
-            <label htmlFor="familia" className="text-sm font-medium text-slate-700">
-              Família <span className="font-normal text-slate-400">(automática)</span>
-            </label>
-            <input
-              id="familia"
-              type="text"
-              readOnly
-              tabIndex={-1}
-              value={textoFamilia}
-              placeholder="Definida automaticamente pelo instrumento"
-              className="w-full cursor-default rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
-            />
-          </div>
+          <FamiliaAutomatica instrumentoId={instrumentoId} instrumentos={instrumentos} familias={familias} />
         </>
       )}
 
-      {/* Localidade: congregação (comum), cidade e bairro, com sugestões dos já cadastrados */}
+      {/* Localidade: comum (lista do banco), cidade e bairro (com sugestões dos já cadastrados) */}
       <div className="space-y-1.5">
         <label htmlFor="comum-membro" className="text-sm font-medium text-slate-700">
           Comum
@@ -425,11 +343,11 @@ export default function FormularioMembro({
         />
       </div>
 
-      {/* Status: só na edição (todo membro novo nasce "Ativo") */}
+      {/* Situação: só na edição */}
       {editando && (
         <div className="space-y-1.5">
           <label htmlFor="status" className="text-sm font-medium text-slate-700">
-            Situação cadastral
+            Situação
           </label>
           <select
             id="status"

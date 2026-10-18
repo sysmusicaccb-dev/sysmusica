@@ -20,8 +20,9 @@ export interface CartaoMembro {
 
 /** Opções do formulário de visitante (cargos e instrumentos, já filtrados pelo banco). */
 export interface OpcoesVisitante {
-  cargos: { id: string; nome: string; permite_instrumento: boolean }[];
-  instrumentos: { id: string; nome: string }[];
+  cargos: { id: string; nome: string; permite_instrumento: boolean; exige_instrumento: boolean }[];
+  instrumentos: { id: string; nome: string; familia_id: string | null }[];
+  familias: { id: string; nome: string }[];
 }
 
 /** Uma entrada recente da portaria. */
