@@ -53,6 +53,20 @@ describe("montarHtmlImpressao", () => {
   });
 });
 
+describe("montarHtmlImpressao: abertura da impressão", () => {
+  const base = { titulo: "T", colunas: ["A"], linhas: [["1"]], geradoEm: "agora" };
+
+  it("abre a caixa de impressão sozinha por padrão", () => {
+    expect(montarHtmlImpressao(base)).toContain("setTimeout(");
+  });
+
+  it("não abre a impressão sozinha na pré-visualização, mas mantém o botão Imprimir", () => {
+    const html = montarHtmlImpressao({ ...base, abrirImpressao: false });
+    expect(html).not.toContain("setTimeout(");
+    expect(html).toContain('onclick="window.print()"');
+  });
+});
+
 describe("gerarCsv", () => {
   it("usa ponto e vírgula, aspas e a marca de acentos do Excel", () => {
     const csv = gerarCsv(["Nome", "Obs"], [["Ana", 'disse "oi"']]);

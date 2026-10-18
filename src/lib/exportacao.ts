@@ -29,6 +29,8 @@ export interface OpcoesImpressao {
   rodape?: string;
   /** Texto de data/hora da geração (padrão: agora, no fuso de Salvador). */
   geradoEm?: string;
+  /** Abre a caixa de impressão sozinha (padrão: sim). Com "false", mostra a página para conferir e o botão Imprimir. */
+  abrirImpressao?: boolean;
 }
 
 /**
@@ -88,9 +90,32 @@ ${opcoes.subtitulo ? `<p class="sub">${escaparHtml(opcoes.subtitulo)}</p>` : ""}
 <tbody>${corpo}</tbody>
 </table>
 <p class="rodape">${opcoes.rodape ? `${escaparHtml(opcoes.rodape)} · ` : ""}Gerado em ${escaparHtml(gerado)} · ${opcoes.linhas.length} registro(s)</p>
-<script>window.addEventListener("load", function () { setTimeout(function () { window.focus(); window.print(); }, 150); });</script>
+${opcoes.abrirImpressao === false ? "" : `<script>window.addEventListener("load", function () { setTimeout(function () { window.focus(); window.print(); }, 150); });</script>`}
 </body>
 </html>`;
+}
+
+/**
+ * Abre a janela do relatório JÁ NO CLIQUE do usuário (antes de qualquer espera), para o navegador não a
+ * bloquear como pop-up. Depois, escreverImpressao preenche a janela. Devolve nulo se foi bloqueada.
+ */
+export function abrirJanelaImpressao(): Window | null {
+  const janela = window.open("", "_blank");
+  if (janela) {
+    janela.document.open();
+    janela.document.write(
+      '<!doctype html><meta charset="utf-8"><title>Relatório</title><p style="font-family:Arial,sans-serif">Preparando o relatório...</p>'
+    );
+    janela.document.close();
+  }
+  return janela;
+}
+
+/** Escreve o relatório na janela aberta por abrirJanelaImpressao. */
+export function escreverImpressao(janela: Window, opcoes: OpcoesImpressao): void {
+  janela.document.open();
+  janela.document.write(montarHtmlImpressao(opcoes));
+  janela.document.close();
 }
 
 /** Abre a janela de impressão. Devolve false se o navegador bloqueou a janela (pop-up). */

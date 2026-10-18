@@ -22,6 +22,7 @@ Aplique **em ordem numérica**, cada arquivo **uma única vez**, no SQL Editor d
 | `0015_auditoria_e_origem_visitante.sql` | Auditoria automática (gatilhos, logins, impressões), permissão auditoria.visualizar e origem do visitante vinda do banco | aplicar agora |
 | `0016_instrumento_obrigatorio.sql` | Instrumento obrigatório para o cargo Músico (banco e telas) e família do instrumento nas opções do visitante | aplicar agora |
 | `0017_foto_obrigatoria.sql` | Fotografia obrigatória no cadastro novo (membro e visitante), envio da foto por quem cadastra e troca de foto respeitando a região | aplicar agora |
+| `0018_relatorios.sql` | Módulo Relatórios: permissão relatorios.visualizar e consultas (presença, membros, eventos, contagens) respeitando a região | aplicar agora |
 
 Atenção: **não reexecute o `0001` depois do `0002`**. O 0001 recria as políticas antigas, que liberavam
 o acesso anônimo. Novas alterações de banco entram sempre como um novo arquivo numerado.

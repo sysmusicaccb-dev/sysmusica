@@ -165,4 +165,8 @@ describe("Gestão de portarias no menu", () => {
   it("quem só tem a permissão de auditoria vê apenas Auditoria", () => {
     expect(hrefs(["auditoria.visualizar"])).toEqual(["/administracao/auditoria"]);
   });
+
+  it("quem só tem a permissão de relatórios vê apenas Relatórios", () => {
+    expect(hrefs(["relatorios.visualizar"])).toEqual(["/relatorios"]);
+  });
 });
