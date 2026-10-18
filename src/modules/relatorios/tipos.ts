@@ -66,6 +66,24 @@ export interface FiltrosRelatorio {
 
 export type AjustePagina = "automatico" | "manual";
 
+/** Margem da página impressa: estreita, normal ou larga (os valores em mm ficam em regras.ts). */
+export type MargemPagina = "estreita" | "normal" | "larga";
+
+/** O que pode aparecer no quadro de informações do cabeçalho. */
+export type ItemCabecalho =
+  | "marca"
+  | "evento"
+  | "periodo"
+  | "localizacao"
+  | "filtros"
+  | "total"
+  | "resumo"
+  | "emissao"
+  | "emitidoPor";
+
+/** O que pode aparecer no rodapé (além do texto livre). */
+export type ItemRodape = "paginacao" | "sistema" | "emitidoPor" | "emissao" | "total";
+
 export interface OpcoesPagina {
   titulo: string;
   rodape: string;
@@ -73,6 +91,12 @@ export interface OpcoesPagina {
   ajuste: AjustePagina;
   escala: string; // zoom em % (só no ajuste manual)
   fonte: string; // tamanho da letra em pt (só no ajuste manual)
+  subtitulo: string; // linha opcional sob o título
+  margem: MargemPagina;
+  cabecalho: Record<ItemCabecalho, boolean>; // o que aparece no quadro do cabeçalho
+  rodapeMarcado: Record<ItemRodape, boolean>; // o que aparece no rodapé (o texto livre é o campo "rodape")
+  assinaturas: boolean; // mostra as linhas de assinatura no fim
+  nomesAssinaturas: string; // nomes das linhas, separados por vírgula
 }
 
 export interface EventoFiltro {

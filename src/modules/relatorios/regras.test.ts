@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { DEFINICOES_RELATORIO } from "@/modules/relatorios/catalogo";
 import {
+  agoraEmSalvador,
   colunasEscolhidas,
+  itensCabecalhoDisponiveis,
+  lerAssinaturas,
+  margemEmMm,
+  montarInformacoes,
+  montarItensRodape,
+  resumoDeTotais,
   colunasVisiveis,
   contarPor,
   FILTROS_VAZIOS,
@@ -79,6 +86,161 @@ describe("montarTabela", () => {
       ["1", "Músico", "5"],
       ["2", "Ancião", ""],
     ]);
+  });
+});
+
+describe("agoraEmSalvador e margemEmMm", () => {
+  it("mostra data e hora no fuso de Salvador", () => {
+    expect(agoraEmSalvador(new Date("2026-10-18T04:31:00Z"))).toBe("18/10/2026 01:31");
+  });
+
+  it("traduz a margem escolhida para milímetros", () => {
+    expect(margemEmMm("estreita")).toBe(8);
+    expect(margemEmMm("normal")).toBe(12);
+    expect(margemEmMm("larga")).toBe(18);
+  });
+});
+
+describe("itensCabecalhoDisponiveis", () => {
+  it("oferece só o que faz sentido para o tipo escolhido", () => {
+    expect(itensCabecalhoDisponiveis(definicao("cargos"))).toEqual(["marca", "total", "emissao", "emitidoPor"]);
+    expect(itensCabecalhoDisponiveis(definicao("organizacao"))).toEqual([
+      "marca",
+      "localizacao",
+      "total",
+      "emissao",
+      "emitidoPor",
+    ]);
+    expect(itensCabecalhoDisponiveis(definicao("presenca"))).toEqual([
+      "marca",
+      "evento",
+      "periodo",
+      "localizacao",
+      "filtros",
+      "total",
+      "resumo",
+      "emissao",
+      "emitidoPor",
+    ]);
+  });
+});
+
+describe("resumoDeTotais", () => {
+  it("conta as presenças por situação e soma os eventos", () => {
+    expect(resumoDeTotais("presenca", [{ status: "Presente" }, { status: "Presente" }, { status: "Ausente" }])).toBe(
+      "Presentes: 2 · Ausentes: 1 · Justificados: 0"
+    );
+    expect(
+      resumoDeTotais("eventos", [
+        { registros: "5", presentes: "4" },
+        { registros: "3", presentes: "3" },
+      ])
+    ).toBe("Presenças registradas: 8 · Presentes: 7");
+  });
+
+  it("não tem resumo nos outros tipos", () => {
+    expect(resumoDeTotais("membros", [{ status: "Ativo" }])).toBe("");
+  });
+});
+
+describe("montarInformacoes", () => {
+  const base = {
+    definicao: definicao("presenca"),
+    filtros: {
+      ...FILTROS_VAZIOS,
+      inicio: "2026-10-01",
+      fim: "2026-10-18",
+      eventoId: "ev1",
+      regiaoId: "r1",
+      setorId: "s1",
+      statusPresenca: "Presente",
+    },
+    rotulos: {
+      evento: "17/10/2026 19:30 · Ensaio Regional · Central Itinga",
+      regiao: "Salvador",
+      setor: "Setor 1",
+    },
+    itens: {
+      marca: true,
+      evento: true,
+      periodo: true,
+      localizacao: true,
+      filtros: true,
+      total: true,
+      resumo: true,
+      emissao: true,
+      emitidoPor: true,
+    },
+    emitidoPor: "Levi Alencar",
+    geradoEm: "18/10/2026 01:31",
+    linhas: [{ status: "Presente" }, { status: "Presente" }, { status: "Ausente" }],
+    total: 3,
+  };
+  const comoTexto = (lista: { rotulo: string; valor: string }[]) => lista.map((item) => `${item.rotulo}: ${item.valor}`);
+
+  it("monta o quadro completo na ordem certa", () => {
+    expect(comoTexto(montarInformacoes(base))).toEqual([
+      "Evento: 17/10/2026 19:30 · Ensaio Regional · Central Itinga",
+      "Período: 01/10/2026 a 18/10/2026",
+      "Localização: Salvador › Setor 1",
+      "Filtros: Presença: Presente",
+      "Total de registros: 3",
+      "Resumo: Presentes: 2 · Ausentes: 1 · Justificados: 0",
+      "Emitido em: 18/10/2026 01:31",
+      "Emitido por: Levi Alencar",
+    ]);
+  });
+
+  it("deixa de fora os itens desmarcados", () => {
+    const lista = comoTexto(montarInformacoes({ ...base, itens: { ...base.itens, evento: false, resumo: false, emissao: false } }));
+    expect(lista.some((linha) => linha.startsWith("Evento"))).toBe(false);
+    expect(lista.some((linha) => linha.startsWith("Resumo"))).toBe(false);
+    expect(lista.some((linha) => linha.startsWith("Emitido em"))).toBe(false);
+    expect(lista).toContain("Emitido por: Levi Alencar");
+  });
+
+  it("explica quando nenhum evento ou localização foi escolhido", () => {
+    const lista = comoTexto(
+      montarInformacoes({
+        ...base,
+        filtros: { ...FILTROS_VAZIOS },
+        rotulos: {},
+      })
+    );
+    expect(lista).toContain("Evento: Todos os eventos do período");
+    expect(lista).toContain("Localização: Toda a sua abrangência");
+    expect(lista).toContain("Filtros: Nenhum filtro adicional");
+  });
+
+  it("não inventa itens que o tipo não tem", () => {
+    const lista = comoTexto(montarInformacoes({ ...base, definicao: definicao("cargos"), linhas: [], total: 0 }));
+    expect(lista).toEqual(["Total de registros: 0", "Emitido em: 18/10/2026 01:31", "Emitido por: Levi Alencar"]);
+  });
+});
+
+describe("montarItensRodape e lerAssinaturas", () => {
+  const itens = { paginacao: true, sistema: true, emitidoPor: true, emissao: false, total: true };
+
+  it("coloca o texto livre primeiro e só os itens marcados (a numeração é tratada à parte)", () => {
+    expect(
+      montarItensRodape({ itens, textoLivre: " Confidencial ", emitidoPor: "Levi", geradoEm: "agora", total: 3 })
+    ).toEqual(["Confidencial", "SysMúsica", "Emitido por Levi", "3 registro(s)"]);
+    expect(
+      montarItensRodape({
+        itens: { ...itens, sistema: false, emitidoPor: false, total: false, emissao: true },
+        textoLivre: "",
+        emitidoPor: "Levi",
+        geradoEm: "agora",
+        total: 3,
+      })
+    ).toEqual(["Emitido em agora"]);
+  });
+
+  it("lê os nomes das assinaturas (até 4) e usa 'Responsável' quando vazio", () => {
+    expect(lerAssinaturas(false, "A, B")).toEqual([]);
+    expect(lerAssinaturas(true, " Ana , Beto ,, ")).toEqual(["Ana", "Beto"]);
+    expect(lerAssinaturas(true, "1,2,3,4,5")).toEqual(["1", "2", "3", "4"]);
+    expect(lerAssinaturas(true, "  ")).toEqual(["Responsável"]);
   });
 });
 

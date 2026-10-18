@@ -4,6 +4,7 @@
  * Testadas em regras.test.ts.
  */
 import type { CodigoPermissao } from "@/lib/permissoes";
+import type { ItemInformacao } from "@/lib/exportacao";
 import { formatarDataHora } from "@/lib/datas";
 import { intervaloDoFiltro } from "@/modules/auditoria/regras";
 import { filhosDe, ROTULO_NIVEL } from "@/modules/organizacao/regras";
@@ -16,7 +17,12 @@ import type {
   FiltrosRelatorio,
   LinhaRelatorio,
   OpcoesFiltros,
+  CampoFiltro,
+  ItemCabecalho,
+  ItemRodape,
+  MargemPagina,
   OpcoesPagina,
+  TipoRelatorioId,
 } from "./tipos";
 
 export const FILTROS_VAZIOS: FiltrosRelatorio = {
@@ -36,7 +42,23 @@ export const FILTROS_VAZIOS: FiltrosRelatorio = {
 export const PAGINA_INICIAL: OpcoesPagina = {
   titulo: "",
   rodape: "",
-  orientacao: "paisagem",
+  orientacao: "retrato", // padrão: retrato; a paisagem é a segunda opção
+  subtitulo: "",
+  margem: "normal",
+  cabecalho: {
+    marca: true,
+    evento: true,
+    periodo: true,
+    localizacao: true,
+    filtros: true,
+    total: true,
+    resumo: true,
+    emissao: true,
+    emitidoPor: true,
+  },
+  rodapeMarcado: { paginacao: true, sistema: true, emitidoPor: true, emissao: false, total: true },
+  assinaturas: false,
+  nomesAssinaturas: "Responsável",
   ajuste: "automatico",
   escala: "100",
   fonte: "9",
@@ -199,6 +221,205 @@ export function opcoesSetor(nos: NoOrganizacao[], regiaoId: string): OpcaoSeleca
 /** Comuns do setor escolhido (vazio sem setor). */
 export function opcoesComum(nos: NoOrganizacao[], setorId: string): OpcaoSelecao[] {
   return setorId ? filhosDe(nos, setorId, "COMUM").map((no) => ({ id: no.id, rotulo: no.nome })) : [];
+}
+
+// ---------- Cabeçalho, rodapé e margens do relatório impresso ----------
+
+export const NOME_DO_SISTEMA = "SysMúsica";
+
+/** Itens do quadro do cabeçalho, na ordem em que aparecem. */
+export const ITENS_CABECALHO: { id: ItemCabecalho; rotulo: string }[] = [
+  { id: "marca", rotulo: "Marca do sistema (logomarca ou nome)" },
+  { id: "evento", rotulo: "Evento escolhido (nome, data, hora e local)" },
+  { id: "periodo", rotulo: "Período" },
+  { id: "localizacao", rotulo: "Região, setor e comum" },
+  { id: "filtros", rotulo: "Outros filtros usados" },
+  { id: "total", rotulo: "Total de registros" },
+  { id: "resumo", rotulo: "Resumo dos totais (presentes, ausentes...)" },
+  { id: "emissao", rotulo: "Data e hora da emissão" },
+  { id: "emitidoPor", rotulo: "Emitido por (nome do usuário)" },
+];
+
+/** Itens do rodapé, na ordem em que aparecem (o texto livre vem sempre primeiro). */
+export const ITENS_RODAPE: { id: ItemRodape; rotulo: string }[] = [
+  { id: "paginacao", rotulo: "Numeração das páginas (Página 1 de 3)" },
+  { id: "sistema", rotulo: "Nome do sistema" },
+  { id: "emitidoPor", rotulo: "Emitido por" },
+  { id: "emissao", rotulo: "Data e hora da emissão" },
+  { id: "total", rotulo: "Total de registros" },
+];
+
+/** Margens da página em milímetros. */
+export const MARGENS: Record<MargemPagina, number> = { estreita: 8, normal: 12, larga: 18 };
+
+export function margemEmMm(margem: MargemPagina): number {
+  return MARGENS[margem] ?? MARGENS.normal;
+}
+
+// Filtros que entram no item "Outros filtros usados" (período, evento e localização têm item próprio)
+const OUTROS_FILTROS: CampoFiltro[] = [
+  "cargo",
+  "instrumento",
+  "situacaoMembro",
+  "statusPresenca",
+  "visitante",
+  "situacaoPortaria",
+];
+
+/** Itens do cabeçalho que fazem sentido para o tipo escolhido (marca, total, emissão e emitido por valem sempre). */
+export function itensCabecalhoDisponiveis(definicao: DefinicaoRelatorio): ItemCabecalho[] {
+  const tem = (campo: CampoFiltro) => definicao.filtros.includes(campo);
+  return ITENS_CABECALHO.map((item) => item.id).filter((id) => {
+    switch (id) {
+      case "evento":
+        return tem("evento");
+      case "periodo":
+        return tem("periodo");
+      case "localizacao":
+        return tem("regiao");
+      case "filtros":
+        return OUTROS_FILTROS.some((campo) => tem(campo));
+      case "resumo":
+        return definicao.id === "presenca" || definicao.id === "eventos";
+      default:
+        return true;
+    }
+  });
+}
+
+/** Data e hora de agora no fuso de Salvador, no formato "18/10/2026 01:31". */
+export function agoraEmSalvador(agora: Date = new Date()): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+    .format(agora)
+    .replace(", ", " ");
+}
+
+/** Resumo dos totais do relatório: presença (por situação) e eventos (presenças). Os demais tipos não têm. */
+export function resumoDeTotais(tipo: TipoRelatorioId, linhas: LinhaRelatorio[]): string {
+  if (tipo === "presenca") {
+    const contar = (situacao: string) => linhas.filter((linha) => linha.status === situacao).length;
+    return `Presentes: ${contar("Presente")} · Ausentes: ${contar("Ausente")} · Justificados: ${contar("Justificado")}`;
+  }
+  if (tipo === "eventos") {
+    const somar = (campo: string) => linhas.reduce((total, linha) => total + (Number(linha[campo]) || 0), 0);
+    return `Presenças registradas: ${somar("registros")} · Presentes: ${somar("presentes")}`;
+  }
+  return "";
+}
+
+// Filtros além de período, evento e localização, em uma linha ("Cargo: Músico · Presença: Presente")
+function textoOutrosFiltros(
+  definicao: DefinicaoRelatorio,
+  filtros: FiltrosRelatorio,
+  rotulos: RotulosFiltros
+): string {
+  const tem = (campo: CampoFiltro) => definicao.filtros.includes(campo);
+  const partes: string[] = [];
+
+  if (tem("cargo") && filtros.cargoId && rotulos.cargo) partes.push(`Cargo: ${rotulos.cargo}`);
+  if (tem("instrumento") && filtros.instrumentoId && rotulos.instrumento) {
+    partes.push(`Instrumento: ${rotulos.instrumento}`);
+  }
+  if (tem("situacaoMembro") && filtros.situacao) partes.push(`Situação: ${filtros.situacao}`);
+  if (tem("statusPresenca") && filtros.statusPresenca) partes.push(`Presença: ${filtros.statusPresenca}`);
+  if (tem("visitante") && filtros.visitante === "sim") partes.push("Somente visitantes");
+  if (tem("visitante") && filtros.visitante === "nao") partes.push("Sem visitantes");
+  if (tem("situacaoPortaria") && filtros.situacao) {
+    partes.push(`Situação: ${(ROTULO_STATUS as Record<string, string>)[filtros.situacao] ?? filtros.situacao}`);
+  }
+  return partes.join(" · ");
+}
+
+export interface EntradaInformacoes {
+  definicao: DefinicaoRelatorio;
+  filtros: FiltrosRelatorio;
+  rotulos: RotulosFiltros;
+  itens: Record<ItemCabecalho, boolean>;
+  emitidoPor: string;
+  geradoEm: string;
+  linhas: LinhaRelatorio[]; // para o resumo dos totais
+  total: number; // linhas que vão para o papel
+}
+
+/** Monta o quadro de informações do cabeçalho, só com os itens marcados que fazem sentido para o tipo. */
+export function montarInformacoes(entrada: EntradaInformacoes): ItemInformacao[] {
+  const { definicao, filtros, rotulos, itens } = entrada;
+  const tem = (campo: CampoFiltro) => definicao.filtros.includes(campo);
+  const lista: ItemInformacao[] = [];
+
+  if (itens.evento && tem("evento")) {
+    lista.push({
+      rotulo: "Evento",
+      valor: filtros.eventoId ? (rotulos.evento ?? "Evento escolhido") : "Todos os eventos do período",
+      largo: true,
+    });
+  }
+
+  if (itens.periodo && tem("periodo")) {
+    const de = filtros.inicio ? formatarDataFiltro(filtros.inicio) : "";
+    const ate = filtros.fim ? formatarDataFiltro(filtros.fim) : "";
+    if (de || ate) lista.push({ rotulo: "Período", valor: `${de || "início"} a ${ate || "hoje"}` });
+  }
+
+  if (itens.localizacao && tem("regiao")) {
+    const partes = [rotulos.regiao, rotulos.setor, rotulos.comum].filter((parte): parte is string => Boolean(parte));
+    lista.push({ rotulo: "Localização", valor: partes.length > 0 ? partes.join(" › ") : "Toda a sua abrangência" });
+  }
+
+  if (itens.filtros && OUTROS_FILTROS.some((campo) => tem(campo))) {
+    lista.push({
+      rotulo: "Filtros",
+      valor: textoOutrosFiltros(definicao, filtros, rotulos) || "Nenhum filtro adicional",
+      largo: true,
+    });
+  }
+
+  if (itens.total) lista.push({ rotulo: "Total de registros", valor: String(entrada.total) });
+
+  if (itens.resumo) {
+    const resumo = resumoDeTotais(definicao.id, entrada.linhas);
+    if (resumo) lista.push({ rotulo: "Resumo", valor: resumo, largo: true });
+  }
+
+  if (itens.emissao) lista.push({ rotulo: "Emitido em", valor: entrada.geradoEm });
+  if (itens.emitidoPor) lista.push({ rotulo: "Emitido por", valor: entrada.emitidoPor });
+  return lista;
+}
+
+/** Itens de texto do rodapé: o texto livre primeiro e depois os marcados (a numeração é tratada à parte). */
+export function montarItensRodape(entrada: {
+  itens: Record<ItemRodape, boolean>;
+  textoLivre: string;
+  emitidoPor: string;
+  geradoEm: string;
+  total: number;
+}): string[] {
+  const lista: string[] = [];
+  const livre = entrada.textoLivre.trim();
+  if (livre) lista.push(livre);
+  if (entrada.itens.sistema) lista.push(NOME_DO_SISTEMA);
+  if (entrada.itens.emitidoPor) lista.push(`Emitido por ${entrada.emitidoPor}`);
+  if (entrada.itens.emissao) lista.push(`Emitido em ${entrada.geradoEm}`);
+  if (entrada.itens.total) lista.push(`${entrada.total} registro(s)`);
+  return lista;
+}
+
+/** Nomes das linhas de assinatura: até 4, separados por vírgula (vazio = "Responsável"). Desligado = nenhuma. */
+export function lerAssinaturas(ativo: boolean, texto: string): string[] {
+  if (!ativo) return [];
+  const nomes = texto
+    .split(",")
+    .map((nome) => nome.trim().slice(0, 60))
+    .filter((nome) => nome !== "")
+    .slice(0, 4);
+  return nomes.length > 0 ? nomes : ["Responsável"];
 }
 
 // ---------- Ajuste da página ----------

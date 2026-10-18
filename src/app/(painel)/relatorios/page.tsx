@@ -24,13 +24,20 @@ import {
   colunasEscolhidas,
   colunasVisiveis,
   FILTROS_VAZIOS,
+  agoraEmSalvador,
+  itensCabecalhoDisponiveis,
   lerAjusteManual,
+  lerAssinaturas,
+  margemEmMm,
+  montarInformacoes,
+  montarItensRodape,
+  NOME_DO_SISTEMA,
   marcadasIniciais,
   montarTabela,
   moverColuna,
   nomeDoArquivo,
   PAGINA_INICIAL,
-  resumoFiltros,
+  // (o resumo dos filtros agora vem de montarInformacoes)
   rotulosDosFiltros,
   tiposDisponiveis,
   validarAjusteManual,
@@ -196,17 +203,42 @@ export default function RelatoriosPage() {
         baixarCsv(`${nomeDoArquivo(titulo, dataIso(0))}.csv`, gerarCsv(tabela.colunas, tabela.linhas));
         setAviso("Arquivo baixado. Esta ação ficou registrada na auditoria.");
       } else if (janela) {
-        const resumo = resumoFiltros(definicao, resultado.filtros, rotulosDosFiltros(resultado.filtros, opcoes));
+        const geradoEm = agoraEmSalvador();
+        const emitidoPor = conta?.nome ?? "usuário";
+        const informacoes = montarInformacoes({
+          definicao,
+          filtros: resultado.filtros,
+          rotulos: rotulosDosFiltros(resultado.filtros, opcoes),
+          itens: pagina.cabecalho,
+          emitidoPor,
+          geradoEm,
+          linhas: resultado.linhas,
+          total: tabela.linhas.length,
+        });
+        const rodapeItens = montarItensRodape({
+          itens: pagina.rodapeMarcado,
+          textoLivre: pagina.rodape,
+          emitidoPor,
+          geradoEm,
+          total: tabela.linhas.length,
+        });
         const manual = pagina.ajuste === "manual" ? lerAjusteManual(pagina.escala, pagina.fonte) : null;
         escreverImpressao(janela, {
           titulo,
-          subtitulo: `${resumo || "Sem filtros"} · emitido por ${conta?.nome ?? "usuário"}`,
+          subtitulo: pagina.subtitulo.trim() || undefined,
+          informacoes,
+          rodapeItens,
+          marca: pagina.cabecalho.marca ? NOME_DO_SISTEMA : undefined,
+          paginacao: pagina.rodapeMarcado.paginacao,
+          assinaturas: lerAssinaturas(pagina.assinaturas, pagina.nomesAssinaturas),
+          margem: margemEmMm(pagina.margem),
+          geradoEm,
           colunas: tabela.colunas,
           linhas: tabela.linhas,
           orientacao: pagina.orientacao,
           escala: manual?.escala,
           tamanhoFonte: manual?.tamanhoFonte,
-          rodape: pagina.rodape.trim() || undefined,
+          // (o texto livre do rodapé entra em rodapeItens)
           abrirImpressao: modo === "impressao",
         });
         setAviso(
@@ -308,7 +340,11 @@ export default function RelatoriosPage() {
                 {/* 4) Página */}
                 <section className={classeSecao}>
                   <h2 className="mb-3 text-sm font-semibold text-slate-900">4. Página</h2>
-                  <OpcoesDaPagina valores={pagina} onChange={setPagina} />
+                  <OpcoesDaPagina
+                    valores={pagina}
+                    onChange={setPagina}
+                    itensCabecalho={itensCabecalhoDisponiveis(definicao)}
+                  />
                 </section>
 
                 {/* 5) Resultado */}
