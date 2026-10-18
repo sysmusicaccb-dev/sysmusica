@@ -33,6 +33,7 @@ const ROTULO_ACAO: Record<string, string> = {
   backup_restaurado: "Restaurou dados de um backup",
   backup_excluido: "Excluiu um backup",
   backup_baixado: "Baixou um backup",
+  backup_verificado: "Verificou um backup",
   backup_configuracao_alterada: "Alterou a configuração do backup",
 };
 

@@ -39,6 +39,7 @@ export interface ResultadoVerificacao {
   hashConfere: boolean;
   abre: boolean;
   contagensConferem: boolean;
+  impedimento?: string; // a verificação nem chegou a ser feita (arquivo ausente, chave indisponível...)
   totalRegistros: number;
   detalhe?: string;
 }
@@ -157,6 +158,8 @@ export interface DadosAviso {
   totalTabelas?: number;
   feitoPor?: string | null;
   motivo?: string;
+  verificacao?: ResultadoVerificacao; // resultado da verificação automática (entra no aviso de sucesso)
+  refeito?: boolean; // a primeira cópia falhou na verificação e foi refeita
 }
 
 export function mensagemSucesso(dados: DadosAviso): { assunto: string; texto: string } {
@@ -169,6 +172,8 @@ export function mensagemSucesso(dados: DadosAviso): { assunto: string; texto: st
     "Guardado em: sistema (criptografado)",
     `Feito por: ${dados.feitoPor?.trim() || "sistema"}`,
   ];
+  if (dados.verificacao) linhas.push(`Verificação automática: ${resumoCurtoVerificacao(dados.verificacao)}`);
+  if (dados.refeito) linhas.push("Atenção: a primeira cópia falhou na verificação e foi refeita automaticamente.");
   return { assunto: "SysMúsica: backup concluído", texto: linhas.join("\n") };
 }
 
@@ -201,8 +206,105 @@ export function descreverAvisos(avisos: ResultadoCanal[]): string {
     .join(" · ");
 }
 
+// ---------- Verificação automática do backup ----------
+
+export type SituacaoVerificacao = "pendente" | "ok" | "falhou";
+
+/** Texto curto do resultado da verificação (usado nos avisos). */
+export function resumoCurtoVerificacao(resultado: ResultadoVerificacao): string {
+  if (resultado.ok) {
+    return `íntegra (${resultado.totalRegistros.toLocaleString("pt-BR")} registros conferidos: impressão digital, abertura e contagem)`;
+  }
+  return descreverVerificacao(resultado);
+}
+
+/** Alerta: o backup foi feito, mas não passou na verificação automática (mesmo depois de refeito). */
+export function mensagemVerificacaoFalhou(dados: {
+  tipo: TipoBackup;
+  quando: Date;
+  verificacao: ResultadoVerificacao;
+  feitoPor?: string | null;
+}): { assunto: string; texto: string } {
+  const linhas = [
+    "ALERTA: o backup foi feito, mas FALHOU na verificação automática (mesmo depois de refeito).",
+    `Tipo: ${ROTULO_TIPO[dados.tipo]}`,
+    `Data: ${dataHoraSalvador(dados.quando)}`,
+    `Problema: ${descreverVerificacao(dados.verificacao)}`,
+    "O que fazer: abra Administração > Backup, confira o registro e faça um novo backup.",
+    `Tentativa de: ${dados.feitoPor?.trim() || "sistema"}`,
+  ];
+  return { assunto: "SysMúsica: ALERTA, backup com falha na verificação", texto: linhas.join("\n") };
+}
+
+/** Aviso da verificação feita por um administrador (botão Verificar). */
+export function mensagemVerificacaoManual(dados: {
+  tipo: TipoBackup;
+  criadoEm: Date;
+  quando: Date;
+  verificacao: ResultadoVerificacao;
+  feitoPor?: string | null;
+}): { assunto: string; texto: string } {
+  const ok = dados.verificacao.ok;
+  const linhas = [
+    ok ? "Verificação manual concluída: o backup está íntegro." : "ALERTA: a verificação manual encontrou problema no backup.",
+    `Backup de: ${dataHoraSalvador(dados.criadoEm)} (${ROTULO_TIPO[dados.tipo]})`,
+    `Verificado em: ${dataHoraSalvador(dados.quando)}`,
+    `Resultado: ${resumoCurtoVerificacao(dados.verificacao)}`,
+    `Verificado por: ${dados.feitoPor?.trim() || "sistema"}`,
+  ];
+  return {
+    assunto: ok ? "SysMúsica: backup verificado" : "SysMúsica: ALERTA, problema na verificação do backup",
+    texto: linhas.join("\n"),
+  };
+}
+
+export interface DadosEtiquetaVerificacao {
+  verificacao: SituacaoVerificacao;
+  verificado_em: string | null;
+  verificado_por_nome: string | null;
+  verificacao_detalhe: string | null;
+}
+
+/** Texto, cor e dica da etiqueta de verificação: rosa suave (a verificar), verde suave (verificado) ou vermelho. */
+export function descreverEtiquetaVerificacao(dados: DadosEtiquetaVerificacao): {
+  texto: string;
+  classe: string;
+  dica: string;
+} {
+  const quando = dados.verificado_em ? dataHoraSalvador(new Date(dados.verificado_em)) : "";
+  const por = dados.verificado_por_nome ? `por ${dados.verificado_por_nome}` : "pelo sistema";
+
+  if (dados.verificacao === "ok") {
+    return {
+      texto: "Verificado",
+      classe: "bg-emerald-50 text-emerald-600",
+      dica: `Verificado ${por}${quando ? ` em ${quando}` : ""}.`,
+    };
+  }
+  if (dados.verificacao === "falhou") {
+    return {
+      texto: "Falha na verificação",
+      classe: "bg-red-100 text-red-700",
+      dica: dados.verificacao_detalhe ?? "A verificação encontrou problema neste backup.",
+    };
+  }
+  return {
+    texto: "A verificar",
+    classe: "bg-rose-50 text-rose-600",
+    dica: "Ainda não verificado. Clique em Verificar.",
+  };
+}
+
+/** Cor do ícone do botão Verificar, conforme a situação. */
+export function classeIconeVerificacao(situacao: SituacaoVerificacao): string {
+  if (situacao === "ok") return "text-emerald-500";
+  if (situacao === "falhou") return "text-red-500";
+  return "text-rose-400";
+}
+
 /** Resumo da verificação de um backup, para mostrar na tela. */
 export function descreverVerificacao(resultado: ResultadoVerificacao): string {
+  if (resultado.impedimento) return `Não foi possível verificar: ${resultado.impedimento.replace(/\.$/, "")}.`;
   if (resultado.ok) {
     return `Backup íntegro: a impressão digital confere, o arquivo abre e os ${resultado.totalRegistros.toLocaleString("pt-BR")} registros batem com o que foi gravado.`;
   }

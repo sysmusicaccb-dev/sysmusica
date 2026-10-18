@@ -15,6 +15,7 @@ import Skeleton from "@/components/ui/Skeleton";
 import { formatarDataHora } from "@/lib/datas";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import {
+  classeIconeVerificacao,
   descreverAvisos,
   descreverVerificacao,
   formatarTamanho,
@@ -28,6 +29,7 @@ import {
   obterUrlDeDownload,
   verificarBackup,
 } from "@/modules/backup/services/backupApi";
+import EtiquetaVerificacao from "@/modules/backup/components/EtiquetaVerificacao";
 import type { RegistroBackup } from "@/modules/backup/tipos";
 
 const classeBotao =
@@ -87,7 +89,11 @@ export default function BackupPage() {
       const resposta = await fazerBackup(observacao.trim() || null);
       setObservacao("");
       await carregar();
-      return `Backup concluído (${formatarTamanho(resposta.backup.tamanho_bytes)}). ${descreverAvisos(resposta.avisos)}`;
+      const titulo = resposta.verificacao.ok
+        ? "Backup concluído e verificado"
+        : "Atenção: o backup foi feito, mas não passou na verificação";
+      const refeito = resposta.refeito ? " A primeira cópia falhou na verificação e foi refeita automaticamente." : "";
+      return `${titulo} (${formatarTamanho(resposta.backup.tamanho_bytes)}).${refeito} ${descreverVerificacao(resposta.verificacao)} ${descreverAvisos(resposta.avisos)}`;
     });
   }
 
@@ -99,7 +105,11 @@ export default function BackupPage() {
   }
 
   function aoVerificar(id: string) {
-    void executar(`verificar:${id}`, async () => descreverVerificacao(await verificarBackup(id)));
+    void executar(`verificar:${id}`, async () => {
+      const resultado = await verificarBackup(id);
+      await carregar(); // a etiqueta e o ícone da lista mudam de cor
+      return descreverVerificacao(resultado);
+    });
   }
 
   function aoExcluir(id: string) {
@@ -129,7 +139,8 @@ export default function BackupPage() {
         <p className="mb-4 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
           Cada backup é comprimido, criptografado e guardado no armazenamento privado do sistema. Os links de
           download valem por 60 segundos. Guarde uma cópia da chave BACKUP_CHAVE fora do sistema: sem ela nenhum
-          backup abre.
+          backup abre. Cada backup é verificado automaticamente logo depois de gravado, e o resultado aparece na
+          etiqueta da lista e nos avisos.
         </p>
 
         {pode("backup.criar") && (
@@ -208,6 +219,7 @@ export default function BackupPage() {
                           {ok ? "Concluído" : "Falhou"}
                         </span>
                         {!ok && backup.erro && <span className="mt-1 block max-w-xs text-xs text-red-700">{backup.erro}</span>}
+                        {ok && <EtiquetaVerificacao backup={backup} />}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-slate-700">{formatarTamanho(backup.tamanho_bytes)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-slate-700">
@@ -223,8 +235,8 @@ export default function BackupPage() {
                                 {ocupado === `baixar:${backup.id}` ? "Gerando..." : "Baixar"}
                               </button>
                               <button type="button" className={classeBotao} onClick={() => aoVerificar(backup.id)} disabled={ocupado !== null}>
-                                <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-                                {ocupado === `verificar:${backup.id}` ? "Verificando..." : "Verificar"}
+                                <ShieldCheck className={"h-4 w-4 " + classeIconeVerificacao(backup.verificacao)} aria-hidden="true" />
+                                {ocupado === `verificar:${backup.id}` ? "Verificando..." : backup.verificacao === "pendente" ? "Verificar" : "Verificar novamente"}
                               </button>
                             </>
                           )}

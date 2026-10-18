@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  classeIconeVerificacao,
   compararContagens,
+  descreverEtiquetaVerificacao,
+  mensagemVerificacaoFalhou,
+  mensagemVerificacaoManual,
+  resumoCurtoVerificacao,
   contarLinhas,
   dataHoraSalvador,
   descreverAvisos,
@@ -133,6 +138,72 @@ describe("descreverVerificacao", () => {
     expect(descreverVerificacao({ ...ok, ok: false, hashConfere: false })).toMatch(/impressão digital/);
     expect(descreverVerificacao({ ...ok, ok: false, abre: false, detalhe: "chave errada" })).toMatch(/não abre \(chave errada\)/);
     expect(descreverVerificacao({ ...ok, ok: false, contagensConferem: false })).toMatch(/quantidade de registros/);
+  });
+});
+
+describe("verificação automática", () => {
+  const ok = { ok: true, hashConfere: true, abre: true, contagensConferem: true, totalRegistros: 192 };
+  const quando = new Date("2026-10-18T15:30:00Z");
+
+  it("o aviso de sucesso informa a verificação e quando a cópia foi refeita", () => {
+    const { texto } = mensagemSucesso({ tipo: "diario", quando, verificacao: ok, refeito: true });
+    expect(texto).toContain("Verificação automática: íntegra (192 registros conferidos");
+    expect(texto).toContain("refeita automaticamente");
+    expect(mensagemSucesso({ tipo: "diario", quando }).texto).not.toContain("Verificação automática");
+  });
+
+  it("o resumo curto mostra íntegra ou o problema", () => {
+    expect(resumoCurtoVerificacao(ok)).toMatch(/^íntegra/);
+    expect(resumoCurtoVerificacao({ ...ok, ok: false, hashConfere: false })).toMatch(/impressão digital/);
+  });
+
+  it("explica quando a verificação nem chegou a ser feita", () => {
+    const semArquivo = { ...ok, ok: false, abre: false, hashConfere: false, contagensConferem: false, impedimento: "A chave não está configurada." };
+    expect(descreverVerificacao(semArquivo)).toBe("Não foi possível verificar: A chave não está configurada.");
+  });
+
+  it("o alerta de falha traz o problema e o que fazer", () => {
+    const { assunto, texto } = mensagemVerificacaoFalhou({
+      tipo: "diario",
+      quando,
+      verificacao: { ...ok, ok: false, hashConfere: false },
+    });
+    expect(assunto).toContain("ALERTA");
+    expect(texto).toContain("impressão digital");
+    expect(texto).toContain("faça um novo backup");
+  });
+
+  it("o aviso da verificação manual muda conforme o resultado", () => {
+    const bom = mensagemVerificacaoManual({ tipo: "manual", criadoEm: quando, quando, verificacao: ok, feitoPor: "Levi" });
+    expect(bom.assunto).toBe("SysMúsica: backup verificado");
+    expect(bom.texto).toContain("Verificado por: Levi");
+    const ruim = mensagemVerificacaoManual({ tipo: "manual", criadoEm: quando, quando, verificacao: { ...ok, ok: false, abre: false } });
+    expect(ruim.assunto).toContain("ALERTA");
+    expect(ruim.texto).toContain("Verificado por: sistema");
+  });
+
+  it("a etiqueta muda de texto e de cor conforme a situação", () => {
+    const base = { verificado_em: null, verificado_por_nome: null, verificacao_detalhe: null };
+    expect(descreverEtiquetaVerificacao({ ...base, verificacao: "pendente" })).toMatchObject({
+      texto: "A verificar",
+      classe: "bg-rose-50 text-rose-600",
+    });
+    expect(
+      descreverEtiquetaVerificacao({ ...base, verificacao: "ok", verificado_em: "2026-10-18T15:30:00Z" })
+    ).toMatchObject({ texto: "Verificado", classe: "bg-emerald-50 text-emerald-600", dica: "Verificado pelo sistema em 18/10/2026 12:30." });
+    expect(
+      descreverEtiquetaVerificacao({ ...base, verificacao: "ok", verificado_em: "2026-10-18T15:30:00Z", verificado_por_nome: "Levi" }).dica
+    ).toBe("Verificado por Levi em 18/10/2026 12:30.");
+    expect(descreverEtiquetaVerificacao({ ...base, verificacao: "falhou", verificacao_detalhe: "o arquivo não abre" })).toMatchObject({
+      texto: "Falha na verificação",
+      dica: "o arquivo não abre",
+    });
+  });
+
+  it("o ícone do botão acompanha a situação", () => {
+    expect(classeIconeVerificacao("pendente")).toBe("text-rose-400");
+    expect(classeIconeVerificacao("ok")).toBe("text-emerald-500");
+    expect(classeIconeVerificacao("falhou")).toBe("text-red-500");
   });
 });
 

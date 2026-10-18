@@ -8,8 +8,8 @@ export const maxDuration = 60; // abrir e conferir o arquivo pode levar alguns s
 
 export async function POST(request: NextRequest, contexto: { params: Promise<{ id: string }> }) {
   return responder(async () => {
-    await autenticar(request, "backup.visualizar");
+    const usuario = await autenticar(request, "backup.visualizar");
     const { id } = await contexto.params;
-    return await verificarBackup(id);
+    return await verificarBackup(id, usuario);
   });
 }

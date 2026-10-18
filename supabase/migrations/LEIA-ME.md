@@ -25,6 +25,7 @@ Aplique **em ordem numérica**, cada arquivo **uma única vez**, no SQL Editor d
 | `0018_relatorios.sql` | Módulo Relatórios: permissão relatorios.visualizar e consultas (presença, membros, eventos, contagens) respeitando a região | aplicar agora |
 | `0019_preferencias_visuais.sql` | Preferências de aparência por usuário (modo claro/escuro, cor principal e tamanho da letra) | aplicar agora |
 | `0020_backup.sql` | Backup (base): permissões travadas ao Administrador, tabelas e armazenamento privado do módulo, função de restauração em uma transação | aplicar agora |
+| `0021_backup_verificacao.sql` | Verificação automática dos backups: situação (pendente, ok ou falhou), quando, por quem e detalhe | aplicar agora |
 
 Atenção: **não reexecute o `0001` depois do `0002`**. O 0001 recria as políticas antigas, que liberavam
 o acesso anônimo. Novas alterações de banco entram sempre como um novo arquivo numerado.
