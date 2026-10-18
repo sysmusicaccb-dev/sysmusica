@@ -3,14 +3,18 @@
 /**
  * SysMúsica — Cadastro rápido de visitante na portaria (painel lateral).
  * Para o irmão de outra região (ou sem cadastro) que vem congregar: nome completo, cargo ou ministério,
- * instrumento (opcional) e de onde vem. O visitante é cadastrado na COMUM da portaria em atendimento e
- * só a região dela o enxerga. Depois de salvar, abre a conferência para registrar a entrada.
- * O banco confere permissão, portaria aprovada, abrangência e nome repetido na comum.
+ * instrumento (opcional) e a IGREJA DE ORIGEM, escolhida em listas encadeadas que vêm do banco
+ * (Estado > Região > Setor > Comum, cadastrados em Organização): nada de origem digitada à mão.
+ * O visitante é cadastrado na COMUM da portaria em atendimento e só a região dela o enxerga.
+ * Depois de salvar, abre a conferência para registrar a entrada.
+ * O banco confere permissão, portaria aprovada, abrangência, origem cadastrada e nome repetido na comum.
  */
 import { useEffect, useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
+import { filhosDe } from "@/modules/organizacao/regras";
+import type { NoOrganizacao } from "@/modules/organizacao/tipos";
 import { validarDadosVisitante } from "../regras";
-import { cadastrarVisitante, listarOpcoesVisitante } from "../services/atendimento";
+import { cadastrarVisitante, listarOpcoesVisitante, listarOrigensVisitante } from "../services/atendimento";
 import type { CartaoMembro, OpcoesVisitante } from "../tipos";
 
 interface FormularioVisitanteProps {
@@ -24,20 +28,28 @@ const classeInput =
 
 export default function FormularioVisitante({ portariaId, onCadastrado }: FormularioVisitanteProps) {
   const [opcoes, setOpcoes] = useState<OpcoesVisitante | null>(null); // nulo = carregando
+  const [origens, setOrigens] = useState<NoOrganizacao[]>([]);
   const [nome, setNome] = useState("");
   const [cargoId, setCargoId] = useState("");
   const [instrumentoId, setInstrumentoId] = useState("");
-  const [igreja, setIgreja] = useState("");
-  const [cidade, setCidade] = useState("");
+  const [estadoId, setEstadoId] = useState("");
+  const [regiaoId, setRegiaoId] = useState("");
+  const [setorId, setSetorId] = useState("");
+  const [comumId, setComumId] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     let cancelado = false;
-    void listarOpcoesVisitante()
-      .then((lista) => {
-        if (!cancelado) setOpcoes(lista);
+    void Promise.all([listarOpcoesVisitante(), listarOrigensVisitante()])
+      .then(([listaOpcoes, listaOrigens]) => {
+        if (cancelado) return;
+        setOpcoes(listaOpcoes);
+        setOrigens(listaOrigens);
+        // Com um único estado cadastrado, ele já vem escolhido
+        const estados = filhosDe(listaOrigens, null, "ESTADO");
+        if (estados.length === 1) setEstadoId(estados[0].id);
       })
       .catch((e: unknown) => {
         if (cancelado) return;
@@ -52,6 +64,29 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
 
   const cargo = opcoes?.cargos.find((item) => item.id === cargoId);
 
+  // Listas encadeadas: cada nível só mostra o que pertence à escolha anterior
+  const estados = filhosDe(origens, null, "ESTADO");
+  const regioes = estadoId ? filhosDe(origens, estadoId, "REGIAO") : [];
+  const setores = regiaoId ? filhosDe(origens, regiaoId, "SETOR") : [];
+  const comuns = setorId ? filhosDe(origens, setorId, "COMUM") : [];
+
+  // Ao trocar um nível, limpa os de baixo
+  function trocarEstado(id: string) {
+    setEstadoId(id);
+    setRegiaoId("");
+    setSetorId("");
+    setComumId("");
+  }
+  function trocarRegiao(id: string) {
+    setRegiaoId(id);
+    setSetorId("");
+    setComumId("");
+  }
+  function trocarSetor(id: string) {
+    setSetorId(id);
+    setComumId("");
+  }
+
   // Ao trocar o cargo, limpa o instrumento se o novo cargo não usar instrumento
   function trocarCargo(novoId: string) {
     setCargoId(novoId);
@@ -64,7 +99,7 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
     if (salvando) return; // evita envio duplicado
     setErro(null);
 
-    const erroDados = validarDadosVisitante({ nome, cargoId, igreja, cidade });
+    const erroDados = validarDadosVisitante({ nome, cargoId, origemComumId: comumId });
     if (erroDados) return setErro(erroDados);
 
     setSalvando(true);
@@ -73,8 +108,7 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
         nome: nome.trim(),
         cargoId,
         instrumentoId: cargo?.permite_instrumento && instrumentoId ? instrumentoId : null,
-        igreja: igreja.trim(),
-        cidade: cidade.trim(),
+        origemComumId: comumId,
       });
       onCadastrado(cartao);
     } catch (e) {
@@ -154,40 +188,95 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
         </div>
       )}
 
-      <div className="space-y-1.5">
-        <label htmlFor="igreja-visitante" className="text-sm font-medium text-slate-700">
-          Igreja ou comum de origem <span className="font-normal text-slate-400">(opcional)</span>
-        </label>
-        <input
-          id="igreja-visitante"
-          type="text"
-          maxLength={80}
-          autoComplete="off"
-          value={igreja}
-          onChange={(e) => setIgreja(e.target.value)}
-          disabled={salvando}
-          placeholder="Ex: Central de Jequié"
-          className={classeInput}
-        />
-      </div>
+      {/* Origem: listas encadeadas que vêm do banco (Organização) */}
+      <fieldset className="space-y-3 rounded-xl border border-slate-200 p-4">
+        <legend className="px-1 text-sm font-medium text-slate-700">Igreja de origem</legend>
 
-      <div className="space-y-1.5">
-        <label htmlFor="cidade-visitante" className="text-sm font-medium text-slate-700">
-          Cidade, estado ou país de origem <span className="font-normal text-slate-400">(opcional)</span>
-        </label>
-        <input
-          id="cidade-visitante"
-          type="text"
-          maxLength={80}
-          autoComplete="off"
-          value={cidade}
-          onChange={(e) => setCidade(e.target.value)}
-          disabled={salvando}
-          placeholder="Ex: Jequié, Bahia"
-          className={classeInput}
-        />
-        <p className="text-xs text-slate-500">Informe pelo menos a igreja ou a cidade de origem.</p>
-      </div>
+        <div className="space-y-1.5">
+          <label htmlFor="estado-visitante" className="text-xs font-medium text-slate-600">
+            Estado
+          </label>
+          <select
+            id="estado-visitante"
+            value={estadoId}
+            onChange={(e) => trocarEstado(e.target.value)}
+            disabled={salvando}
+            className={classeInput}
+          >
+            <option value="">Selecione o estado</option>
+            {estados.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="regiao-visitante" className="text-xs font-medium text-slate-600">
+            Região
+          </label>
+          <select
+            id="regiao-visitante"
+            value={regiaoId}
+            onChange={(e) => trocarRegiao(e.target.value)}
+            disabled={salvando || !estadoId}
+            className={classeInput}
+          >
+            <option value="">Selecione a região</option>
+            {regioes.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="setor-visitante" className="text-xs font-medium text-slate-600">
+            Setor
+          </label>
+          <select
+            id="setor-visitante"
+            value={setorId}
+            onChange={(e) => trocarSetor(e.target.value)}
+            disabled={salvando || !regiaoId}
+            className={classeInput}
+          >
+            <option value="">Selecione o setor</option>
+            {setores.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="comum-visitante" className="text-xs font-medium text-slate-600">
+            Comum
+          </label>
+          <select
+            id="comum-visitante"
+            value={comumId}
+            onChange={(e) => setComumId(e.target.value)}
+            disabled={salvando || !setorId}
+            className={classeInput}
+          >
+            <option value="">Selecione a comum</option>
+            {comuns.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <p className="text-xs text-slate-500">
+          A cidade e a igreja de origem são preenchidas por esta escolha. Se a origem não aparecer na lista,
+          peça a um administrador para cadastrá-la em Administração &gt; Organização.
+        </p>
+      </fieldset>
 
       {erro && (
         <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

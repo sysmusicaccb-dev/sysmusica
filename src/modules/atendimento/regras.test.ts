@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   horaCurta,
-  validarDadosVisitante,
   mensagemCamera,
   nomeCompletoValido,
   ordenarPorProximidade,
   pareceQrSysMusica,
+  validarDadosVisitante,
 } from "@/modules/atendimento/regras";
 
 describe("pareceQrSysMusica", () => {
@@ -30,11 +30,10 @@ describe("nomeCompletoValido", () => {
 });
 
 describe("validarDadosVisitante", () => {
-  const completo = { nome: "Maria da Silva", cargoId: "c1", igreja: "Central", cidade: "" };
+  const completo = { nome: "Maria da Silva", cargoId: "c1", origemComumId: "o1" };
 
-  it("aceita os dados completos (basta igreja ou cidade de origem)", () => {
+  it("aceita os dados completos", () => {
     expect(validarDadosVisitante(completo)).toBeNull();
-    expect(validarDadosVisitante({ ...completo, igreja: "", cidade: "Lisboa, Portugal" })).toBeNull();
   });
 
   it("exige nome e sobrenome", () => {
@@ -45,8 +44,8 @@ describe("validarDadosVisitante", () => {
     expect(validarDadosVisitante({ ...completo, cargoId: "" })).toMatch(/cargo/);
   });
 
-  it("exige de onde ele vem", () => {
-    expect(validarDadosVisitante({ ...completo, igreja: " ", cidade: "" })).toMatch(/de onde/);
+  it("exige a igreja de origem escolhida na lista", () => {
+    expect(validarDadosVisitante({ ...completo, origemComumId: "" })).toMatch(/igreja de origem/);
   });
 });
 

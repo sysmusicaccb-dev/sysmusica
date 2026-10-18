@@ -6,6 +6,7 @@
  */
 import { supabase } from "@/lib/supabase";
 import { mensagemDoErro } from "@/lib/erros";
+import type { NoOrganizacao } from "@/modules/organizacao/tipos";
 import type { CartaoMembro, EntradaRecente, OpcoesVisitante, OrigemEntrada } from "../tipos";
 
 /** Localiza o membro pelo conteúdo lido do QR Code. */
@@ -45,6 +46,13 @@ export async function registrarEntrada(
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível registrar a entrada."));
 }
 
+/** Estrutura ativa (estados, regiões, setores e comuns) para escolher a origem do visitante. */
+export async function listarOrigensVisitante(): Promise<NoOrganizacao[]> {
+  const { data, error } = await supabase.rpc("listar_origens_visitante");
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar as origens."));
+  return (data ?? []) as NoOrganizacao[];
+}
+
 /** Cargos e instrumentos para o formulário de visitante (exige a permissão de cadastrar visitante). */
 export async function listarOpcoesVisitante(): Promise<OpcoesVisitante> {
   const { data, error } = await supabase.rpc("opcoes_visitante");
@@ -67,15 +75,14 @@ export async function listarOpcoesVisitante(): Promise<OpcoesVisitante> {
  */
 export async function cadastrarVisitante(
   portariaId: string,
-  dados: { nome: string; cargoId: string; instrumentoId: string | null; igreja: string; cidade: string }
+  dados: { nome: string; cargoId: string; instrumentoId: string | null; origemComumId: string }
 ): Promise<CartaoMembro> {
   const { data, error } = await supabase.rpc("cadastrar_visitante", {
     p_portaria_id: portariaId,
     p_nome: dados.nome,
     p_cargo_id: dados.cargoId,
     p_instrumento_id: dados.instrumentoId,
-    p_igreja: dados.igreja,
-    p_cidade: dados.cidade,
+    p_origem_comum_id: dados.origemComumId,
   });
   if (error || typeof data !== "string") {
     throw new Error(
