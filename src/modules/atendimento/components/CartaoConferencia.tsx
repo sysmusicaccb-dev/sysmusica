@@ -9,6 +9,7 @@
 import { useState } from "react";
 import Button from "@/components/ui/Button";
 import FotoMembro from "@/modules/membros/components/FotoMembro";
+import FotoNaConferencia from "./FotoNaConferencia";
 import { horaCurta } from "../regras";
 import type { CartaoMembro, OrigemEntrada } from "../tipos";
 
@@ -19,6 +20,9 @@ interface CartaoConferenciaProps {
   erro: string | null;
   onConfirmar: () => void;
   onCancelar: () => void;
+  /** Quem tem a permissão Fotografia pode tirar a foto na hora, se o membro ainda não tiver. */
+  podeFoto?: boolean;
+  onFotoSalva?: () => Promise<void>;
 }
 
 export default function CartaoConferencia({
@@ -28,6 +32,8 @@ export default function CartaoConferencia({
   erro,
   onConfirmar,
   onCancelar,
+  podeFoto = false,
+  onFotoSalva,
 }: CartaoConferenciaProps) {
   const [conferi, setConferi] = useState(false);
   const manual = origem === "MANUAL";
@@ -79,6 +85,9 @@ export default function CartaoConferencia({
             <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
               Este membro não tem fotografia cadastrada: confirme a identidade por outro meio.
             </p>
+          )}
+          {podeFoto && !membro.foto_path && onFotoSalva && (
+            <FotoNaConferencia membroId={membro.membro_id} nome={membro.nome} onSalva={onFotoSalva} />
           )}
           {inativo && (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

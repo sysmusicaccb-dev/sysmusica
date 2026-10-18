@@ -90,7 +90,14 @@ export async function listarOpcoesVisitante(): Promise<OpcoesVisitante> {
  */
 export async function cadastrarVisitante(
   portariaId: string,
-  dados: { nome: string; cargoId: string; instrumentoId: string | null; origemComumId: string }
+  dados: {
+    nome: string;
+    cargoId: string;
+    instrumentoId: string | null;
+    origemComumId: string;
+    membroId: string; // gerado na tela: a foto sobe para a pasta deste identificador antes do cadastro
+    fotoPath: string;
+  }
 ): Promise<CartaoMembro> {
   const { data, error } = await supabase.rpc("cadastrar_visitante", {
     p_portaria_id: portariaId,
@@ -98,6 +105,8 @@ export async function cadastrarVisitante(
     p_cargo_id: dados.cargoId,
     p_instrumento_id: dados.instrumentoId,
     p_origem_comum_id: dados.origemComumId,
+    p_membro_id: dados.membroId,
+    p_foto_path: dados.fotoPath,
   });
   if (error || typeof data !== "string") {
     throw new Error(
@@ -109,6 +118,16 @@ export async function cadastrarVisitante(
   const cartao = ((resposta.data ?? []) as CartaoMembro[])[0];
   if (resposta.error || !cartao) {
     throw new Error("Visitante cadastrado, mas não foi possível abrir a conferência. Busque-o pelo nome completo.");
+  }
+  return cartao;
+}
+
+/** Recarrega o cartão de conferência de um membro (por exemplo, depois de tirar a foto na hora). */
+export async function recarregarCartao(portariaId: string, membroId: string): Promise<CartaoMembro> {
+  const { data, error } = await supabase.rpc("cartao_do_membro", { p_portaria_id: portariaId, p_membro_id: membroId });
+  const cartao = ((data ?? []) as CartaoMembro[])[0];
+  if (error || !cartao) {
+    throw new Error(error ? mensagemDoErro(error, "Não foi possível atualizar a conferência.") : "Membro não encontrado.");
   }
   return cartao;
 }

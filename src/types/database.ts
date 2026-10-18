@@ -70,6 +70,7 @@ export interface Membro {
   bairro: string | null; // bairro ou igreja de referência
   atualizado_em: string; // timestamptz, atualizado automaticamente a cada alteração
   comum_id?: string | null; // FK -> comuns.id: a comum do membro (define quem enxerga o cadastro)
+  foto_path?: string | null; // caminho da fotografia no armazenamento privado (exibida por URL temporária)
 }
 
 /**
@@ -84,14 +85,14 @@ export type MembroPublico = Omit<Membro, "qr_secret" | "excluido_em" | "cpf">;
  * Usada no lugar de select("*"), que falha porque inclui o qr_secret.
  */
 export const COLUNAS_MEMBRO_PUBLICO =
-  "id, nome, congregacao, cargo_id, data_nascimento, instrumento_id, status, data_cadastro, cidade, bairro, atualizado_em, cpf_mascarado, comum_id" as const;
+  "id, nome, congregacao, cargo_id, data_nascimento, instrumento_id, status, data_cadastro, cidade, bairro, atualizado_em, cpf_mascarado, comum_id, foto_path" as const;
 
 /** Payload para INSERT: o qr_secret é sempre gerado pelo banco e não pode ser enviado. */
 export type MembroInsert = Pick<Membro, "nome" | "congregacao" | "cargo_id"> &
   Partial<
     Pick<
       Membro,
-      "id" | "data_nascimento" | "instrumento_id" | "status" | "data_cadastro" | "cidade" | "bairro" | "cpf" | "comum_id"
+      "id" | "data_nascimento" | "instrumento_id" | "status" | "data_cadastro" | "cidade" | "bairro" | "cpf" | "comum_id" | "foto_path"
     >
   >;
 

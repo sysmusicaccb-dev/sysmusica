@@ -217,6 +217,7 @@ export default function MembrosPage() {
             membro={painel.tipo === "editar" ? painel.membro : null}
             cpfInicial={painel.tipo === "editar" ? painel.cpfInicial : null}
             podeCpf={pode("membros.cpf")}
+            podeFoto={pode("membros.foto")}
             cargos={cargos}
             instrumentos={instrumentos}
             familias={familias}

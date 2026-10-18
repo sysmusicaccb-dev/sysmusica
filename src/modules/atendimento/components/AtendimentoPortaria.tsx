@@ -19,7 +19,7 @@ import { formatarDataHora } from "@/lib/datas";
 import { listarPortarias } from "@/modules/portarias/services/portarias";
 import type { PortariaDetalhada } from "@/modules/portarias/tipos";
 import { ordenarPorProximidade, pareceQrSysMusica } from "../regras";
-import { buscarMembroPorQr, entradasDaPortaria, registrarEntrada } from "../services/atendimento";
+import { buscarMembroPorQr, entradasDaPortaria, recarregarCartao, registrarEntrada } from "../services/atendimento";
 import type { CartaoMembro, EntradaRecente, OrigemEntrada } from "../tipos";
 import BuscaPorNome from "./BuscaPorNome";
 import CartaoConferencia from "./CartaoConferencia";
@@ -149,6 +149,13 @@ export default function AtendimentoPortaria() {
     } finally {
       setConsultando(false);
     }
+  }
+
+  // Foto tirada na conferência: recarrega os dados do cartão (a foto já aparece)
+  async function aoSalvarFotoNoCartao() {
+    if (!portariaId || !cartao) return;
+    const atualizado = await recarregarCartao(portariaId, cartao.membro.membro_id);
+    setCartao({ membro: atualizado, origem: cartao.origem });
   }
 
   // Visitante cadastrado: abre a conferência para registrar a entrada
@@ -283,6 +290,8 @@ export default function AtendimentoPortaria() {
           erro={erroCartao}
           onConfirmar={() => void confirmar()}
           onCancelar={() => setCartao(null)}
+          podeFoto={pode("membros.foto")}
+          onFotoSalva={aoSalvarFotoNoCartao}
         />
       )}
 

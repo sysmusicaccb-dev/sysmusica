@@ -15,6 +15,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import SeletorInstrumento, { FamiliaAutomatica } from "@/modules/instrumentos/components/SeletorInstrumento";
+import CampoFoto from "@/modules/membros/components/CampoFoto";
+import { descartarFoto, subirFotoNova } from "@/modules/membros/services/fotos";
 import { validarInstrumentoDoCargo } from "@/modules/instrumentos/selecao";
 import { filhosDe } from "@/modules/organizacao/regras";
 import type { NoOrganizacao } from "@/modules/organizacao/tipos";
@@ -41,6 +43,7 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
   const [regiaoId, setRegiaoId] = useState("");
   const [setorId, setSetorId] = useState("");
   const [comumId, setComumId] = useState("");
+  const [foto, setFoto] = useState<Blob | null>(null); // fotografia obrigatória do visitante
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -109,15 +112,27 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
     if (erroDados) return setErro(erroDados);
     const erroInstrumento = validarInstrumentoDoCargo(exigeInstrumento, instrumentoId, cargo?.nome);
     if (erroInstrumento) return setErro(erroInstrumento);
+    if (!foto) return setErro("A fotografia do visitante é obrigatória. Tire a foto ou escolha uma imagem.");
 
     setSalvando(true);
     try {
-      const cartao = await cadastrarVisitante(portariaId, {
-        nome: nome.trim(),
-        cargoId,
-        instrumentoId: cargo?.permite_instrumento && instrumentoId ? instrumentoId : null,
-        origemComumId: comumId,
-      });
+      // O identificador do visitante é gerado aqui para a foto subir para a pasta dele antes do cadastro
+      const membroId = crypto.randomUUID();
+      const caminho = await subirFotoNova(membroId, foto);
+      let cartao: CartaoMembro;
+      try {
+        cartao = await cadastrarVisitante(portariaId, {
+          nome: nome.trim(),
+          cargoId,
+          instrumentoId: cargo?.permite_instrumento && instrumentoId ? instrumentoId : null,
+          origemComumId: comumId,
+          membroId,
+          fotoPath: caminho,
+        });
+      } catch (e) {
+        await descartarFoto(caminho); // o cadastro falhou: não deixa a foto solta
+        throw e;
+      }
       onCadastrado(cartao);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível cadastrar o visitante.");
@@ -205,6 +220,14 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
           />
         </>
       )}
+
+      {/* Fotografia obrigatória: identifica o visitante e evita intrusos */}
+      <div className="space-y-1.5">
+        <span className="text-sm font-medium text-slate-700">
+          Fotografia <span className="font-normal text-red-600">(obrigatória)</span>
+        </span>
+        <CampoFoto nome={nome.trim() || "Visitante"} obrigatoria onChange={setFoto} disabled={salvando} />
+      </div>
 
       {/* Origem: listas encadeadas que vêm do banco (Organização) */}
       <fieldset className="space-y-3 rounded-xl border border-slate-200 p-4">

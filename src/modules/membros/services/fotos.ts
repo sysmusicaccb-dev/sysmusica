@@ -79,6 +79,30 @@ export async function enviarFoto(membroId: string, imagem: Blob): Promise<void> 
   if (anterior) await supabase.storage.from(BUCKET_FOTOS).remove([anterior]);
 }
 
+/**
+ * Envia a foto para a pasta do membro e devolve o caminho, SEM ligar a foto a ninguém ainda.
+ * Usado no cadastro novo (membro e visitante): a foto sobe antes e o caminho vai junto com o cadastro,
+ * onde o banco confere se o arquivo existe e se está na pasta certa.
+ */
+export async function subirFotoNova(membroId: string, imagem: Blob): Promise<string> {
+  const caminho = `${membroId}/${crypto.randomUUID()}.jpg`;
+  const { error } = await supabase.storage
+    .from(BUCKET_FOTOS)
+    .upload(caminho, imagem, { contentType: "image/jpeg", upsert: false });
+  if (error) {
+    throw new Error("Não foi possível enviar a fotografia. Verifique a conexão e tente novamente.");
+  }
+  return caminho;
+}
+
+/**
+ * Tenta apagar uma foto enviada que não chegou a ser usada (o cadastro falhou). Se o usuário não tiver
+ * permissão para apagar, o arquivo apenas fica sem uso no armazenamento privado.
+ */
+export async function descartarFoto(caminho: string): Promise<void> {
+  await supabase.storage.from(BUCKET_FOTOS).remove([caminho]);
+}
+
 /** Remove a fotografia do membro (referência no banco e arquivo). */
 export async function removerFoto(membroId: string): Promise<void> {
   const { data, error } = await supabase.rpc("remover_foto_membro", { p_membro_id: membroId });

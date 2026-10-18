@@ -22,6 +22,9 @@ import SeletorInstrumento, { FamiliaAutomatica } from "@/modules/instrumentos/co
 import { validarInstrumentoDoCargo } from "@/modules/instrumentos/selecao";
 import { atualizarMembro, criarMembro } from "@/modules/membros/services/membros";
 import SeletorComum from "@/modules/organizacao/components/SeletorComum";
+import CampoFoto from "@/modules/membros/components/CampoFoto";
+import FotoMembro from "@/modules/membros/components/FotoMembro";
+import { descartarFoto, enviarFoto, subirFotoNova } from "@/modules/membros/services/fotos";
 import type { Cargo, Familia, Instrumento, MembroPublico } from "@/types/database";
 
 /** Listas de sugestões para os campos de localidade. */
@@ -35,6 +38,7 @@ interface FormularioMembroProps {
   membro: MembroPublico | null; // null = cadastrar; preenchido = editar
   cpfInicial: string | null; // CPF completo (só na edição e só para quem tem membros.cpf)
   podeCpf: boolean; // permissão membros.cpf
+  podeFoto: boolean; // permissão membros.foto (trocar a fotografia de um membro já cadastrado)
   cargos: Cargo[];
   instrumentos: Instrumento[];
   familias: Familia[];
@@ -57,6 +61,7 @@ export default function FormularioMembro({
   membro,
   cpfInicial,
   podeCpf,
+  podeFoto,
   cargos,
   instrumentos,
   familias,
@@ -78,6 +83,7 @@ export default function FormularioMembro({
   const [dataNascimento, setDataNascimento] = useState(membro?.data_nascimento ?? ""); // "AAAA-MM-DD"
   const [instrumentoId, setInstrumentoId] = useState(membro?.instrumento_id ?? "");
   const [status, setStatus] = useState(membro?.status ?? "Ativo");
+  const [foto, setFoto] = useState<Blob | null>(null); // foto nova já preparada (obrigatória no cadastro novo)
   const [salvando, setSalvando] = useState(false);
   const [erroForm, setErroForm] = useState<string | null>(null);
 
@@ -114,6 +120,11 @@ export default function FormularioMembro({
     const erroInstrumento = validarInstrumentoDoCargo(exigeInstrumento, instrumentoId, cargoSelecionado?.nome);
     if (erroInstrumento) return setErroForm(erroInstrumento);
 
+    // Fotografia: obrigatória no cadastro novo (o banco também recusa sem ela)
+    if (!editando && !foto) {
+      return setErroForm("A fotografia é obrigatória. Tire a foto ou escolha uma imagem.");
+    }
+
     setSalvando(true);
     try {
       const dados = {
@@ -133,8 +144,24 @@ export default function FormularioMembro({
           status,
           ...(podeCpf ? { cpf: cpfDigitos || null } : {}),
         });
+        // Foto nova (opcional na edição): só quem tem a permissão de fotografia a troca
+        if (foto && podeFoto) await enviarFoto(membro.id, foto);
       } else {
-        await criarMembro({ ...dados, ...(podeCpf && cpfDigitos ? { cpf: cpfDigitos } : {}) });
+        // Cadastro novo: o identificador é gerado aqui para a foto subir para a pasta do próprio membro
+        // antes do cadastro; o banco confere o arquivo e recusa o cadastro sem foto.
+        const novoId = crypto.randomUUID();
+        const caminho = await subirFotoNova(novoId, foto as Blob);
+        try {
+          await criarMembro({
+            ...dados,
+            id: novoId,
+            foto_path: caminho,
+            ...(podeCpf && cpfDigitos ? { cpf: cpfDigitos } : {}),
+          });
+        } catch (e) {
+          await descartarFoto(caminho); // o cadastro falhou: não deixa a foto solta
+          throw e;
+        }
       }
 
       await onSalvo(editando ? `Membro "${dados.nome}" atualizado.` : `Membro "${dados.nome}" cadastrado.`);
@@ -189,6 +216,33 @@ export default function FormularioMembro({
           className={classeInput}
         />
       </div>
+
+      {/* Fotografia: obrigatória no cadastro novo; na edição só troca quem tem a permissão de fotografia */}
+      {!editando || podeFoto ? (
+        <div className="space-y-1.5">
+          <span className="text-sm font-medium text-slate-700">
+            Fotografia{" "}
+            {editando ? (
+              <span className="font-normal text-slate-400">(opcional na edição)</span>
+            ) : (
+              <span className="font-normal text-red-600">(obrigatória)</span>
+            )}
+          </span>
+          <CampoFoto
+            nome={nome || "Membro"}
+            fotoAtualCaminho={membro?.foto_path ?? null}
+            obrigatoria={!editando}
+            onChange={setFoto}
+            disabled={salvando}
+          />
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          <span className="text-sm font-medium text-slate-700">Fotografia</span>
+          <FotoMembro caminho={membro?.foto_path ?? null} nome={nome || "Membro"} tamanho="grande" />
+          <p className="text-xs text-slate-500">A fotografia só pode ser trocada por quem tem a permissão Fotografia.</p>
+        </div>
+      )}
 
       {/* CPF: só para quem tem a permissão membros.cpf */}
       {podeCpf && (
