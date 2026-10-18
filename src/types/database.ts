@@ -103,12 +103,13 @@ export interface Evento {
   data_evento: string; // timestamptz (ISO 8601)
   local: string;
   finalidade_id: string | null; // FK -> finalidades_evento.id (nula em eventos antigos)
-  cidade?: string | null; // município do evento (a portaria herda; define quem atua nela)
+  cidade?: string | null; // município do evento (informativo; o setor vem da comum)
+  comum_id?: string | null; // comum do evento: define o setor da portaria e quem enxerga o evento
 }
 
 /** Payload para INSERT: o id é gerado pelo banco; a finalidade é opcional (eventos antigos não têm). */
 export type EventoInsert = Pick<Evento, "tipo" | "data_evento" | "local"> &
-  Partial<Pick<Evento, "id" | "finalidade_id" | "cidade">>;
+  Partial<Pick<Evento, "id" | "finalidade_id" | "cidade" | "comum_id">>;
 
 // ---------------------------------------------------------------------
 // Tabela: finalidades_evento (catálogo reaproveitável de finalidades)

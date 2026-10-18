@@ -70,12 +70,12 @@ export default function FormularioNovaPortaria({ eventos, cota, onSalvo }: Formu
           {eventos.map((item) => (
             <option key={item.id} value={item.id} disabled={!item.cidade}>
               {formatarDataHora(item.data_evento)} · {item.tipo} · {item.local}
-              {item.cidade ? ` (${item.cidade})` : " — sem cidade"}
+              {item.cidade ? ` (${item.cidade})` : " — comum sem setor"}
             </option>
           ))}
         </select>
         <p className="text-xs text-slate-500">
-          Eventos sem cidade ficam desabilitados: edite o evento e informe a cidade. Eventos que já têm
+          Aparecem só os eventos das suas comuns. Os de comum sem setor ficam desabilitados (peça a um administrador para vincular a comum a um setor). Eventos que já têm
           portaria pendente ou aprovada não aparecem.
         </p>
       </div>

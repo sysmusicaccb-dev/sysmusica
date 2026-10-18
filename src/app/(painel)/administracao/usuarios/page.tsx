@@ -15,14 +15,16 @@ import ErrorState from "@/components/ui/ErrorState";
 import Notificacao from "@/components/ui/Notificacao";
 import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
-import FormularioAbrangencia from "@/modules/administracao/components/FormularioAbrangencia";
+import FormularioVinculos from "@/modules/administracao/components/FormularioVinculos";
+import { rotulosPorUsuario } from "@/modules/organizacao/regras";
+import { listarOrganizacao, listarVinculosRotulados } from "@/modules/organizacao/services/organizacao";
+import type { NoOrganizacao, VinculoRotulado } from "@/modules/organizacao/tipos";
 import FormularioSenha from "@/modules/administracao/components/FormularioSenha";
 import FormularioUsuario from "@/modules/administracao/components/FormularioUsuario";
 import TabelaUsuarios from "@/modules/administracao/components/TabelaUsuarios";
 import {
   atualizarUsuario,
-  listarAbrangencias,
-  listarCidadesConhecidas,
+  // (a abrangência por cidade foi substituída pelos vínculos organizacionais)
   listarGrupos,
   listarUsuarios,
 } from "@/modules/administracao/services/acesso";
@@ -42,8 +44,8 @@ export default function UsuariosPage() {
 
   const [usuarios, setUsuarios] = useState<UsuarioSistema[]>([]);
   const [grupos, setGrupos] = useState<GrupoAcesso[]>([]);
-  const [abrangencias, setAbrangencias] = useState<Record<string, string[]>>({});
-  const [cidadesConhecidas, setCidadesConhecidas] = useState<string[]>([]);
+  const [abrangencias, setAbrangencias] = useState<Record<string, VinculoRotulado[]>>({});
+  const [arvore, setArvore] = useState<NoOrganizacao[]>([]);
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
   const [painel, setPainel] = useState<PainelUsuario | null>(null);
@@ -58,14 +60,14 @@ export default function UsuariosPage() {
       const [listaUsuarios, listaGrupos, mapaAbrangencias, listaCidades] = await Promise.all([
         listarUsuarios(),
         listarGrupos(),
-        listarAbrangencias(),
+        listarVinculosRotulados(),
         // só quem edita usuários lista as cidades; para os demais a lista fica vazia
-        listarCidadesConhecidas().catch(() => [] as string[]),
+        listarOrganizacao().catch(() => [] as NoOrganizacao[]),
       ]);
       setUsuarios(listaUsuarios);
       setGrupos(listaGrupos);
       setAbrangencias(mapaAbrangencias);
-      setCidadesConhecidas(listaCidades);
+      setArvore(listaCidades);
       setErro(null);
     } catch (e) {
       console.error("Falha ao carregar usuários:", e);
@@ -123,8 +125,8 @@ export default function UsuariosPage() {
     editar: { titulo: "Editar usuário", descricao: "Altere o nome ou o grupo de acesso." },
     senha: { titulo: "Redefinir senha", descricao: "Defina uma nova senha para este usuário." },
     abrangencia: {
-      titulo: "Abrangência de atuação",
-      descricao: "Cidades em que o usuário aprova portarias e registra presenças.",
+      titulo: "Vínculos organizacionais",
+      descricao: "Estado, região, setor ou comum que o usuário pode ver e usar.",
     },
   } as const;
 
@@ -171,7 +173,7 @@ export default function UsuariosPage() {
               podeEditar={pode("usuarios.editar")}
               onEditar={(usuario) => setPainel({ tipo: "editar", usuario })}
               onRedefinirSenha={(usuario) => setPainel({ tipo: "senha", usuario })}
-              cidadesPorUsuario={abrangencias}
+              cidadesPorUsuario={rotulosPorUsuario(abrangencias)}
               onAbrangencia={(usuario) => setPainel({ tipo: "abrangencia", usuario })}
               onAlterarStatus={(usuario) => {
                 setErroStatus(null);
@@ -197,10 +199,10 @@ export default function UsuariosPage() {
         )}
         {painel?.tipo === "senha" && <FormularioSenha usuario={painel.usuario} onSalvo={aoSalvar} />}
         {painel?.tipo === "abrangencia" && (
-          <FormularioAbrangencia
+          <FormularioVinculos
             usuario={painel.usuario}
-            cidadesConhecidas={cidadesConhecidas}
-            selecionadasIniciais={abrangencias[painel.usuario.id] ?? []}
+            arvore={arvore}
+            vinculosIniciais={abrangencias[painel.usuario.id] ?? []}
             onSalvo={aoSalvar}
           />
         )}

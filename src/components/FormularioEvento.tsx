@@ -1,5 +1,7 @@
 "use client";
 
+import SeletorComum from "@/modules/organizacao/components/SeletorComum";
+
 /**
  * SysMúsica — Formulário de evento (cadastro e edição) — conteúdo do painel lateral.
  * evento = null -> cadastrar; preenchido -> editar.
@@ -53,6 +55,7 @@ export default function FormularioEvento({
   const [dataEvento, setDataEvento] = useState(evento ? isoParaDatetimeLocal(evento.data_evento) : "");
   const [local, setLocal] = useState(evento?.local ?? "");
   const [cidade, setCidade] = useState(evento?.cidade ?? "");
+  const [comumId, setComumId] = useState(evento?.comum_id ?? "");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -91,6 +94,7 @@ export default function FormularioEvento({
         local: local.trim(),
         finalidade_id: finalidade.id,
         cidade: cidade.trim() || null,
+        comum_id: comumId || null,
       };
       if (evento) await atualizarEvento(evento.id, dados);
       else await criarEvento(dados);
@@ -198,7 +202,7 @@ export default function FormularioEvento({
 
       <div className="space-y-1.5">
         <label htmlFor="cidade-evento" className="text-sm font-medium text-slate-700">
-          Cidade <span className="font-normal text-slate-400">(necessária para criar a portaria)</span>
+          Cidade <span className="font-normal text-slate-400">(informativo)</span>
         </label>
         <datalist id="sugestoes-cidade-evento">
           {sugestoesCidade.map((sugestao) => (
@@ -214,6 +218,19 @@ export default function FormularioEvento({
           onChange={(e) => setCidade(e.target.value)}
           disabled={salvando}
           placeholder="Ex: Lauro de Freitas"
+          className={classeInput}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="comum-evento" className="text-sm font-medium text-slate-700">
+          Comum <span className="font-normal text-slate-400">(define o setor da portaria)</span>
+        </label>
+        <SeletorComum
+          id="comum-evento"
+          valor={comumId}
+          onChange={setComumId}
+          disabled={salvando}
           className={classeInput}
         />
       </div>

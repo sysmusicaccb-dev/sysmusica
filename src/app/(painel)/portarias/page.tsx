@@ -189,8 +189,8 @@ export default function PortariasPage() {
         {/* Aprovador sem cidade de abrangência: avisa o que fazer */}
         {podeAprovar && !controleTotal && cidades !== null && cidades.length === 0 && (
           <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
-            Você ainda não tem cidades de abrangência, então não consegue aprovar nem rejeitar portarias. Peça a
-            um administrador para marcá-las em Administração &gt; Usuários.
+            Você ainda não tem vínculo com nenhum setor, então não consegue aprovar nem rejeitar portarias. Peça a
+            um administrador para vinculá-lo a um setor em Administração &gt; Usuários.
           </p>
         )}
 

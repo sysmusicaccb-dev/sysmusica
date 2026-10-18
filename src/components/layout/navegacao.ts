@@ -8,6 +8,7 @@
  */
 import {
   CalendarDays,
+  Building2,
   Camera,
   ClipboardList,
   DoorOpen,
@@ -70,6 +71,12 @@ export const GRUPOS_MENU: GrupoMenu[] = [
   {
     titulo: "Administração",
     itens: [
+      {
+        href: "/administracao/organizacao",
+        rotulo: "Organização",
+        icone: Building2,
+        permissao: "organizacao.visualizar",
+      },
       {
         href: "/administracao/usuarios",
         rotulo: "Usuários",

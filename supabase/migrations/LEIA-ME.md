@@ -16,6 +16,7 @@ Aplique **em ordem numérica**, cada arquivo **uma única vez**, no SQL Editor d
 | `0009_controle_total_portarias.sql` | Permissão Controle total de portarias (aprovar a própria, sem limite diário e sem restrição de abrangência) | aplicar agora |
 | `0010_duplicidade_por_evento.sql` | Duplicidade de presença por evento (inclui registros antigos), mensagem clara e conferência na portaria | aplicar agora |
 | `0011_varios_grupos_por_usuario.sql` | Vários grupos por usuário (as permissões somam), com proteção do último administrador | aplicar agora |
+| `0012_hierarquia_organizacional.sql` | Estado > Região > Setor > Comum, vínculos dos usuários e acesso por região (membros, eventos, presenças, portarias) | aplicar agora |
 
 Atenção: **não reexecute o `0001` depois do `0002`**. O 0001 recria as políticas antigas, que liberavam
 o acesso anônimo. Novas alterações de banco entram sempre como um novo arquivo numerado.

@@ -157,4 +157,8 @@ describe("Gestão de portarias no menu", () => {
   it("quem só tem a permissão de fotografia vê apenas Fotografias", () => {
     expect(hrefs(["membros.foto"])).toEqual(["/fotografias"]);
   });
+
+  it("quem só tem a permissão de organização vê apenas Organização", () => {
+    expect(hrefs(["organizacao.visualizar"])).toEqual(["/administracao/organizacao"]);
+  });
 });

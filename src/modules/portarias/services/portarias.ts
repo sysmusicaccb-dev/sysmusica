@@ -16,6 +16,14 @@ export async function listarPortarias(): Promise<PortariaDetalhada[]> {
 
 /** Eventos para escolher ao criar uma portaria (os mais recentes primeiro). */
 export async function buscarEventosParaPortaria(): Promise<EventoParaPortaria[]> {
+  // O banco já devolve só os eventos das comuns da abrangência do usuário ("cidade" = Região › Setor)
+  const { data, error } = await supabase.rpc("listar_eventos_para_portaria");
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar os eventos."));
+  return (data ?? []) as EventoParaPortaria[];
+}
+
+/** (antiga) Eventos direto da tabela, sem filtro por setor. A tela não usa mais. */
+export async function buscarEventosParaPortariaSemSetor(): Promise<EventoParaPortaria[]> {
   const { data, error } = await supabase
     .from("eventos")
     .select("id, tipo, data_evento, local, cidade")
