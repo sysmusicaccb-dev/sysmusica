@@ -1,12 +1,12 @@
 /**
  * SysMúsica — Janela de atendimento da portaria (regras puras, sem banco).
- * A portaria abre 2 horas ANTES do início do evento e encerra 2 horas DEPOIS do início (horário de Salvador).
- * Ex.: ensaio às 14h -> aberta das 12h às 16h. A regra de verdade é aplicada pelo banco (migração 0024);
+ * A portaria abre 2 horas ANTES do início do evento e encerra 3 horas DEPOIS do início (horário de Salvador).
+ * Ex.: ensaio às 14h -> aberta das 12h às 17h. A regra de verdade é aplicada pelo banco (migração 0024);
  * aqui ficam só os cálculos para a tela mostrar quando abre, até quando vale e se está liberada.
  */
 
 export const HORAS_ANTES = 2;
-export const HORAS_DEPOIS = 2;
+export const HORAS_DEPOIS = 3; // encerra 3 horas depois do início (igual ao banco, migração 0027)
 const MS_HORA = 60 * 60 * 1000;
 const FUSO = "America/Sao_Paulo";
 
