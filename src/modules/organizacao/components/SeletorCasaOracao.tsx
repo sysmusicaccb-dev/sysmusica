@@ -1,33 +1,33 @@
 "use client";
 
 /**
- * SysMúsica — Seletor de COMUM (igreja/salão), agrupado por "Região › Setor".
- * Mostra só as comuns que o usuário pode usar (o banco filtra pela abrangência dele; quem tem
+ * SysMúsica — Seletor de CASA DE ORAÇÃO (igreja/salão), agrupado por "Região › Setor".
+ * Mostra só as casas de oração que o usuário pode usar (o banco filtra pela abrangência dele; quem tem
  * acesso total vê todas). Usado nos eventos e, em seguida, no cadastro de membros.
  */
 import { useEffect, useMemo, useState } from "react";
-import { agruparComunsParaSelecao } from "../regras";
+import { agruparCasasOracaoParaSelecao } from "../regras";
 import { listarOrganizacaoParaSelecao } from "../services/organizacao";
 import type { NoOrganizacao } from "../tipos";
 
-interface SeletorComumProps {
+interface SeletorCasaOracaoProps {
   id?: string;
-  valor: string; // id da comum escolhida ("" = nenhuma)
-  onChange: (comumId: string) => void;
-  /** Opcional: devolve também o nome da comum escolhida (vazio quando nenhuma). */
+  valor: string; // id da casa de oração escolhida ("" = nenhuma)
+  onChange: (casaOracaoId: string) => void;
+  /** Opcional: devolve também o nome da casa de oração escolhida (vazio quando nenhuma). */
   onEscolherNome?: (nome: string) => void;
   disabled?: boolean;
   className?: string;
 }
 
-export default function SeletorComum({
+export default function SeletorCasaOracao({
   id,
   valor,
   onChange,
   onEscolherNome,
   disabled,
   className,
-}: SeletorComumProps) {
+}: SeletorCasaOracaoProps) {
   const [nos, setNos] = useState<NoOrganizacao[] | null>(null); // nulo = ainda carregando
   const [erro, setErro] = useState<string | null>(null);
 
@@ -41,7 +41,7 @@ export default function SeletorComum({
       .catch((e: unknown) => {
         if (cancelado) return;
         setNos([]);
-        setErro(e instanceof Error ? e.message : "Não foi possível carregar as comuns.");
+        setErro(e instanceof Error ? e.message : "Não foi possível carregar as casas de oração.");
       });
     return () => {
       cancelado = true;
@@ -49,8 +49,8 @@ export default function SeletorComum({
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const grupos = useMemo(() => agruparComunsParaSelecao(nos ?? []), [nos]);
-  const existe = grupos.some((grupo) => grupo.comuns.some((comum) => comum.id === valor));
+  const grupos = useMemo(() => agruparCasasOracaoParaSelecao(nos ?? []), [nos]);
+  const existe = grupos.some((grupo) => grupo.casasOracao.some((casaOracao) => casaOracao.id === valor));
 
   return (
     <>
@@ -60,19 +60,19 @@ export default function SeletorComum({
         onChange={(e) => {
           const novoId = e.target.value;
           onChange(novoId);
-          onEscolherNome?.((nos ?? []).find((no) => no.nivel === "COMUM" && no.id === novoId)?.nome ?? "");
+          onEscolherNome?.((nos ?? []).find((no) => no.nivel === "CASA_ORACAO" && no.id === novoId)?.nome ?? "");
         }}
         disabled={disabled || nos === null}
         className={className}
       >
         <option value="">{nos === null ? "Carregando..." : "Nenhuma (definir depois)"}</option>
-        {/* A comum atual do registro pode estar fora da abrangência de quem edita: continua visível, sem trocar sozinha */}
-        {nos !== null && valor !== "" && !existe && <option value={valor}>Comum atual (fora da sua abrangência)</option>}
+        {/* A casa de oração atual do registro pode estar fora da abrangência de quem edita: continua visível, sem trocar sozinha */}
+        {nos !== null && valor !== "" && !existe && <option value={valor}>Casa de Oração atual (fora da sua abrangência)</option>}
         {grupos.map((grupo) => (
           <optgroup key={grupo.rotulo} label={grupo.rotulo}>
-            {grupo.comuns.map((comum) => (
-              <option key={comum.id} value={comum.id}>
-                {comum.nome}
+            {grupo.casasOracao.map((casaOracao) => (
+              <option key={casaOracao.id} value={casaOracao.id}>
+                {casaOracao.nome}
               </option>
             ))}
           </optgroup>

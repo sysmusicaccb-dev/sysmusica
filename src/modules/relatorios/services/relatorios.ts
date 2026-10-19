@@ -76,9 +76,9 @@ interface LinhaPresencaBanco {
   evento_finalidade: string | null;
   regiao: string | null;
   setor: string | null;
-  comum: string | null;
+  casa_oracao: string | null;
   membro_nome: string;
-  membro_comum: string | null;
+  membro_casa_oracao: string | null;
   cargo: string | null;
   instrumento: string | null;
   familia: string | null;
@@ -101,7 +101,7 @@ async function buscarPresencas(filtros: FiltrosRelatorio): Promise<ResultadoRela
     p_evento: filtros.eventoId || null,
     p_regiao: filtros.regiaoId || null,
     p_setor: filtros.setorId || null,
-    p_comum: filtros.comumId || null,
+    p_casa_oracao: filtros.casaOracaoId || null,
     p_status: filtros.statusPresenca || null,
     p_limite: LIMITE_LINHAS,
   });
@@ -116,9 +116,9 @@ async function buscarPresencas(filtros: FiltrosRelatorio): Promise<ResultadoRela
       evento_finalidade: texto(linha.evento_finalidade),
       regiao: texto(linha.regiao),
       setor: texto(linha.setor),
-      comum: texto(linha.comum),
+      casa_oracao: texto(linha.casa_oracao),
       membro: linha.membro_nome,
-      membro_comum: texto(linha.membro_comum),
+      membro_casa_oracao: texto(linha.membro_casa_oracao),
       cargo: texto(linha.cargo),
       instrumento: texto(linha.instrumento),
       familia: texto(linha.familia),
@@ -141,7 +141,7 @@ interface LinhaMembroBanco {
   familia: string | null;
   regiao: string | null;
   setor: string | null;
-  comum: string | null;
+  casa_oracao: string | null;
   cidade: string | null;
   bairro: string | null;
   status: string;
@@ -156,7 +156,7 @@ async function buscarMembros(filtros: FiltrosRelatorio): Promise<ResultadoRelato
   const { data, error } = await supabase.rpc("relatorio_membros", {
     p_regiao: filtros.regiaoId || null,
     p_setor: filtros.setorId || null,
-    p_comum: filtros.comumId || null,
+    p_casa_oracao: filtros.casaOracaoId || null,
     p_cargo: filtros.cargoId || null,
     p_instrumento: filtros.instrumentoId || null,
     p_status: filtros.situacao || null,
@@ -174,7 +174,7 @@ async function buscarMembros(filtros: FiltrosRelatorio): Promise<ResultadoRelato
       familia: texto(linha.familia),
       regiao: texto(linha.regiao),
       setor: texto(linha.setor),
-      comum: texto(linha.comum),
+      casa_oracao: texto(linha.casa_oracao),
       cidade: texto(linha.cidade),
       bairro: texto(linha.bairro),
       status: linha.status,
@@ -195,7 +195,7 @@ interface LinhaEventoBanco {
   cidade: string | null;
   regiao: string | null;
   setor: string | null;
-  comum: string | null;
+  casa_oracao: string | null;
   registros: number | string;
   presentes: number | string;
   portaria: string | null;
@@ -209,7 +209,7 @@ async function buscarEventos(filtros: FiltrosRelatorio): Promise<ResultadoRelato
     p_fim: periodo.fim,
     p_regiao: filtros.regiaoId || null,
     p_setor: filtros.setorId || null,
-    p_comum: filtros.comumId || null,
+    p_casa_oracao: filtros.casaOracaoId || null,
     p_limite: LIMITE_LINHAS,
   });
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível gerar o relatório de eventos."));
@@ -224,7 +224,7 @@ async function buscarEventos(filtros: FiltrosRelatorio): Promise<ResultadoRelato
       cidade: texto(linha.cidade),
       regiao: texto(linha.regiao),
       setor: texto(linha.setor),
-      comum: texto(linha.comum),
+      casa_oracao: texto(linha.casa_oracao),
       registros: String(Number(linha.registros)),
       presentes: String(Number(linha.presentes)),
       portaria: linha.portaria ?? "Sem portaria",

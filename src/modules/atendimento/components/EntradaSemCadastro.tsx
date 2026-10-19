@@ -60,7 +60,7 @@ export default function EntradaSemCadastro({ portariaId, opcoes, onRegistrada }:
         linhaCodigo,
         toca: perguntar ? toca : null,
         instrumentoId: pedirInstrumento ? instrumentoId : null,
-        origemComumId: localidade?.comum_id ?? null,
+        origemCasaOracaoId: localidade?.casa_oracao_id ?? null,
         origemTexto: localidade ? null : textoDaLocalidade(outra, texto),
       });
       onRegistrada(linha?.rotulo ?? "Entrada sem cadastro");

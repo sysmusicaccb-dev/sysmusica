@@ -9,18 +9,18 @@ export const ROTULO_NIVEL: Record<NivelOrganizacao, string> = {
   ESTADO: "Estado",
   REGIAO: "Região",
   SETOR: "Setor",
-  COMUM: "Comum",
+  CASA_ORACAO: "Casa de Oração",
 };
 
 /** Nível que fica logo abaixo de cada nível. */
 export const FILHO_DE: Record<NivelOrganizacao, NivelOrganizacao | null> = {
   ESTADO: "REGIAO",
   REGIAO: "SETOR",
-  SETOR: "COMUM",
-  COMUM: null,
+  SETOR: "CASA_ORACAO",
+  CASA_ORACAO: null,
 };
 
-const NIVEIS: NivelOrganizacao[] = ["ESTADO", "REGIAO", "SETOR", "COMUM"];
+const NIVEIS: NivelOrganizacao[] = ["ESTADO", "REGIAO", "SETOR", "CASA_ORACAO"];
 
 // Ordem natural em português ("Setor 2" antes de "Setor 10")
 const porNome = (a: NoOrganizacao, b: NoOrganizacao) => a.nome.localeCompare(b.nome, "pt-BR", { numeric: true });
@@ -46,10 +46,10 @@ export function motivoBloqueioExclusao(no: NoOrganizacao): string | null {
     return `"${no.nome}" ainda tem ${filhos} ${filhos === 1 ? "setor" : "setores"}. Exclua os setores antes.`;
   }
   if (no.nivel === "SETOR" && filhos > 0) {
-    return `"${no.nome}" ainda tem ${filhos} ${filhos === 1 ? "comum" : "comuns"}. Transfira as comuns para outro setor antes.`;
+    return `"${no.nome}" ainda tem ${filhos} ${filhos === 1 ? "casa de oração" : "casas de oração"}. Transfira as casas de oração para outro setor antes.`;
   }
-  if (no.nivel === "COMUM" && membros > 0) {
-    return `"${no.nome}" ainda tem ${membros} ${membros === 1 ? "membro" : "membros"}. Mude os membros para outra comum (ou exclua-os) antes.`;
+  if (no.nivel === "CASA_ORACAO" && membros > 0) {
+    return `"${no.nome}" ainda tem ${membros} ${membros === 1 ? "membro" : "membros"}. Mude os membros para outra casa de oração (ou exclua-os) antes.`;
   }
   return null;
 }
@@ -60,35 +60,35 @@ export function validarNomeNo(nome: string): string | null {
   return tamanho < 2 || tamanho > 80 ? "O nome deve ter entre 2 e 80 caracteres." : null;
 }
 
-export interface GrupoComuns {
+export interface GrupoCasasOracao {
   rotulo: string; // ex.: "Salvador › Setor 1"
-  comuns: NoOrganizacao[];
+  casasOracao: NoOrganizacao[];
 }
 
-/** Agrupa as comuns por "Região › Setor" (com o estado na frente se houver mais de um). Comuns sem setor vão para o fim. */
-export function agruparComunsParaSelecao(nos: NoOrganizacao[]): GrupoComuns[] {
+/** Agrupa as casas de oração por "Região › Setor" (com o estado na frente se houver mais de um). Casas de Oração sem setor vão para o fim. */
+export function agruparCasasOracaoParaSelecao(nos: NoOrganizacao[]): GrupoCasasOracao[] {
   const porChave = new Map(nos.map((no) => [`${no.nivel}:${no.id}`, no] as const));
   const estados = nos.filter((no) => no.nivel === "ESTADO");
   const grupos = new Map<string, NoOrganizacao[]>();
   const semSetor: NoOrganizacao[] = [];
 
-  for (const comum of nos.filter((no) => no.nivel === "COMUM")) {
-    const setor = comum.parent_id ? porChave.get(`SETOR:${comum.parent_id}`) : undefined;
+  for (const casaOracao of nos.filter((no) => no.nivel === "CASA_ORACAO")) {
+    const setor = casaOracao.parent_id ? porChave.get(`SETOR:${casaOracao.parent_id}`) : undefined;
     const regiao = setor?.parent_id ? porChave.get(`REGIAO:${setor.parent_id}`) : undefined;
     if (!setor || !regiao) {
-      semSetor.push(comum);
+      semSetor.push(casaOracao);
       continue;
     }
     const estado = regiao.parent_id ? porChave.get(`ESTADO:${regiao.parent_id}`) : undefined;
     const prefixo = estados.length > 1 && estado ? `${estado.nome} › ` : "";
     const rotulo = `${prefixo}${regiao.nome} › ${setor.nome}`;
-    grupos.set(rotulo, [...(grupos.get(rotulo) ?? []), comum]);
+    grupos.set(rotulo, [...(grupos.get(rotulo) ?? []), casaOracao]);
   }
 
-  const lista: GrupoComuns[] = [...grupos.entries()]
+  const lista: GrupoCasasOracao[] = [...grupos.entries()]
     .sort(([a], [b]) => a.localeCompare(b, "pt-BR", { numeric: true }))
-    .map(([rotulo, comuns]) => ({ rotulo, comuns: [...comuns].sort(porNome) }));
-  if (semSetor.length > 0) lista.push({ rotulo: "Sem setor definido", comuns: [...semSetor].sort(porNome) });
+    .map(([rotulo, casasOracao]) => ({ rotulo, casasOracao: [...casasOracao].sort(porNome) }));
+  if (semSetor.length > 0) lista.push({ rotulo: "Sem setor definido", casasOracao: [...semSetor].sort(porNome) });
   return lista;
 }
 

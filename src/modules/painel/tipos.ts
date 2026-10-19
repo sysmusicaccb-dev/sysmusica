@@ -24,7 +24,7 @@ export interface EventoDoPainel {
   local: string | null;
   data_evento: string;
   cidade: string | null;
-  comum: string | null;
+  casa_oracao: string | null;
 }
 
 /** Resposta de painel_ao_vivo: só números, nenhuma linha de presença. */
@@ -43,7 +43,7 @@ export interface EventoParaEscolher {
   local_evento: string | null;
   data_evento: string;
   cidade: string | null;
-  comum_nome: string | null;
+  casa_oracao_nome: string | null;
 }
 
 /** Um bloco pronto para mostrar: Ministério, Músicos ou Organistas. */

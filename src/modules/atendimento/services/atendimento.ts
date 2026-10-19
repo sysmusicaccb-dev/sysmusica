@@ -50,7 +50,7 @@ export async function registrarEntrada(
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível registrar a entrada."));
 }
 
-/** Estrutura ativa (estados, regiões, setores e comuns) para escolher a origem do visitante. */
+/** Estrutura ativa (estados, regiões, setores e casas de oração) para escolher a origem do visitante. */
 export async function listarOrigensVisitante(): Promise<NoOrganizacao[]> {
   const { data, error } = await supabase.rpc("listar_origens_visitante");
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar as origens."));
@@ -89,8 +89,8 @@ export async function listarOpcoesVisitante(): Promise<OpcoesVisitante> {
 }
 
 /**
- * Cadastra o visitante na comum da portaria e devolve o cartão para a conferência.
- * O banco confere permissão, portaria aprovada, abrangência, nome completo e nome repetido na comum.
+ * Cadastra o visitante na casa de oração da portaria e devolve o cartão para a conferência.
+ * O banco confere permissão, portaria aprovada, abrangência, nome completo e nome repetido na casa de oração.
  */
 export async function cadastrarVisitante(
   portariaId: string,
@@ -98,7 +98,7 @@ export async function cadastrarVisitante(
     nome: string;
     cargoId: string;
     instrumentoId: string | null;
-    origemComumId: string;
+    origemCasaOracaoId: string;
     membroId: string; // gerado na tela: a foto sobe para a pasta deste identificador antes do cadastro
     fotoPath: string;
   }
@@ -108,7 +108,7 @@ export async function cadastrarVisitante(
     p_nome: dados.nome,
     p_cargo_id: dados.cargoId,
     p_instrumento_id: dados.instrumentoId,
-    p_origem_comum_id: dados.origemComumId,
+    p_origem_casa_oracao_id: dados.origemCasaOracaoId,
     p_membro_id: dados.membroId,
     p_foto_path: dados.fotoPath,
   });

@@ -37,7 +37,7 @@ export interface DadosAtualizacaoEvento {
   local: string;
   finalidade_id: string | null;
   cidade: string | null;
-  comum_id?: string | null;
+  casa_oracao_id?: string | null;
 }
 
 export async function atualizarEvento(id: string, dados: DadosAtualizacaoEvento): Promise<void> {

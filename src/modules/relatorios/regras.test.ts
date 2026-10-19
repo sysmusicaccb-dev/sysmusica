@@ -20,7 +20,7 @@ import {
   montarTabela,
   moverColuna,
   nomeDoArquivo,
-  opcoesComum,
+  opcoesCasaOracao,
   opcoesRegiao,
   opcoesSetor,
   resumoFiltros,
@@ -288,7 +288,7 @@ describe("resumoFiltros", () => {
   });
 });
 
-// Bahia > Salvador (Setor 1, Setor 2) e Jequié (Setor 1); comuns: Itinga e Caique em Salvador/Setor 1, Central em Jequié/Setor 1, Solta sem setor
+// Bahia > Salvador (Setor 1, Setor 2) e Jequié (Setor 1); casas de oração: Itinga e Caique em Salvador/Setor 1, Central em Jequié/Setor 1, Solta sem setor
 const nos: NoOrganizacao[] = [
   { nivel: "ESTADO", id: "e1", parent_id: null, nome: "Bahia", ativo: true, qtd_filhos: 2 },
   { nivel: "REGIAO", id: "r1", parent_id: "e1", nome: "Salvador", ativo: true, qtd_filhos: 2 },
@@ -296,19 +296,19 @@ const nos: NoOrganizacao[] = [
   { nivel: "SETOR", id: "s1", parent_id: "r1", nome: "Setor 1", ativo: true, qtd_filhos: 2 },
   { nivel: "SETOR", id: "s2", parent_id: "r1", nome: "Setor 2", ativo: true, qtd_filhos: 0 },
   { nivel: "SETOR", id: "s3", parent_id: "r2", nome: "Setor 1", ativo: true, qtd_filhos: 1 },
-  { nivel: "COMUM", id: "c1", parent_id: "s1", nome: "Itinga", ativo: true, qtd_membros: 7, cidade: "Lauro de Freitas" },
-  { nivel: "COMUM", id: "c2", parent_id: "s1", nome: "Caique", ativo: false, qtd_membros: 2 },
-  { nivel: "COMUM", id: "c3", parent_id: "s3", nome: "Central", ativo: true, qtd_membros: 4 },
-  { nivel: "COMUM", id: "c4", parent_id: null, nome: "Solta", ativo: true, qtd_membros: 0 },
+  { nivel: "CASA_ORACAO", id: "c1", parent_id: "s1", nome: "Itinga", ativo: true, qtd_membros: 7, cidade: "Lauro de Freitas" },
+  { nivel: "CASA_ORACAO", id: "c2", parent_id: "s1", nome: "Caique", ativo: false, qtd_membros: 2 },
+  { nivel: "CASA_ORACAO", id: "c3", parent_id: "s3", nome: "Central", ativo: true, qtd_membros: 4 },
+  { nivel: "CASA_ORACAO", id: "c4", parent_id: null, nome: "Solta", ativo: true, qtd_membros: 0 },
 ];
 
 describe("opções dos filtros de organização", () => {
-  it("lista regiões, setores da região e comuns do setor", () => {
+  it("lista regiões, setores da região e casas de oração do setor", () => {
     expect(opcoesRegiao(nos).map((o) => o.rotulo)).toEqual(["Jequié", "Salvador"]);
     expect(opcoesSetor(nos, "r1").map((o) => o.rotulo)).toEqual(["Setor 1", "Setor 2"]);
     expect(opcoesSetor(nos, "")).toEqual([]);
-    expect(opcoesComum(nos, "s1").map((o) => o.rotulo)).toEqual(["Caique", "Itinga"]);
-    expect(opcoesComum(nos, "")).toEqual([]);
+    expect(opcoesCasaOracao(nos, "s1").map((o) => o.rotulo)).toEqual(["Caique", "Itinga"]);
+    expect(opcoesCasaOracao(nos, "")).toEqual([]);
   });
 
   it("coloca o estado na frente da região quando há mais de um estado", () => {
@@ -318,27 +318,27 @@ describe("opções dos filtros de organização", () => {
 });
 
 describe("linhasOrganizacao", () => {
-  it("traz a estrutura inteira, na ordem, com as comuns sem setor no fim", () => {
+  it("traz a estrutura inteira, na ordem, com as casas de oração sem setor no fim", () => {
     const linhas = linhasOrganizacao(nos, { regiaoId: "", setorId: "" });
-    expect(linhas.map((l) => `${l.nivel}:${l.comum || l.setor || l.regiao || l.estado}`)).toEqual([
+    expect(linhas.map((l) => `${l.nivel}:${l.casa_oracao || l.setor || l.regiao || l.estado}`)).toEqual([
       "Estado:Bahia",
       "Região:Jequié",
       "Setor:Setor 1",
-      "Comum:Central",
+      "Casa de Oração:Central",
       "Região:Salvador",
       "Setor:Setor 1",
-      "Comum:Caique",
-      "Comum:Itinga",
+      "Casa de Oração:Caique",
+      "Casa de Oração:Itinga",
       "Setor:Setor 2",
-      "Comum:Solta",
+      "Casa de Oração:Solta",
     ]);
   });
 
-  it("preenche situação, membros e cidade da comum", () => {
+  it("preenche situação, membros e cidade da casa de oração", () => {
     const linhas = linhasOrganizacao(nos, { regiaoId: "", setorId: "" });
-    const itinga = linhas.find((l) => l.comum === "Itinga");
+    const itinga = linhas.find((l) => l.casa_oracao === "Itinga");
     expect(itinga).toMatchObject({ situacao: "Ativo", membros: "7", cidade: "Lauro de Freitas", regiao: "Salvador" });
-    expect(linhas.find((l) => l.comum === "Caique")?.situacao).toBe("Inativo");
+    expect(linhas.find((l) => l.casa_oracao === "Caique")?.situacao).toBe("Inativo");
   });
 
   it("filtra por região e por setor (separando o Setor 1 de cada região)", () => {
@@ -347,8 +347,8 @@ describe("linhasOrganizacao", () => {
     expect(daRegiao.some((l) => l.nivel === "Estado")).toBe(false);
 
     const doSetor = linhasOrganizacao(nos, { regiaoId: "", setorId: "s3" });
-    expect(doSetor.map((l) => l.nivel)).toEqual(["Setor", "Comum"]);
-    expect(doSetor[1].comum).toBe("Central");
+    expect(doSetor.map((l) => l.nivel)).toEqual(["Setor", "Casa de Oração"]);
+    expect(doSetor[1].casa_oracao).toBe("Central");
   });
 });
 

@@ -19,7 +19,7 @@ export type NomeTabela =
   | "estados"
   | "regioes"
   | "setores"
-  | "comuns"
+  | "casas_oracao"
   | "familias"
   | "cargos"
   | "finalidades_evento"
@@ -82,7 +82,7 @@ export const TABELAS: DefinicaoTabela[] = [
   tabela("estados", "Estados", "organizacao"),
   tabela("regioes", "Regiões", "organizacao", { referencias: [{ coluna: "estado_id", tabela: "estados" }] }),
   tabela("setores", "Setores", "organizacao", { referencias: [{ coluna: "regiao_id", tabela: "regioes" }] }),
-  tabela("comuns", "Comuns", "organizacao", { referencias: [{ coluna: "setor_id", tabela: "setores" }] }),
+  tabela("casas_oracao", "Casas de Oração", "organizacao", { referencias: [{ coluna: "setor_id", tabela: "setores" }] }),
   tabela("familias", "Famílias de instrumentos", "cadastros"),
   tabela("cargos", "Cargos", "cadastros"),
   tabela("finalidades_evento", "Finalidades de evento", "cadastros"),
@@ -112,15 +112,15 @@ export const TABELAS: DefinicaoTabela[] = [
     referencias: [
       { coluna: "cargo_id", tabela: "cargos" },
       { coluna: "instrumento_id", tabela: "instrumentos" },
-      { coluna: "comum_id", tabela: "comuns" },
-      { coluna: "origem_comum_id", tabela: "comuns" },
+      { coluna: "casa_oracao_id", tabela: "casas_oracao" },
+      { coluna: "origem_casa_oracao_id", tabela: "casas_oracao" },
     ],
   }),
   tabela("eventos", "Eventos", "eventos", {
     exclusaoLogica: true,
     referencias: [
       { coluna: "finalidade_id", tabela: "finalidades_evento" },
-      { coluna: "comum_id", tabela: "comuns" },
+      { coluna: "casa_oracao_id", tabela: "casas_oracao" },
     ],
   }),
   tabela("portarias", "Portarias", "portarias", {
@@ -129,7 +129,7 @@ export const TABELAS: DefinicaoTabela[] = [
       { coluna: "evento_id", tabela: "eventos" },
       { coluna: "criada_por", tabela: "usuarios" },
       { coluna: "decidida_por", tabela: "usuarios" },
-      { coluna: "comum_id", tabela: "comuns" },
+      { coluna: "casa_oracao_id", tabela: "casas_oracao" },
     ],
   }),
   tabela("portarias_historico", "Histórico das portarias", "portarias", {
@@ -152,8 +152,8 @@ export const GRUPOS_DADOS: DefinicaoGrupo[] = [
   {
     id: "organizacao",
     rotulo: "Organização",
-    descricao: "Estados, regiões, setores e comuns",
-    tabelas: ["estados", "regioes", "setores", "comuns"],
+    descricao: "Estados, regiões, setores e casas de oração",
+    tabelas: ["estados", "regioes", "setores", "casas_oracao"],
   },
   {
     id: "cadastros",

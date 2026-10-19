@@ -2,8 +2,8 @@
 
 /**
  * SysMúsica — Vínculos organizacionais de um usuário (painel lateral).
- * O usuário pode ser ligado a um estado, região, setor ou comum: o acesso desce em cascata (um setor
- * inclui todas as comuns dele). Sem nenhum vínculo, ele não vê nenhum dado (membros, eventos,
+ * O usuário pode ser ligado a um estado, região, setor ou casa de oração: o acesso desce em cascata (um setor
+ * inclui todas as casas de oração dele). Sem nenhum vínculo, ele não vê nenhum dado (membros, eventos,
  * presenças e portarias). Quem tem acesso total não precisa de vínculo. Fica na auditoria.
  */
 import { useState, type FormEvent, type ReactNode } from "react";
@@ -87,13 +87,13 @@ export default function FormularioVinculos({ usuario, arvore, vinculosIniciais, 
   }
 
   const estados = filhosDe(arvore, null, "ESTADO");
-  const semSetor = filhosDe(arvore, null, "COMUM");
+  const semSetor = filhosDe(arvore, null, "CASA_ORACAO");
 
   return (
     <form onSubmit={salvar} className="space-y-5">
       <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
         <strong className="text-slate-900">{usuario.nome}</strong> só vê e usa os dados das áreas marcadas.
-        Marcar um setor inclui todas as comuns dele; marcar uma região inclui todos os setores. Sem nenhuma
+        Marcar um setor inclui todas as casas de oração dele; marcar uma região inclui todos os setores. Sem nenhuma
         marcação, não vê nada.
       </p>
 
@@ -106,8 +106,8 @@ export default function FormularioVinculos({ usuario, arvore, vinculosIniciais, 
           <ul>{estados.map((estado) => renderNo(estado, 0))}</ul>
           {semSetor.length > 0 && (
             <div className="mt-3 border-t border-slate-100 pt-2">
-              <p className="mb-1 text-xs font-semibold text-slate-500">Comuns sem setor</p>
-              <ul>{semSetor.map((comum) => renderNo(comum, 0))}</ul>
+              <p className="mb-1 text-xs font-semibold text-slate-500">Casas de Oração sem setor</p>
+              <ul>{semSetor.map((casaOracao) => renderNo(casaOracao, 0))}</ul>
             </div>
           )}
         </div>

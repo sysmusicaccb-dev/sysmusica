@@ -4,7 +4,7 @@
  * SysMúsica — Formulário de membro (cadastro e edição) — conteúdo do painel lateral.
  * membro = null -> cadastrar; preenchido -> editar (inclui o status Ativo/Inativo).
  *
- * Comum: lista agrupada por Região › Setor (cadastrada em Organização). O nome da congregação sai da comum.
+ * Casa de Oração: lista agrupada por Região › Setor (cadastrada em Organização). O nome da congregação sai da casa de oração.
  * Cidade e bairro: texto com sugestões dos valores já cadastrados.
  * CPF: só aparece para quem tem a permissão membros.cpf (o banco também confere). É opcional,
  *      validado pelos dígitos verificadores e não pode repetir entre os membros.
@@ -22,7 +22,7 @@ import SeletorInstrumento, { FamiliaAutomatica } from "@/modules/instrumentos/co
 import { validarInstrumentoDoCargo } from "@/modules/instrumentos/selecao";
 import { atualizarMembro, criarMembro } from "@/modules/membros/services/membros";
 import { CATEGORIAS, cargoUsaCategoria, validarCategoria } from "@/modules/painel/regras";
-import SeletorComum from "@/modules/organizacao/components/SeletorComum";
+import SeletorCasaOracao from "@/modules/organizacao/components/SeletorCasaOracao";
 import CampoFoto from "@/modules/membros/components/CampoFoto";
 import FotoMembro from "@/modules/membros/components/FotoMembro";
 import { descartarFoto, enviarFoto, subirFotoNova } from "@/modules/membros/services/fotos";
@@ -76,7 +76,7 @@ export default function FormularioMembro({
   // Valores iniciais: vazios no cadastro; os dados do membro na edição
   const [nome, setNome] = useState(membro?.nome ?? "");
   const [congregacao, setCongregacao] = useState(membro?.congregacao ?? "");
-  const [comumId, setComumId] = useState(membro?.comum_id ?? ""); // a comum define o nome da congregação
+  const [casaOracaoId, setCasaOracaoId] = useState(membro?.casa_oracao_id ?? ""); // a casa de oração define o nome da congregação
   const [cidade, setCidade] = useState(membro?.cidade ?? "");
   const [bairro, setBairro] = useState(membro?.bairro ?? "");
   const [cpf, setCpf] = useState(cpfInicial ? formatarCpf(cpfInicial) : "");
@@ -111,8 +111,8 @@ export default function FormularioMembro({
     setErroForm(null);
 
     // Barra campos obrigatórios vazios ou preenchidos só com espaços
-    if (!nome.trim() || !comumId || !cargoId) {
-      return setErroForm("Preencha nome, cargo e comum.");
+    if (!nome.trim() || !casaOracaoId || !cargoId) {
+      return setErroForm("Preencha nome, cargo e casa de oração.");
     }
 
     // CPF (opcional): se preenchido, precisa ser válido
@@ -139,7 +139,7 @@ export default function FormularioMembro({
       const dados = {
         nome: nome.trim(),
         congregacao: congregacao.trim(),
-        comum_id: comumId,
+        casa_oracao_id: casaOracaoId,
         cidade: cidade.trim() || null,
         bairro: bairro.trim() || null,
         cargo_id: cargoId,
@@ -353,21 +353,21 @@ export default function FormularioMembro({
         </div>
       )}
 
-      {/* Localidade: comum (lista do banco), cidade e bairro (com sugestões dos já cadastrados) */}
+      {/* Localidade: casa de oração (lista do banco), cidade e bairro (com sugestões dos já cadastrados) */}
       <div className="space-y-1.5">
-        <label htmlFor="comum-membro" className="text-sm font-medium text-slate-700">
-          Comum
+        <label htmlFor="casa-oracao-membro" className="text-sm font-medium text-slate-700">
+          Casa de Oração
         </label>
-        <SeletorComum
-          id="comum-membro"
-          valor={comumId}
-          onChange={setComumId}
+        <SeletorCasaOracao
+          id="casa-oracao-membro"
+          valor={casaOracaoId}
+          onChange={setCasaOracaoId}
           onEscolherNome={setCongregacao}
           disabled={salvando}
           className={classeInput}
         />
         <p className="text-xs text-slate-500">
-          A comum define o setor e quem enxerga o cadastro. Se a comum não aparecer, peça a um administrador para
+          A casa de oração define o setor e quem enxerga o cadastro. Se a casa de oração não aparecer, peça a um administrador para
           cadastrá-la em Administração &gt; Organização.
         </p>
       </div>

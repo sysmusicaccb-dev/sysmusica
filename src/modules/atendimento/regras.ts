@@ -24,17 +24,17 @@ export function nomeCompletoValido(nome: string): boolean {
 
 /**
  * Confere os dados do visitante antes de enviar; devolve a mensagem de erro ou null.
- * A origem (igreja) é uma comum escolhida na lista, cadastrada em Organização: nunca texto livre.
- * É só uma resposta rápida da tela: o banco confere tudo de novo (inclusive nome repetido na comum).
+ * A origem (igreja) é uma casa de oração escolhida na lista, cadastrada em Organização: nunca texto livre.
+ * É só uma resposta rápida da tela: o banco confere tudo de novo (inclusive nome repetido na casa de oração).
  */
 export function validarDadosVisitante(dados: {
   nome: string;
   cargoId: string;
-  origemComumId: string;
+  origemCasaOracaoId: string;
 }): string | null {
   if (!nomeCompletoValido(dados.nome)) return "Digite o nome completo do visitante (nome e sobrenome).";
   if (!dados.cargoId) return "Escolha o cargo ou ministério do visitante.";
-  if (!dados.origemComumId) return "Escolha a igreja de origem na lista (estado, região, setor e comum).";
+  if (!dados.origemCasaOracaoId) return "Escolha a igreja de origem na lista (estado, região, setor e casa de oração).";
   return null;
 }
 

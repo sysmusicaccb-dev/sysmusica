@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço de dados da organização (Estado > Região > Setor > Comum) e dos vínculos dos usuários.
+ * SysMúsica — Serviço de dados da organização (Estado > Região > Setor > Casa de Oração) e dos vínculos dos usuários.
  * Todas as regras (permissão, nomes repetidos, abrangência) são aplicadas pelo banco (migração 0012);
  * a tela só chama e mostra o resultado, com as mensagens do banco já escritas para o usuário.
  */
@@ -23,10 +23,10 @@ export async function listarOrganizacao(): Promise<NoOrganizacao[]> {
   }));
 }
 
-/** Itens ativos que o usuário pode usar (seletor de comum nos formulários). */
+/** Itens ativos que o usuário pode usar (seletor de casa de oração nos formulários). */
 export async function listarOrganizacaoParaSelecao(): Promise<NoOrganizacao[]> {
   const { data, error } = await supabase.rpc("listar_organizacao_para_selecao");
-  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar as comuns."));
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar as casas de oração."));
   return (data ?? []) as NoOrganizacao[];
 }
 
@@ -60,14 +60,14 @@ export async function excluirNo(nivel: NivelOrganizacao, id: string): Promise<vo
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível excluir."));
 }
 
-/** Muda uma comum de setor (fica no histórico e na auditoria). */
-export async function transferirComum(comumId: string, setorId: string, justificativa: string): Promise<void> {
-  const { error } = await supabase.rpc("transferir_comum", {
-    p_comum: comumId,
+/** Muda uma casa de oração de setor (fica no histórico e na auditoria). */
+export async function transferirCasaOracao(casaOracaoId: string, setorId: string, justificativa: string): Promise<void> {
+  const { error } = await supabase.rpc("transferir_casa_oracao", {
+    p_casa_oracao: casaOracaoId,
     p_setor: setorId,
     p_justificativa: justificativa,
   });
-  if (error) throw new Error(mensagemDoErro(error, "Não foi possível transferir a comum."));
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível transferir a casa de oração."));
 }
 
 /** Vínculos de cada usuário com o rótulo: { idDoUsuario: [{ nivel, alvo_id, rotulo }] }. */

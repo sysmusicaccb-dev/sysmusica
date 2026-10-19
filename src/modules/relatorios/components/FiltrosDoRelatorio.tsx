@@ -1,13 +1,13 @@
 "use client";
 
 /**
- * SysMúsica — Filtros do relatório. Mostra só os filtros do tipo escolhido. Região, setor e comum são
+ * SysMúsica — Filtros do relatório. Mostra só os filtros do tipo escolhido. Região, setor e casa de oração são
  * listas encadeadas que vêm do banco (Organização): cada uma só mostra o que pertence à escolha anterior.
  */
 import type { ReactNode } from "react";
 import { formatarDataHora } from "@/lib/datas";
 import { ROTULO_STATUS } from "@/modules/portarias/regras";
-import { opcoesComum, opcoesRegiao, opcoesSetor } from "../regras";
+import { opcoesCasaOracao, opcoesRegiao, opcoesSetor } from "../regras";
 import type { CampoFiltro, FiltrosRelatorio, OpcoesFiltros } from "../tipos";
 
 interface FiltrosDoRelatorioProps {
@@ -96,7 +96,7 @@ export default function FiltrosDoRelatorio({ campos, valores, onChange, opcoes, 
           <select
             id="rel-regiao"
             value={valores.regiaoId}
-            onChange={(e) => mudar({ regiaoId: e.target.value, setorId: "", comumId: "" })}
+            onChange={(e) => mudar({ regiaoId: e.target.value, setorId: "", casaOracaoId: "" })}
             disabled={desabilitado}
             className={classeCampo}
           >
@@ -115,7 +115,7 @@ export default function FiltrosDoRelatorio({ campos, valores, onChange, opcoes, 
           <select
             id="rel-setor"
             value={valores.setorId}
-            onChange={(e) => mudar({ setorId: e.target.value, comumId: "" })}
+            onChange={(e) => mudar({ setorId: e.target.value, casaOracaoId: "" })}
             disabled={desabilitado || !valores.regiaoId}
             className={classeCampo}
           >
@@ -129,17 +129,17 @@ export default function FiltrosDoRelatorio({ campos, valores, onChange, opcoes, 
         </Campo>
       )}
 
-      {tem("comum") && (
-        <Campo id="rel-comum" rotulo="Comum">
+      {tem("casa_oracao") && (
+        <Campo id="rel-casa-oracao" rotulo="Casa de Oração">
           <select
-            id="rel-comum"
-            value={valores.comumId}
-            onChange={(e) => mudar({ comumId: e.target.value })}
+            id="rel-casa-oracao"
+            value={valores.casaOracaoId}
+            onChange={(e) => mudar({ casaOracaoId: e.target.value })}
             disabled={desabilitado || !valores.setorId}
             className={classeCampo}
           >
-            <option value="">{valores.setorId ? "Todas as comuns" : "Escolha o setor primeiro"}</option>
-            {opcoesComum(organizacao, valores.setorId).map((opcao) => (
+            <option value="">{valores.setorId ? "Todas as casas de oração" : "Escolha o setor primeiro"}</option>
+            {opcoesCasaOracao(organizacao, valores.setorId).map((opcao) => (
               <option key={opcao.id} value={opcao.id}>
                 {opcao.rotulo}
               </option>

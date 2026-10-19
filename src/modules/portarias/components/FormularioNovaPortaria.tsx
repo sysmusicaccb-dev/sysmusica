@@ -70,12 +70,12 @@ export default function FormularioNovaPortaria({ eventos, cota, onSalvo }: Formu
           {eventos.map((item) => (
             <option key={item.id} value={item.id} disabled={!item.cidade}>
               {formatarDataHora(item.data_evento)} · {item.tipo} · {item.local}
-              {item.cidade ? ` (${item.cidade})` : " — comum sem setor"}
+              {item.cidade ? ` (${item.cidade})` : " — casa de oração sem setor"}
             </option>
           ))}
         </select>
         <p className="text-xs text-slate-500">
-          Aparecem só os eventos que têm uma comum escolhida (na tela de Eventos, botão Editar) dentro da sua abrangência. Os de comum sem setor ficam desabilitados (peça a um administrador para vincular a comum a um setor). Eventos que já têm
+          Aparecem só os eventos que têm uma casa de oração escolhida (na tela de Eventos, botão Editar) dentro da sua abrangência. Os de casa de oração sem setor ficam desabilitados (peça a um administrador para vincular a casa de oração a um setor). Eventos que já têm
           portaria pendente ou aprovada não aparecem.
         </p>
       </div>

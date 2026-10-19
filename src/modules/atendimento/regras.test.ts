@@ -30,7 +30,7 @@ describe("nomeCompletoValido", () => {
 });
 
 describe("validarDadosVisitante", () => {
-  const completo = { nome: "Maria da Silva", cargoId: "c1", origemComumId: "o1" };
+  const completo = { nome: "Maria da Silva", cargoId: "c1", origemCasaOracaoId: "o1" };
 
   it("aceita os dados completos", () => {
     expect(validarDadosVisitante(completo)).toBeNull();
@@ -45,7 +45,7 @@ describe("validarDadosVisitante", () => {
   });
 
   it("exige a igreja de origem escolhida na lista", () => {
-    expect(validarDadosVisitante({ ...completo, origemComumId: "" })).toMatch(/igreja de origem/);
+    expect(validarDadosVisitante({ ...completo, origemCasaOracaoId: "" })).toMatch(/igreja de origem/);
   });
 });
 

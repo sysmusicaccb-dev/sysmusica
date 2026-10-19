@@ -18,7 +18,7 @@ export type CampoFiltro =
   | "evento"
   | "regiao"
   | "setor"
-  | "comum"
+  | "casa_oracao"
   | "cargo"
   | "instrumento"
   | "situacaoMembro"
@@ -56,7 +56,7 @@ export interface FiltrosRelatorio {
   eventoId: string;
   regiaoId: string;
   setorId: string;
-  comumId: string;
+  casaOracaoId: string;
   cargoId: string;
   instrumentoId: string;
   situacao: string; // membros: Ativo/Inativo; portarias: código da situação

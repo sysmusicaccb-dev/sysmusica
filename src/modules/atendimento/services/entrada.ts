@@ -38,7 +38,7 @@ export async function registrarEntradaAvulsa(
     linhaCodigo: string;
     toca: boolean | null;
     instrumentoId: string | null;
-    origemComumId: string | null;
+    origemCasaOracaoId: string | null;
     origemTexto: string | null;
   }
 ): Promise<void> {
@@ -47,7 +47,7 @@ export async function registrarEntradaAvulsa(
     p_linha_codigo: dados.linhaCodigo,
     p_toca: dados.toca,
     p_instrumento_id: dados.instrumentoId,
-    p_origem_comum_id: dados.origemComumId,
+    p_origem_casa_oracao_id: dados.origemCasaOracaoId,
     p_origem_texto: dados.origemTexto,
   });
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível registrar a entrada."));

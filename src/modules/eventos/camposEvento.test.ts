@@ -7,7 +7,7 @@ const completo: CamposEvento = {
   dataEvento: "2026-10-25T10:00",
   local: "Casa de Oração de Cidade Nova",
   cidade: "Jequié",
-  comumId: "abc",
+  casaOracaoId: "abc",
 };
 
 describe("camposFaltando", () => {
@@ -17,13 +17,13 @@ describe("camposFaltando", () => {
 
   it("aponta o Local vazio (caso do print) e a ordem do formulário", () => {
     expect(camposFaltando({ ...completo, local: "" })).toEqual(["Local"]);
-    expect(camposFaltando({ tipo: "", finalidade: "", dataEvento: "", local: "", cidade: "", comumId: "" })).toEqual([
+    expect(camposFaltando({ tipo: "", finalidade: "", dataEvento: "", local: "", cidade: "", casaOracaoId: "" })).toEqual([
       "Tipo",
       "Finalidade do evento",
       "Data e hora",
       "Local",
       "Cidade",
-      "Comum",
+      "Casa de Oração",
     ]);
   });
 
@@ -31,8 +31,8 @@ describe("camposFaltando", () => {
     expect(camposFaltando({ ...completo, cidade: "   ", local: " " })).toEqual(["Local", "Cidade"]);
   });
 
-  it("a comum escolhida é obrigatória ('Nenhuma' = vazio)", () => {
-    expect(camposFaltando({ ...completo, comumId: "" })).toEqual(["Comum"]);
+  it("a casa de oração escolhida é obrigatória ('Nenhuma' = vazio)", () => {
+    expect(camposFaltando({ ...completo, casaOracaoId: "" })).toEqual(["Casa de Oração"]);
   });
 });
 

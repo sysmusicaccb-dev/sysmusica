@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * SysMúsica — Página /administracao/organizacao: estados, regiões, setores e comuns.
- * Cadastro pelo sistema (sem código fixo), com ativar/inativar e transferência de comum entre setores.
+ * SysMúsica — Página /administracao/organizacao: estados, regiões, setores e casas de oração.
+ * Cadastro pelo sistema (sem código fixo), com ativar/inativar e transferência de casa de oração entre setores.
  * Cada botão só aparece para quem tem a permissão; o banco confere de novo em toda operação.
  */
 import { useCallback, useEffect, useState } from "react";
@@ -24,12 +24,12 @@ import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
 
 // Qual painel lateral está aberto
-type Painel = { tipo: "no"; modo: ModoNo } | { tipo: "transferir"; comum: NoOrganizacao };
+type Painel = { tipo: "no"; modo: ModoNo } | { tipo: "transferir"; casaOracao: NoOrganizacao };
 
 // Título do painel lateral
 function tituloDoPainel(painel: Painel | null): string {
   if (!painel) return "";
-  if (painel.tipo === "transferir") return "Transferir comum";
+  if (painel.tipo === "transferir") return "Transferir casa de oração";
   const modo = painel.modo;
   return modo.tipo === "editar"
     ? `Editar ${ROTULO_NIVEL[modo.no.nivel].toLowerCase()}`
@@ -149,7 +149,7 @@ export default function OrganizacaoPage() {
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
         <PageHeader
           titulo="Organização"
-          descricao="Estados, regiões, setores e comuns. O acesso dos usuários aos dados segue esta estrutura."
+          descricao="Estados, regiões, setores e casas de oração. O acesso dos usuários aos dados segue esta estrutura."
           acoes={
             podeCriar ? (
               <Button icone={Plus} onClick={() => abrirNovo("ESTADO", null)} disabled={carregando || !!erro}>
@@ -193,7 +193,7 @@ export default function OrganizacaoPage() {
               setErroConfirmacao(null);
               setAlvoAlternar(no);
             }}
-            onTransferir={(comum) => setPainel({ tipo: "transferir", comum })}
+            onTransferir={(casaOracao) => setPainel({ tipo: "transferir", casaOracao })}
           />
         )}
       </div>
@@ -204,13 +204,13 @@ export default function OrganizacaoPage() {
         titulo={tituloDoPainel(painel)}
         descricao={
           painel?.tipo === "transferir"
-            ? "A comum e as portarias dela passam a valer para o setor escolhido."
+            ? "A casa de oração e as portarias dela passam a valer para o setor escolhido."
             : "Os nomes não podem se repetir dentro do mesmo item pai."
         }
       >
         {painel?.tipo === "no" && <FormularioNo modo={painel.modo} onSalvo={aoSalvar} />}
         {painel?.tipo === "transferir" && (
-          <FormularioTransferencia comum={painel.comum} nos={nos} onSalvo={aoSalvar} />
+          <FormularioTransferencia casaOracao={painel.casaOracao} nos={nos} onSalvo={aoSalvar} />
         )}
       </Drawer>
 

@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * SysMúsica — Árvore da organização: Estado > Região > Setor > Comum, com abrir/fechar e as ações de cada item.
+ * SysMúsica — Árvore da organização: Estado > Região > Setor > Casa de Oração, com abrir/fechar e as ações de cada item.
  * Os botões só aparecem para quem tem a permissão (a tela repassa); o banco confere de novo em cada operação.
- * Comuns que ainda não têm setor ficam numa seção própria, no fim, com o botão de transferir.
+ * Casas de Oração que ainda não têm setor ficam numa seção própria, no fim, com o botão de transferir.
  */
 import { useState, type ReactNode } from "react";
 import { ArrowRightLeft, ChevronDown, ChevronRight, Pencil, Plus, Power, Trash2 } from "lucide-react";
@@ -30,7 +30,7 @@ function contagem(no: NoOrganizacao): string {
   const n = no.qtd_filhos ?? 0;
   if (no.nivel === "ESTADO") return `${n} ${n === 1 ? "região" : "regiões"}`;
   if (no.nivel === "REGIAO") return `${n} ${n === 1 ? "setor" : "setores"}`;
-  if (no.nivel === "SETOR") return `${n} ${n === 1 ? "comum" : "comuns"}`;
+  if (no.nivel === "SETOR") return `${n} ${n === 1 ? "casa de oração" : "casas de oração"}`;
   const m = no.qtd_membros ?? 0;
   return `${m} ${m === 1 ? "membro" : "membros"}`;
 }
@@ -95,7 +95,7 @@ export default function ArvoreOrganizacao({
             <span className={inativo ? "font-medium text-slate-400" : "font-medium text-slate-900"}>{no.nome}</span>
             <span className="ml-2 text-xs text-slate-500">
               {contagem(no)}
-              {no.nivel === "COMUM" && (no.bairro || no.cidade)
+              {no.nivel === "CASA_ORACAO" && (no.bairro || no.cidade)
                 ? ` · ${[no.bairro, no.cidade].filter(Boolean).join(", ")}`
                 : ""}
             </span>
@@ -111,7 +111,7 @@ export default function ArvoreOrganizacao({
                 onClick={() => onNovo(nivelFilho, no)}
               />
             )}
-            {podeTransferir && no.nivel === "COMUM" && (
+            {podeTransferir && no.nivel === "CASA_ORACAO" && (
               <BotaoIcone icone={ArrowRightLeft} rotulo={`Transferir ${no.nome} para outro setor`} onClick={() => onTransferir(no)} />
             )}
             {podeEditar && (
@@ -143,7 +143,7 @@ export default function ArvoreOrganizacao({
   }
 
   const estados = filhosDe(nos, null, "ESTADO");
-  const semSetor = filhosDe(nos, null, "COMUM");
+  const semSetor = filhosDe(nos, null, "CASA_ORACAO");
 
   return (
     <div className="space-y-6">
@@ -157,12 +157,12 @@ export default function ArvoreOrganizacao({
 
       {semSetor.length > 0 && (
         <section className="rounded-2xl border border-amber-200 bg-amber-50/50 p-3 shadow-sm">
-          <h2 className="px-2 pt-1 text-sm font-semibold text-slate-900">Comuns sem setor ({semSetor.length})</h2>
+          <h2 className="px-2 pt-1 text-sm font-semibold text-slate-900">Casas de Oração sem setor ({semSetor.length})</h2>
           <p className="px-2 pb-2 text-xs text-slate-600">
-            Enquanto uma comum estiver sem setor, quem tem acesso restrito não vê nada dela (membros, eventos e
+            Enquanto uma casa de oração estiver sem setor, quem tem acesso restrito não vê nada dela (membros, eventos e
             portarias). Use o botão de transferir para vinculá-la a um setor.
           </p>
-          <ul>{semSetor.map((comum) => renderLinha(comum, 0))}</ul>
+          <ul>{semSetor.map((casaOracao) => renderLinha(casaOracao, 0))}</ul>
         </section>
       )}
     </div>

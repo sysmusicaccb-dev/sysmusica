@@ -1,6 +1,6 @@
 "use client";
 
-import SeletorComum from "@/modules/organizacao/components/SeletorComum";
+import SeletorCasaOracao from "@/modules/organizacao/components/SeletorCasaOracao";
 
 /**
  * SysMúsica — Formulário de evento (cadastro e edição) — conteúdo do painel lateral.
@@ -24,7 +24,7 @@ import {
   camposFaltando,
   mensagemCamposFaltando,
   ROTULO_CIDADE,
-  ROTULO_COMUM,
+  ROTULO_CASA_ORACAO,
   ROTULO_DATA,
   ROTULO_FINALIDADE,
   ROTULO_LOCAL,
@@ -66,7 +66,7 @@ export default function FormularioEvento({
   const [dataEvento, setDataEvento] = useState(evento ? isoParaDatetimeLocal(evento.data_evento) : "");
   const [local, setLocal] = useState(evento?.local ?? "");
   const [cidade, setCidade] = useState(evento?.cidade ?? "");
-  const [comumId, setComumId] = useState(evento?.comum_id ?? "");
+  const [casaOracaoId, setCasaOracaoId] = useState(evento?.casa_oracao_id ?? "");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [faltando, setFaltando] = useState<string[]>([]); // campos obrigatórios vazios (borda vermelha)
@@ -89,7 +89,7 @@ export default function FormularioEvento({
     setErro(null);
 
     // Todos os campos são obrigatórios: o alerta lista os que faltam e eles ficam com borda vermelha
-    const vazios = camposFaltando({ tipo, finalidade: finalidadeTexto, dataEvento, local, cidade, comumId });
+    const vazios = camposFaltando({ tipo, finalidade: finalidadeTexto, dataEvento, local, cidade, casaOracaoId });
     setFaltando(vazios);
     if (vazios.length > 0) return setErro(mensagemCamposFaltando(vazios));
 
@@ -117,7 +117,7 @@ export default function FormularioEvento({
         local: local.trim(),
         finalidade_id: finalidade.id,
         cidade: cidade.trim() || null,
-        comum_id: comumId || null,
+        casa_oracao_id: casaOracaoId || null,
       };
       if (evento) await atualizarEvento(evento.id, dados);
       else await criarEvento(dados);
@@ -248,15 +248,15 @@ export default function FormularioEvento({
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="comum-evento" className="text-sm font-medium text-slate-700">
-          Comum <span className="text-red-600"> *</span> <span className="font-normal text-slate-400">(define o setor da portaria)</span>
+        <label htmlFor="casa-oracao-evento" className="text-sm font-medium text-slate-700">
+          Casa de Oração <span className="text-red-600"> *</span> <span className="font-normal text-slate-400">(define o setor da portaria)</span>
         </label>
-        <SeletorComum
-          id="comum-evento"
-          valor={comumId}
-          onChange={setComumId}
+        <SeletorCasaOracao
+          id="casa-oracao-evento"
+          valor={casaOracaoId}
+          onChange={setCasaOracaoId}
           disabled={salvando}
-          className={classeCampo(ROTULO_COMUM)}
+          className={classeCampo(ROTULO_CASA_ORACAO)}
         />
       </div>
 

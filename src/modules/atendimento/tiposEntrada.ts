@@ -39,7 +39,7 @@ export interface OpcoesEntrada {
 
 /** Resultado da busca de localidade (casa de oração + caminho na organização). */
 export interface LocalidadeBusca {
-  comum_id: string;
+  casa_oracao_id: string;
   nome: string;
   caminho: string;
 }

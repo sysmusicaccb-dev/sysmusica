@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  agruparComunsParaSelecao,
+  agruparCasasOracaoParaSelecao,
   agruparSetoresParaSelecao,
   chaveVinculo,
   filhosDe,
@@ -11,7 +11,7 @@ import {
 } from "@/modules/organizacao/regras";
 import type { NoOrganizacao } from "@/modules/organizacao/tipos";
 
-// Bahia > Salvador (Setor 1, Setor 2, Setor 10) e Jequié (Setor 1, Setor 9 inativo); duas comuns em
+// Bahia > Salvador (Setor 1, Setor 2, Setor 10) e Jequié (Setor 1, Setor 9 inativo); duas casas de oração em
 // Salvador/Setor 1, uma em Jequié/Setor 1 e uma sem setor
 const nos: NoOrganizacao[] = [
   { nivel: "ESTADO", id: "e1", parent_id: null, nome: "Bahia", ativo: true },
@@ -22,10 +22,10 @@ const nos: NoOrganizacao[] = [
   { nivel: "SETOR", id: "s3", parent_id: "r1", nome: "Setor 2", ativo: true },
   { nivel: "SETOR", id: "s4", parent_id: "r2", nome: "Setor 1", ativo: true },
   { nivel: "SETOR", id: "s5", parent_id: "r2", nome: "Setor 9", ativo: false },
-  { nivel: "COMUM", id: "c1", parent_id: "s1", nome: "Itinga" },
-  { nivel: "COMUM", id: "c2", parent_id: "s1", nome: "Caique" },
-  { nivel: "COMUM", id: "c3", parent_id: "s4", nome: "Central" },
-  { nivel: "COMUM", id: "c4", parent_id: null, nome: "Solta" },
+  { nivel: "CASA_ORACAO", id: "c1", parent_id: "s1", nome: "Itinga" },
+  { nivel: "CASA_ORACAO", id: "c2", parent_id: "s1", nome: "Caique" },
+  { nivel: "CASA_ORACAO", id: "c3", parent_id: "s4", nome: "Central" },
+  { nivel: "CASA_ORACAO", id: "c4", parent_id: null, nome: "Solta" },
 ];
 
 describe("filhosDe", () => {
@@ -38,13 +38,13 @@ describe("filhosDe", () => {
     expect(filhosDe(nos, "r1", "SETOR").map((n) => n.id)).not.toContain("s4");
   });
 
-  it("devolve as comuns sem setor quando o pai é nulo", () => {
-    expect(filhosDe(nos, null, "COMUM").map((n) => n.id)).toEqual(["c4"]);
+  it("devolve as casas de oração sem setor quando o pai é nulo", () => {
+    expect(filhosDe(nos, null, "CASA_ORACAO").map((n) => n.id)).toEqual(["c4"]);
   });
 });
 
-describe("agruparComunsParaSelecao", () => {
-  const grupos = agruparComunsParaSelecao(nos);
+describe("agruparCasasOracaoParaSelecao", () => {
+  const grupos = agruparCasasOracaoParaSelecao(nos);
 
   it("agrupa por Região › Setor e deixa 'sem setor' por último", () => {
     expect(grupos.map((g) => g.rotulo)).toEqual([
@@ -54,8 +54,8 @@ describe("agruparComunsParaSelecao", () => {
     ]);
   });
 
-  it("ordena as comuns de cada grupo pelo nome", () => {
-    expect(grupos[1].comuns.map((c) => c.nome)).toEqual(["Caique", "Itinga"]);
+  it("ordena as casas de oração de cada grupo pelo nome", () => {
+    expect(grupos[1].casasOracao.map((c) => c.nome)).toEqual(["Caique", "Itinga"]);
   });
 });
 
@@ -93,13 +93,13 @@ describe("motivoBloqueioExclusao", () => {
   it("bloqueia o item que ainda tem itens dentro e explica o motivo", () => {
     expect(motivoBloqueioExclusao({ ...base, nivel: "ESTADO", id: "e", nome: "Bahia", qtd_filhos: 2 })).toMatch(/2 regiões/);
     expect(motivoBloqueioExclusao({ ...base, nivel: "REGIAO", id: "r", nome: "Salvador", qtd_filhos: 1 })).toMatch(/1 setor\b/);
-    expect(motivoBloqueioExclusao({ ...base, nivel: "SETOR", id: "s", nome: "Setor 1", qtd_filhos: 3 })).toMatch(/3 comuns/);
-    expect(motivoBloqueioExclusao({ ...base, nivel: "COMUM", id: "c", nome: "Itinga", qtd_membros: 4 })).toMatch(/4 membros/);
+    expect(motivoBloqueioExclusao({ ...base, nivel: "SETOR", id: "s", nome: "Setor 1", qtd_filhos: 3 })).toMatch(/3 casas de oração/);
+    expect(motivoBloqueioExclusao({ ...base, nivel: "CASA_ORACAO", id: "c", nome: "Itinga", qtd_membros: 4 })).toMatch(/4 membros/);
   });
 
   it("libera o item vazio", () => {
     expect(motivoBloqueioExclusao({ ...base, nivel: "SETOR", id: "s", nome: "Setor 9", qtd_filhos: 0 })).toBeNull();
-    expect(motivoBloqueioExclusao({ ...base, nivel: "COMUM", id: "c", nome: "Vazia", qtd_membros: 0 })).toBeNull();
+    expect(motivoBloqueioExclusao({ ...base, nivel: "CASA_ORACAO", id: "c", nome: "Vazia", qtd_membros: 0 })).toBeNull();
   });
 });
 

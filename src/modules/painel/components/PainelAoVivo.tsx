@@ -286,7 +286,7 @@ export default function PainelAoVivo() {
                 <div className="min-w-0">
                   <h2 className="truncate text-lg font-semibold">{evento.tipo}</h2>
                   <p className="truncate text-sm uppercase tracking-wide text-white/80">
-                    {[evento.local, evento.comum].filter(Boolean).join(" · ")}
+                    {[evento.local, evento.casa_oracao].filter(Boolean).join(" · ")}
                   </p>
                 </div>
               </div>

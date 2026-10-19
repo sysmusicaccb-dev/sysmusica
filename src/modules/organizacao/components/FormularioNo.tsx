@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de um item da organização (estado, região, setor ou comum), novo ou em edição.
+ * SysMúsica — Formulário de um item da organização (estado, região, setor ou casa de oração), novo ou em edição.
  * Em item novo, o "pai" (estado, região ou setor) vem de onde o botão + foi clicado. Para mudar uma
- * comum de setor use a transferência (fica registrada). O banco confere permissão e nomes repetidos.
+ * casa de oração de setor use a transferência (fica registrada). O banco confere permissão e nomes repetidos.
  */
 import { useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
@@ -87,12 +87,12 @@ export default function FormularioNo({ modo, onSalvo }: FormularioNoProps) {
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           disabled={salvando}
-          placeholder={nivel === "SETOR" ? "Ex: Setor 6" : nivel === "COMUM" ? "Ex: Central Itinga" : "Nome"}
+          placeholder={nivel === "SETOR" ? "Ex: Setor 6" : nivel === "CASA_ORACAO" ? "Ex: Central Itinga" : "Nome"}
           className={classeInput}
         />
       </div>
 
-      {nivel !== "COMUM" && (
+      {nivel !== "CASA_ORACAO" && (
         <div className="space-y-1.5">
           <label htmlFor="descricao-no" className="text-sm font-medium text-slate-700">
             Descrição <span className="font-normal text-slate-400">(opcional)</span>
@@ -109,7 +109,7 @@ export default function FormularioNo({ modo, onSalvo }: FormularioNoProps) {
         </div>
       )}
 
-      {nivel === "COMUM" && (
+      {nivel === "CASA_ORACAO" && (
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <label htmlFor="cidade-no" className="text-sm font-medium text-slate-700">

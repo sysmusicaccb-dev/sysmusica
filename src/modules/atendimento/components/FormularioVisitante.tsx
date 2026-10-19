@@ -4,13 +4,13 @@
  * SysMúsica — Cadastro rápido de visitante na portaria (painel lateral).
  * Para o irmão de outra região (ou sem cadastro) que vem congregar: nome completo, cargo ou ministério,
  * instrumento e a IGREJA DE ORIGEM, escolhida em listas encadeadas que vêm do banco
- * (Estado > Região > Setor > Comum, cadastrados em Organização): nada de origem digitada à mão.
+ * (Estado > Região > Setor > Casa de Oração, cadastrados em Organização): nada de origem digitada à mão.
  *
  * Instrumento: o MESMO seletor do cadastro de membro (lista por família), obrigatório nos cargos que
  * exigem (o Músico), com a família preenchida automaticamente.
- * O visitante é cadastrado na COMUM da portaria em atendimento e só a região dela o enxerga.
+ * O visitante é cadastrado na CASA DE ORAÇÃO da portaria em atendimento e só a região dela o enxerga.
  * Depois de salvar, abre a conferência para registrar a entrada.
- * O banco confere permissão, portaria aprovada, abrangência, instrumento, origem e nome repetido na comum.
+ * O banco confere permissão, portaria aprovada, abrangência, instrumento, origem e nome repetido na casa de oração.
  */
 import { useEffect, useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
@@ -42,7 +42,7 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
   const [estadoId, setEstadoId] = useState("");
   const [regiaoId, setRegiaoId] = useState("");
   const [setorId, setSetorId] = useState("");
-  const [comumId, setComumId] = useState("");
+  const [casaOracaoId, setCasaOracaoId] = useState("");
   const [foto, setFoto] = useState<Blob | null>(null); // fotografia obrigatória do visitante
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -77,23 +77,23 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
   const estados = filhosDe(origens, null, "ESTADO");
   const regioes = estadoId ? filhosDe(origens, estadoId, "REGIAO") : [];
   const setores = regiaoId ? filhosDe(origens, regiaoId, "SETOR") : [];
-  const comuns = setorId ? filhosDe(origens, setorId, "COMUM") : [];
+  const casasOracao = setorId ? filhosDe(origens, setorId, "CASA_ORACAO") : [];
 
   // Ao trocar um nível, limpa os de baixo
   function trocarEstado(id: string) {
     setEstadoId(id);
     setRegiaoId("");
     setSetorId("");
-    setComumId("");
+    setCasaOracaoId("");
   }
   function trocarRegiao(id: string) {
     setRegiaoId(id);
     setSetorId("");
-    setComumId("");
+    setCasaOracaoId("");
   }
   function trocarSetor(id: string) {
     setSetorId(id);
-    setComumId("");
+    setCasaOracaoId("");
   }
 
   // Ao trocar o cargo, limpa o instrumento se o novo cargo não usar instrumento
@@ -108,7 +108,7 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
     if (salvando) return; // evita envio duplicado
     setErro(null);
 
-    const erroDados = validarDadosVisitante({ nome, cargoId, origemComumId: comumId });
+    const erroDados = validarDadosVisitante({ nome, cargoId, origemCasaOracaoId: casaOracaoId });
     if (erroDados) return setErro(erroDados);
     const erroInstrumento = validarInstrumentoDoCargo(exigeInstrumento, instrumentoId, cargo?.nome);
     if (erroInstrumento) return setErro(erroInstrumento);
@@ -125,7 +125,7 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
           nome: nome.trim(),
           cargoId,
           instrumentoId: cargo?.permite_instrumento && instrumentoId ? instrumentoId : null,
-          origemComumId: comumId,
+          origemCasaOracaoId: casaOracaoId,
           membroId,
           fotoPath: caminho,
         });
@@ -146,7 +146,7 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
   return (
     <form onSubmit={salvar} className="space-y-5">
       <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
-        O visitante é cadastrado na comum desta portaria e só aparece para esta região. Depois de salvar, você
+        O visitante é cadastrado na casa de oração desta portaria e só aparece para esta região. Depois de salvar, você
         confere os dados e registra a entrada.
       </p>
 
@@ -294,18 +294,18 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="comum-visitante" className="text-xs font-medium text-slate-600">
-            Comum
+          <label htmlFor="casa-oracao-visitante" className="text-xs font-medium text-slate-600">
+            Casa de Oração
           </label>
           <select
-            id="comum-visitante"
-            value={comumId}
-            onChange={(e) => setComumId(e.target.value)}
+            id="casa-oracao-visitante"
+            value={casaOracaoId}
+            onChange={(e) => setCasaOracaoId(e.target.value)}
             disabled={salvando || !setorId}
             className={classeInput}
           >
-            <option value="">Selecione a comum</option>
-            {comuns.map((item) => (
+            <option value="">Selecione a casa de oração</option>
+            {casasOracao.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.nome}
               </option>

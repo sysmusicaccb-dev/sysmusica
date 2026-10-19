@@ -9,7 +9,7 @@ export interface CamposEvento {
   dataEvento: string; // valor do campo data e hora (vazio = não preenchido)
   local: string;
   cidade: string;
-  comumId: string;
+  casaOracaoId: string;
 }
 
 export const ROTULO_TIPO = "Tipo";
@@ -17,7 +17,7 @@ export const ROTULO_FINALIDADE = "Finalidade do evento";
 export const ROTULO_DATA = "Data e hora";
 export const ROTULO_LOCAL = "Local";
 export const ROTULO_CIDADE = "Cidade";
-export const ROTULO_COMUM = "Comum";
+export const ROTULO_CASA_ORACAO = "Casa de Oração";
 
 export function camposFaltando(campos: CamposEvento): string[] {
   const faltando: string[] = [];
@@ -26,7 +26,7 @@ export function camposFaltando(campos: CamposEvento): string[] {
   if (!campos.dataEvento.trim()) faltando.push(ROTULO_DATA);
   if (!campos.local.trim()) faltando.push(ROTULO_LOCAL);
   if (!campos.cidade.trim()) faltando.push(ROTULO_CIDADE);
-  if (!campos.comumId.trim()) faltando.push(ROTULO_COMUM);
+  if (!campos.casaOracaoId.trim()) faltando.push(ROTULO_CASA_ORACAO);
   return faltando;
 }
 

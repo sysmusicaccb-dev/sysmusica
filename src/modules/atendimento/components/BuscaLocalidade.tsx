@@ -124,7 +124,7 @@ export default function BuscaLocalidade({
             {resultados.length > 0 && (
               <ul className="max-h-56 divide-y divide-slate-100 overflow-y-auto rounded-lg border border-slate-200">
                 {resultados.map((item) => (
-                  <li key={item.comum_id}>
+                  <li key={item.casa_oracao_id}>
                     <button
                       type="button"
                       onClick={() => escolher(item)}

@@ -52,8 +52,8 @@ describe("GRUPOS_DADOS", () => {
 
 describe("ordenação", () => {
   it("grava os pais primeiro, apaga os filhos primeiro e remove repetidas", () => {
-    expect(ordenarParaGravar(["presencas", "membros", "comuns", "membros"])).toEqual(["comuns", "membros", "presencas"]);
-    expect(ordenarParaApagar(["presencas", "membros", "comuns"])).toEqual(["presencas", "membros", "comuns"]);
+    expect(ordenarParaGravar(["presencas", "membros", "casas_oracao", "membros"])).toEqual(["casas_oracao", "membros", "presencas"]);
+    expect(ordenarParaApagar(["presencas", "membros", "casas_oracao"])).toEqual(["presencas", "membros", "casas_oracao"]);
   });
 
   it("não altera a lista original", () => {

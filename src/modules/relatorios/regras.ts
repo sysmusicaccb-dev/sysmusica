@@ -31,7 +31,7 @@ export const FILTROS_VAZIOS: FiltrosRelatorio = {
   eventoId: "",
   regiaoId: "",
   setorId: "",
-  comumId: "",
+  casaOracaoId: "",
   cargoId: "",
   instrumentoId: "",
   situacao: "",
@@ -135,7 +135,7 @@ export function formatarDataFiltro(dia: string): string {
 }
 
 export type RotulosFiltros = Partial<
-  Record<"evento" | "regiao" | "setor" | "comum" | "cargo" | "instrumento", string>
+  Record<"evento" | "regiao" | "setor" | "casa_oracao" | "cargo" | "instrumento", string>
 >;
 
 /** Nomes (e não identificadores) dos itens escolhidos nos filtros, para o resumo do relatório. */
@@ -149,7 +149,7 @@ export function rotulosDosFiltros(filtros: FiltrosRelatorio, opcoes: OpcoesFiltr
     evento: evento ? `${formatarDataHora(evento.data_evento)} · ${evento.tipo} · ${evento.local}` : undefined,
     regiao: nomeDe("REGIAO", filtros.regiaoId),
     setor: nomeDe("SETOR", filtros.setorId),
-    comum: nomeDe("COMUM", filtros.comumId),
+    casa_oracao: nomeDe("CASA_ORACAO", filtros.casaOracaoId),
     cargo: filtros.cargoId ? opcoes?.cargos.find((item) => item.id === filtros.cargoId)?.nome : undefined,
     instrumento: filtros.instrumentoId
       ? opcoes?.instrumentos.find((item) => item.id === filtros.instrumentoId)?.nome
@@ -176,7 +176,7 @@ export function resumoFiltros(
   if (tem("evento") && filtros.eventoId && rotulos.evento) partes.push(`Evento: ${rotulos.evento}`);
   if (tem("regiao") && filtros.regiaoId && rotulos.regiao) partes.push(`Região: ${rotulos.regiao}`);
   if (tem("setor") && filtros.setorId && rotulos.setor) partes.push(`Setor: ${rotulos.setor}`);
-  if (tem("comum") && filtros.comumId && rotulos.comum) partes.push(`Comum: ${rotulos.comum}`);
+  if (tem("casa_oracao") && filtros.casaOracaoId && rotulos.casa_oracao) partes.push(`Casa de Oração: ${rotulos.casa_oracao}`);
   if (tem("cargo") && filtros.cargoId && rotulos.cargo) partes.push(`Cargo: ${rotulos.cargo}`);
   if (tem("instrumento") && filtros.instrumentoId && rotulos.instrumento) {
     partes.push(`Instrumento: ${rotulos.instrumento}`);
@@ -218,9 +218,9 @@ export function opcoesSetor(nos: NoOrganizacao[], regiaoId: string): OpcaoSeleca
   return regiaoId ? filhosDe(nos, regiaoId, "SETOR").map((no) => ({ id: no.id, rotulo: no.nome })) : [];
 }
 
-/** Comuns do setor escolhido (vazio sem setor). */
-export function opcoesComum(nos: NoOrganizacao[], setorId: string): OpcaoSelecao[] {
-  return setorId ? filhosDe(nos, setorId, "COMUM").map((no) => ({ id: no.id, rotulo: no.nome })) : [];
+/** Casas de Oração do setor escolhido (vazio sem setor). */
+export function opcoesCasaOracao(nos: NoOrganizacao[], setorId: string): OpcaoSelecao[] {
+  return setorId ? filhosDe(nos, setorId, "CASA_ORACAO").map((no) => ({ id: no.id, rotulo: no.nome })) : [];
 }
 
 // ---------- Cabeçalho, rodapé e margens do relatório impresso ----------
@@ -232,7 +232,7 @@ export const ITENS_CABECALHO: { id: ItemCabecalho; rotulo: string }[] = [
   { id: "marca", rotulo: "Marca do sistema (logomarca ou nome)" },
   { id: "evento", rotulo: "Evento escolhido (nome, data, hora e local)" },
   { id: "periodo", rotulo: "Período" },
-  { id: "localizacao", rotulo: "Região, setor e comum" },
+  { id: "localizacao", rotulo: "Região, setor e casa de oração" },
   { id: "filtros", rotulo: "Outros filtros usados" },
   { id: "total", rotulo: "Total de registros" },
   { id: "resumo", rotulo: "Resumo dos totais (presentes, ausentes...)" },
@@ -369,7 +369,7 @@ export function montarInformacoes(entrada: EntradaInformacoes): ItemInformacao[]
   }
 
   if (itens.localizacao && tem("regiao")) {
-    const partes = [rotulos.regiao, rotulos.setor, rotulos.comum].filter((parte): parte is string => Boolean(parte));
+    const partes = [rotulos.regiao, rotulos.setor, rotulos.casa_oracao].filter((parte): parte is string => Boolean(parte));
     lista.push({ rotulo: "Localização", valor: partes.length > 0 ? partes.join(" › ") : "Toda a sua abrangência" });
   }
 
@@ -550,7 +550,7 @@ export function linhasPortarias(
     }));
 }
 
-/** A estrutura Estado > Região > Setor > Comum em linhas (com os filtros de região e setor). */
+/** A estrutura Estado > Região > Setor > Casa de Oração em linhas (com os filtros de região e setor). */
 export function linhasOrganizacao(
   nos: NoOrganizacao[],
   filtro: { regiaoId: string; setorId: string }
@@ -561,18 +561,18 @@ export function linhasOrganizacao(
 
   const montar = (
     no: NoOrganizacao,
-    caminho: { estado?: string; regiao?: string; setor?: string; comum?: string }
+    caminho: { estado?: string; regiao?: string; setor?: string; casa_oracao?: string }
   ): LinhaRelatorio => ({
     nivel: ROTULO_NIVEL[no.nivel],
     estado: caminho.estado ?? "",
     regiao: caminho.regiao ?? "",
     setor: caminho.setor ?? "",
-    comum: caminho.comum ?? "",
+    casa_oracao: caminho.casa_oracao ?? "",
     situacao: situacao(no),
     cidade: no.cidade ?? "",
     bairro: no.bairro ?? "",
-    membros: no.nivel === "COMUM" ? String(no.qtd_membros ?? 0) : "",
-    itens: no.nivel === "COMUM" ? "" : String(no.qtd_filhos ?? 0),
+    membros: no.nivel === "CASA_ORACAO" ? String(no.qtd_membros ?? 0) : "",
+    itens: no.nivel === "CASA_ORACAO" ? "" : String(no.qtd_filhos ?? 0),
   });
 
   for (const estado of filhosDe(nos, null, "ESTADO")) {
@@ -587,17 +587,17 @@ export function linhasOrganizacao(
         const caminho = { estado: estado.nome, regiao: regiao.nome, setor: setor.nome };
         linhas.push(montar(setor, caminho));
 
-        for (const comum of filhosDe(nos, setor.id, "COMUM")) {
-          linhas.push(montar(comum, { ...caminho, comum: comum.nome }));
+        for (const casaOracao of filhosDe(nos, setor.id, "CASA_ORACAO")) {
+          linhas.push(montar(casaOracao, { ...caminho, casa_oracao: casaOracao.nome }));
         }
       }
     }
   }
 
-  // Comuns que ainda não têm setor
+  // Casas de Oração que ainda não têm setor
   if (!filtrando) {
-    for (const comum of filhosDe(nos, null, "COMUM")) {
-      linhas.push(montar(comum, { comum: comum.nome }));
+    for (const casaOracao of filhosDe(nos, null, "CASA_ORACAO")) {
+      linhas.push(montar(casaOracao, { casa_oracao: casaOracao.nome }));
     }
   }
   return linhas;
