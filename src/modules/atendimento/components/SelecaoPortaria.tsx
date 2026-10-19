@@ -6,14 +6,17 @@
  * horário, avisa para conferir o local antes de escolher.
  */
 import { formatarDataHora } from "@/lib/datas";
+import { descreverJanela, janelaDaPortaria } from "@/modules/portarias/janela";
 import type { PortariaDetalhada } from "@/modules/portarias/tipos";
 
 interface SelecaoPortariaProps {
   portarias: PortariaDetalhada[];
+  agora: number; // relógio da tela (ms); 0 = ainda não carregou
+  controleTotal: boolean; // pode atender fora da janela de 2h antes a 2h depois
   onEscolher: (portariaId: string) => void;
 }
 
-export default function SelecaoPortaria({ portarias, onEscolher }: SelecaoPortariaProps) {
+export default function SelecaoPortaria({ portarias, agora, controleTotal, onEscolher }: SelecaoPortariaProps) {
   // Há mais de uma portaria no mesmo horário?
   const contagemPorHorario = new Map<string, number>();
   for (const portaria of portarias) {
@@ -36,12 +39,17 @@ export default function SelecaoPortaria({ portarias, onEscolher }: SelecaoPortar
       )}
 
       <ul className="grid gap-3 sm:grid-cols-2">
-        {portarias.map((portaria) => (
+        {portarias.map((portaria) => {
+          const janela = agora > 0 ? janelaDaPortaria(portaria.evento_data, agora) : null;
+          const fechada = janela !== null && janela.situacao !== "aberta";
+          const bloqueada = fechada && !controleTotal;
+          return (
           <li key={portaria.id}>
             <button
               type="button"
+              disabled={bloqueada}
               onClick={() => onEscolher(portaria.id)}
-              className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-brand-300 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+              className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-brand-300 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-slate-200 disabled:hover:bg-white"
             >
               <p className="text-sm font-semibold text-slate-900">
                 {portaria.evento_data ? formatarDataHora(portaria.evento_data) : "Evento removido"}
@@ -52,9 +60,17 @@ export default function SelecaoPortaria({ portarias, onEscolher }: SelecaoPortar
               <p className="mt-1 text-xs text-slate-500">
                 {[portaria.evento_local, portaria.cidade].filter(Boolean).join(" · ")}
               </p>
+              {janela && (
+                <p className={"mt-1 text-xs font-medium " + (fechada ? "text-amber-700" : "text-emerald-700")}>
+                  {descreverJanela(janela, agora)}
+                  {bloqueada && " — indisponível agora"}
+                  {fechada && controleTotal && " — controle total: permitido e auditado"}
+                </p>
+              )}
             </button>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </section>
   );

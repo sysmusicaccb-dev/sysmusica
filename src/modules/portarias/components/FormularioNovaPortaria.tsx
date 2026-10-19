@@ -75,7 +75,7 @@ export default function FormularioNovaPortaria({ eventos, cota, onSalvo }: Formu
           ))}
         </select>
         <p className="text-xs text-slate-500">
-          Aparecem só os eventos das suas comuns. Os de comum sem setor ficam desabilitados (peça a um administrador para vincular a comum a um setor). Eventos que já têm
+          Aparecem só os eventos que têm uma comum escolhida (na tela de Eventos, botão Editar) dentro da sua abrangência. Os de comum sem setor ficam desabilitados (peça a um administrador para vincular a comum a um setor). Eventos que já têm
           portaria pendente ou aprovada não aparecem.
         </p>
       </div>

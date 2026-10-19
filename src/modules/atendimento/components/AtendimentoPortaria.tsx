@@ -17,6 +17,7 @@ import Notificacao from "@/components/ui/Notificacao";
 import Skeleton from "@/components/ui/Skeleton";
 import { formatarDataHora } from "@/lib/datas";
 import { listarPortarias } from "@/modules/portarias/services/portarias";
+import { descreverJanela, janelaDaPortaria } from "@/modules/portarias/janela";
 import type { PortariaDetalhada } from "@/modules/portarias/tipos";
 import { ordenarPorProximidade, pareceQrSysMusica } from "../regras";
 import { buscarMembroPorQr, entradasDaPortaria, recarregarCartao, registrarEntrada } from "../services/atendimento";
@@ -48,10 +49,17 @@ function guardarPortaria(id: string | null) {
   }
 }
 
+// A portaria só pode ser usada de 2h antes a 2h depois do início do evento (quem tem controle total usa sempre)
+function janelaLiberada(portaria: PortariaDetalhada, agora: number, controleTotal: boolean): boolean {
+  if (controleTotal) return true;
+  return janelaDaPortaria(portaria.evento_data, agora)?.situacao === "aberta";
+}
+
 export default function AtendimentoPortaria() {
   // O link para "Registros e correções" só aparece para quem pode editar ou excluir registros
   const { pode } = useSessao();
   const podeCorrigir = pode("portaria.editar") || pode("portaria.excluir");
+  const controleTotal = pode("portarias.controle_total");
 
   const [portarias, setPortarias] = useState<PortariaDetalhada[]>([]);
   const [portariaId, setPortariaId] = useState<string | null>(null);
@@ -65,20 +73,24 @@ export default function AtendimentoPortaria() {
   const [erroLeitura, setErroLeitura] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [cadastrandoVisitante, setCadastrandoVisitante] = useState(false);
+  const [agora, setAgora] = useState(0); // relógio da tela (atualiza a cada 30 s) para abrir e fechar a janela sozinho
 
   // Portarias aprovadas disponíveis, da mais próxima do horário atual para a mais distante
   const carregar = useCallback(async () => {
     try {
       const aprovadas = (await listarPortarias()).filter((portaria) => portaria.status === "APROVADA");
-      const ordenadas = ordenarPorProximidade(aprovadas, Date.now());
+      const agoraMs = Date.now();
+      const ordenadas = ordenarPorProximidade(aprovadas, agoraMs);
       setPortarias(ordenadas);
+      setAgora(agoraMs);
+      const liberadas = ordenadas.filter((portaria) => janelaLiberada(portaria, agoraMs, controleTotal));
 
       // Seleção: mantém a atual, ou a lembrada, ou escolhe sozinho quando só há uma
       setPortariaId((atual) => {
-        if (atual && ordenadas.some((portaria) => portaria.id === atual)) return atual;
+        if (atual && liberadas.some((portaria) => portaria.id === atual)) return atual;
         const guardada = lerPortariaGuardada();
-        if (guardada && ordenadas.some((portaria) => portaria.id === guardada)) return guardada;
-        return ordenadas.length === 1 ? ordenadas[0].id : null;
+        if (guardada && liberadas.some((portaria) => portaria.id === guardada)) return guardada;
+        return liberadas.length === 1 ? liberadas[0].id : null;
       });
       setErro(null);
     } catch (e) {
@@ -87,7 +99,7 @@ export default function AtendimentoPortaria() {
     } finally {
       setCarregando(false);
     }
-  }, []);
+  }, [controleTotal]);
 
   const carregarEntradas = useCallback(async (id: string) => {
     try {
@@ -115,6 +127,12 @@ export default function AtendimentoPortaria() {
     const temporizador = setTimeout(() => setErroLeitura(null), 5000);
     return () => clearTimeout(temporizador);
   }, [erroLeitura]);
+
+  // Relógio da tela: a cada 30 segundos recalcula quais portarias estão com a janela aberta
+  useEffect(() => {
+    const temporizador = setInterval(() => setAgora(Date.now()), 30_000);
+    return () => clearInterval(temporizador);
+  }, []);
 
   function tentarNovamente() {
     setCarregando(true);
@@ -188,6 +206,7 @@ export default function AtendimentoPortaria() {
   }
 
   const portaria = portarias.find((item) => item.id === portariaId) ?? null;
+  const janela = portaria ? janelaDaPortaria(portaria.evento_data, agora) : null;
 
   return (
     <div className="space-y-6">
@@ -205,7 +224,12 @@ export default function AtendimentoPortaria() {
           descricao="Só é possível atender em portarias aprovadas, dentro da sua abrangência. Peça a criação e a aprovação da portaria do evento."
         />
       ) : !portaria ? (
-        <SelecaoPortaria portarias={portarias} onEscolher={(id) => escolherPortaria(id)} />
+        <SelecaoPortaria
+          portarias={portarias}
+          agora={agora}
+          controleTotal={controleTotal}
+          onEscolher={(id) => escolherPortaria(id)}
+        />
       ) : (
         <>
           {/* Portaria em atendimento */}
@@ -218,6 +242,12 @@ export default function AtendimentoPortaria() {
               <p className="text-sm text-slate-600">
                 {[portaria.evento_tipo, portaria.evento_local, portaria.cidade].filter(Boolean).join(" · ")}
               </p>
+              {janela && agora > 0 && (
+                <p className={"mt-1 text-xs font-medium " + (janela.situacao === "aberta" ? "text-emerald-700" : "text-amber-700")}>
+                  {descreverJanela(janela, agora)}
+                  {janela.situacao !== "aberta" && " — fora do horário: o controle total permite o registro e ele fica na Auditoria."}
+                </p>
+              )}
             </div>
             {portarias.length > 1 && (
               <button
