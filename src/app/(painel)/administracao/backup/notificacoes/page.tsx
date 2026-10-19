@@ -177,7 +177,7 @@ export default function NotificacoesBackupPage() {
 
   return (
     <main className="text-slate-900">
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <PageHeader
           titulo="Backup"
           descricao="Avisos por Telegram e e-mail. Somente o Administrador tem acesso."
