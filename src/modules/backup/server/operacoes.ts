@@ -33,6 +33,7 @@ import { TABELAS, type DefinicaoTabela } from "../tabelas";
 import type { RegistroBackup, RespostaFazerBackup } from "../tipos";
 import type { UsuarioAutenticado } from "./autorizacao";
 import { clienteAdmin } from "./clienteAdmin";
+import { acrescentarCopia, enviarAutomatico } from "./destinos";
 import { ErroBackup } from "./erros";
 import { notificar } from "./notificar";
 
@@ -382,10 +383,13 @@ export async function fazerBackup(opcoes: OpcoesBackup): Promise<RespostaFazerBa
     final = segunda;
   }
 
+  // Cópia automática para o servidor local: só depois de o backup passar na verificação. Nunca derruba o backup.
+  const copia = final.verificacao.ok ? await enviarAutomatico(admin, final.id) : null;
+
   const avisos = final.verificacao.ok
     ? await notificar(
         "sucesso",
-        mensagemSucesso({
+        acrescentarCopia(copia, mensagemSucesso({
           tipo: opcoes.tipo,
           quando: final.quando,
           tamanhoBytes: final.tamanhoBytes,
@@ -394,7 +398,7 @@ export async function fazerBackup(opcoes: OpcoesBackup): Promise<RespostaFazerBa
           feitoPor,
           verificacao: final.verificacao,
           refeito,
-        })
+        }))
       )
     : await notificar(
         "falha",

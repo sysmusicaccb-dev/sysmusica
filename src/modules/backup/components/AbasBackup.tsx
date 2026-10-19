@@ -9,6 +9,7 @@ import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 const ABAS: { href: string; rotulo: string; permissao: CodigoPermissao }[] = [
   { href: "/administracao/backup", rotulo: "Backups", permissao: "backup.visualizar" },
   { href: "/administracao/backup/notificacoes", rotulo: "Notificações", permissao: "backup.configurar" },
+  { href: "/administracao/backup/destinos", rotulo: "Destinos", permissao: "backup.configurar" },
 ];
 
 export default function AbasBackup() {
