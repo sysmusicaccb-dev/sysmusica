@@ -43,6 +43,8 @@ const ROTULO_ACAO: Record<string, string> = {
   backup_retencao_aplicada: "Apagou backups antigos (retenção)",
   backup_agendado_atrasado: "Backup agendado não foi feito",
   backup_configuracao_alterada: "Alterou a configuração do backup",
+  backup_restauracao_falhou: "A restauração de backup falhou (nada foi alterado)",
+  presenca_fora_da_janela: "Registrou entrada fora do horário da portaria (controle total)",
 };
 
 const ROTULO_ENTIDADE: Record<string, string> = {
@@ -107,6 +109,14 @@ const ROTULO_CAMPO: Record<string, string> = {
   cpf: "CPF",
   cpf_mascarado: "CPF (parcial)",
   qr_secret: "QR Code",
+  inicio_do_evento: "Início do evento",
+  registrado_em: "Registrado em",
+  situacao: "Situação",
+  backup_id: "Backup",
+  seguranca_id: "Backup de segurança",
+  modo: "Modo",
+  grupos: "Grupos de dados",
+  operacoes: "Operações",
 };
 
 /** "registro_criado" -> "Registro criado" (para códigos que não têm texto próprio). */

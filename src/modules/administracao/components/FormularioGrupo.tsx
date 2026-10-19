@@ -27,6 +27,11 @@ export default function FormularioGrupo({ grupo, catalogo, onSalvo }: Formulario
   const editando = grupo !== null;
   const protegido = grupo?.sistema ?? false;
 
+  // O módulo Backup só pertence ao grupo protegido (Administrador; o banco também trava). Nos outros grupos
+  // essas permissões nem aparecem na grade.
+  const ehBackup = (codigo: string) => codigo.startsWith("backup.");
+  const catalogoVisivel = protegido ? catalogo : catalogo.filter((permissao) => !ehBackup(permissao.codigo));
+
   const [nome, setNome] = useState(grupo?.nome ?? "");
   const [descricao, setDescricao] = useState(grupo?.descricao ?? "");
   const [ativo, setAtivo] = useState(grupo?.ativo ?? true);
@@ -47,7 +52,7 @@ export default function FormularioGrupo({ grupo, catalogo, onSalvo }: Formulario
 
     setSalvando(true);
     try {
-      const permissoes = [...selecionadas];
+      const permissoes = [...selecionadas].filter((codigo) => protegido || !ehBackup(codigo));
       if (grupo) {
         await atualizarGrupo({ id: grupo.id, nome: nomeLimpo, descricao: descricao.trim(), ativo, permissoes });
         await onSalvo(`Grupo "${nomeLimpo}" atualizado.`);
@@ -126,17 +131,21 @@ export default function FormularioGrupo({ grupo, catalogo, onSalvo }: Formulario
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium text-slate-700">Permissões</p>
           <p className="text-xs text-slate-500">
-            {protegido ? catalogo.length : selecionadas.size} de {catalogo.length} selecionadas
+            {protegido ? catalogoVisivel.length : [...selecionadas].filter((codigo) => !ehBackup(codigo)).length} de{" "}
+            {catalogoVisivel.length} selecionadas
           </p>
         </div>
         <MatrizPermissoes
-          catalogo={catalogo}
+          catalogo={catalogoVisivel}
           selecionadas={
-            protegido ? new Set(catalogo.map((permissao) => permissao.codigo)) : selecionadas
+            protegido ? new Set(catalogoVisivel.map((permissao) => permissao.codigo)) : selecionadas
           }
           onAlterar={setSelecionadas}
           desabilitado={salvando || protegido}
         />
+        {!protegido && (
+          <p className="text-xs text-slate-500">O módulo Backup é exclusivo do Administrador e não aparece aqui.</p>
+        )}
       </div>
 
       {erro && (
