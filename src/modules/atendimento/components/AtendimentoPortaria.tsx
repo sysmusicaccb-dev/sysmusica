@@ -21,11 +21,14 @@ import { descreverJanela, janelaDaPortaria } from "@/modules/portarias/janela";
 import type { PortariaDetalhada } from "@/modules/portarias/tipos";
 import { ordenarPorProximidade, pareceQrSysMusica } from "../regras";
 import { buscarMembroPorQr, entradasDaPortaria, recarregarCartao, registrarEntrada } from "../services/atendimento";
+import { valoresDaEntrada } from "../regrasEntrada";
+import { desfazerEntradaAvulsa, entradasAvulsasDaPortaria, infoEntrada, opcoesEntrada } from "../services/entrada";
 import type { CartaoMembro, EntradaRecente, OrigemEntrada } from "../tipos";
+import type { EntradaAvulsa, EscolhaToca, InfoEntrada, OpcoesEntrada } from "../tiposEntrada";
 import BuscaPorNome from "./BuscaPorNome";
 import CartaoConferencia from "./CartaoConferencia";
 import EntradasRecentes from "./EntradasRecentes";
-import FormularioVisitante from "./FormularioVisitante";
+import EntradaSemCadastro from "./EntradaSemCadastro";
 import LeitorQr from "./LeitorQr";
 import SelecaoPortaria from "./SelecaoPortaria";
 
@@ -72,7 +75,11 @@ export default function AtendimentoPortaria() {
   const [erroCartao, setErroCartao] = useState<string | null>(null);
   const [erroLeitura, setErroLeitura] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
-  const [cadastrandoVisitante, setCadastrandoVisitante] = useState(false);
+  const [semCadastro, setSemCadastro] = useState(false); // janela da entrada sem cadastro
+  const [avulsas, setAvulsas] = useState<EntradaAvulsa[]>([]); // entradas sem cadastro desta portaria
+  const [opcoes, setOpcoes] = useState<OpcoesEntrada | null>(null); // linhas do painel e instrumentos
+  const [info, setInfo] = useState<InfoEntrada | null>(null); // como o membro conferido será contado
+  const [escolha, setEscolha] = useState<EscolhaToca>({ toca: null, instrumentoId: "" }); // resposta de "Vai tocar?"
   const [agora, setAgora] = useState(0); // relógio da tela (atualiza a cada 30 s) para abrir e fechar a janela sozinho
 
   // Portarias aprovadas disponíveis, da mais próxima do horário atual para a mais distante
@@ -103,7 +110,9 @@ export default function AtendimentoPortaria() {
 
   const carregarEntradas = useCallback(async (id: string) => {
     try {
-      setEntradas(await entradasDaPortaria(id));
+      const [lista, semCadastroLista] = await Promise.all([entradasDaPortaria(id), entradasAvulsasDaPortaria(id)]);
+      setEntradas(lista);
+      setAvulsas(semCadastroLista);
     } catch (e) {
       // A lista é apenas informativa: se falhar, o atendimento continua
       console.error("Falha ao carregar as entradas:", e);
@@ -119,6 +128,13 @@ export default function AtendimentoPortaria() {
   useEffect(() => {
     if (portariaId) void carregarEntradas(portariaId);
   }, [portariaId, carregarEntradas]);
+
+  // Linhas do painel e instrumentos (uma vez só): usados na pergunta "Vai tocar?" e na entrada sem cadastro
+  useEffect(() => {
+    opcoesEntrada()
+      .then(setOpcoes)
+      .catch((e: unknown) => console.error("Falha ao carregar as opções da entrada:", e));
+  }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // O aviso de leitura some sozinho depois de alguns segundos
@@ -141,6 +157,7 @@ export default function AtendimentoPortaria() {
 
   function escolherPortaria(id: string | null) {
     setEntradas([]);
+    setAvulsas([]);
     setCartao(null);
     setErroLeitura(null);
     setPortariaId(id);
@@ -160,8 +177,7 @@ export default function AtendimentoPortaria() {
     setConsultando(true);
     try {
       const membro = await buscarMembroPorQr(portariaId, texto);
-      setErroCartao(null);
-      setCartao({ membro, origem: "QR" });
+      await abrirCartao(membro, "QR");
     } catch (e) {
       setErroLeitura(e instanceof Error ? e.message : "Não foi possível ler o QR Code.");
     } finally {
@@ -176,17 +192,41 @@ export default function AtendimentoPortaria() {
     setCartao({ membro: atualizado, origem: cartao.origem });
   }
 
-  // Visitante cadastrado: abre a conferência para registrar a entrada
-  function aoCadastrarVisitante(membro: CartaoMembro) {
-    setCadastrandoVisitante(false);
-    setErroCartao(null);
-    setCartao({ membro, origem: "MANUAL" });
+  // Abre a conferência: antes, consulta se a pessoa precisa responder "Vai tocar?"
+  async function abrirCartao(membro: CartaoMembro, origem: OrigemEntrada) {
+    if (!portariaId) return;
+    try {
+      setInfo(await infoEntrada(portariaId, membro.membro_id));
+      setEscolha({ toca: null, instrumentoId: "" });
+      setErroCartao(null);
+      setCartao({ membro, origem });
+    } catch (e) {
+      setErroLeitura(e instanceof Error ? e.message : "Não foi possível abrir a conferência.");
+    }
   }
 
   // Membro localizado pelo nome: abre a conferência
   function aoEscolherPorNome(membro: CartaoMembro) {
-    setErroCartao(null);
-    setCartao({ membro, origem: "MANUAL" });
+    void abrirCartao(membro, "MANUAL");
+  }
+
+  // Entrada sem cadastro registrada: fecha a janela e atualiza as listas
+  async function aoRegistrarSemCadastro(descricao: string) {
+    setSemCadastro(false);
+    setAviso(`Entrada sem cadastro registrada: ${descricao}`);
+    if (portariaId) await carregarEntradas(portariaId);
+  }
+
+  // Desfaz uma entrada sem cadastro (pede confirmação)
+  async function desfazerSemCadastro(id: string) {
+    if (!portariaId || !window.confirm("Desfazer esta entrada sem cadastro?")) return;
+    try {
+      await desfazerEntradaAvulsa(id);
+      setAviso("Entrada desfeita.");
+      await carregarEntradas(portariaId);
+    } catch (e) {
+      setErroLeitura(e instanceof Error ? e.message : "Não foi possível desfazer a entrada.");
+    }
   }
 
   async function confirmar() {
@@ -194,7 +234,8 @@ export default function AtendimentoPortaria() {
     setRegistrando(true);
     setErroCartao(null);
     try {
-      await registrarEntrada(portariaId, cartao.membro.membro_id, cartao.origem);
+      const valores = valoresDaEntrada(info, escolha);
+      await registrarEntrada(portariaId, cartao.membro.membro_id, cartao.origem, valores.toca, valores.instrumentoId);
       setAviso(`Entrada registrada: ${cartao.membro.nome}`);
       setCartao(null);
       await carregarEntradas(portariaId);
@@ -278,27 +319,25 @@ export default function AtendimentoPortaria() {
 
               <BuscaPorNome portariaId={portaria.id} desabilitado={cartao !== null} onEscolher={aoEscolherPorNome} />
 
-              {pode("portaria.cadastrar_visitante") && (
-                <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 shadow-sm">
-                  <h2 className="text-sm font-semibold text-slate-900">Irmão de outra região ou sem cadastro?</h2>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Cadastre o visitante aqui mesmo: ele entra na comum desta portaria e você já confere e
-                    registra a entrada.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setCadastrandoVisitante(true)}
-                    disabled={cartao !== null}
-                    className="mt-3 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Cadastrar visitante
-                  </button>
-                </section>
-              )}
+              <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 shadow-sm">
+                <h2 className="text-sm font-semibold text-slate-900">Candidato, visitante ou irmão sem cadastro?</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  Registre a entrada sem criar cadastro: informe o cargo ou categoria, o instrumento e de onde a
+                  pessoa vem. Ela entra na contagem do evento.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSemCadastro(true)}
+                  disabled={cartao !== null || opcoes === null}
+                  className="mt-3 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Entrada sem cadastro
+                </button>
+              </section>
             </div>
 
             <aside>
-              <EntradasRecentes entradas={entradas} />
+              <EntradasRecentes entradas={entradas} avulsas={avulsas} onDesfazerAvulsa={(id) => void desfazerSemCadastro(id)} />
             </aside>
           </div>
         </>
@@ -322,17 +361,21 @@ export default function AtendimentoPortaria() {
           onCancelar={() => setCartao(null)}
           podeFoto={pode("membros.foto")}
           onFotoSalva={aoSalvarFotoNoCartao}
+          info={info}
+          instrumentos={opcoes?.instrumentos ?? []}
+          escolha={escolha}
+          onEscolha={setEscolha}
         />
       )}
 
       <Drawer
-        aberto={cadastrandoVisitante}
-        onFechar={() => setCadastrandoVisitante(false)}
-        titulo="Cadastrar visitante"
-        descricao="O visitante vale só para a comum e a região desta portaria."
+        aberto={semCadastro}
+        onFechar={() => setSemCadastro(false)}
+        titulo="Entrada sem cadastro"
+        descricao="Candidato, visitante ou irmão sem cadastro: não cria cadastro, só conta na presença do evento."
       >
-        {cadastrandoVisitante && portaria && (
-          <FormularioVisitante portariaId={portaria.id} onCadastrado={aoCadastrarVisitante} />
+        {semCadastro && portaria && opcoes && (
+          <EntradaSemCadastro portariaId={portaria.id} opcoes={opcoes} onRegistrada={(d) => void aoRegistrarSemCadastro(d)} />
         )}
       </Drawer>
 

@@ -45,6 +45,8 @@ const ROTULO_ACAO: Record<string, string> = {
   backup_configuracao_alterada: "Alterou a configuração do backup",
   backup_restauracao_falhou: "A restauração de backup falhou (nada foi alterado)",
   presenca_fora_da_janela: "Registrou entrada fora do horário da portaria (controle total)",
+  entrada_avulsa_registrada: "Registrou entrada sem cadastro",
+  entrada_avulsa_desfeita: "Desfez entrada sem cadastro",
 };
 
 const ROTULO_ENTIDADE: Record<string, string> = {
@@ -117,6 +119,10 @@ const ROTULO_CAMPO: Record<string, string> = {
   modo: "Modo",
   grupos: "Grupos de dados",
   operacoes: "Operações",
+  linha: "Cargo ou categoria",
+  toca: "Vai tocar",
+  localidade: "Localidade de origem",
+  sem_cadastro: "Sem cadastro",
 };
 
 /** "registro_criado" -> "Registro criado" (para códigos que não têm texto próprio). */

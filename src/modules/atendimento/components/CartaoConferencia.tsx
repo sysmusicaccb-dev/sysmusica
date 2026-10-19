@@ -11,7 +11,10 @@ import Button from "@/components/ui/Button";
 import FotoMembro from "@/modules/membros/components/FotoMembro";
 import FotoNaConferencia from "./FotoNaConferencia";
 import { horaCurta } from "../regras";
+import { validarEscolhaMembro } from "../regrasEntrada";
 import type { CartaoMembro, OrigemEntrada } from "../tipos";
+import type { EscolhaToca, InfoEntrada, InstrumentoEntrada } from "../tiposEntrada";
+import PerguntaToca from "./PerguntaToca";
 
 interface CartaoConferenciaProps {
   membro: CartaoMembro;
@@ -23,6 +26,11 @@ interface CartaoConferenciaProps {
   /** Quem tem a permissão Fotografia pode tirar a foto na hora, se o membro ainda não tiver. */
   podeFoto?: boolean;
   onFotoSalva?: () => Promise<void>;
+  /** Como a pessoa será contada e se a Portaria precisa perguntar "Vai tocar?". */
+  info?: InfoEntrada | null;
+  instrumentos?: InstrumentoEntrada[];
+  escolha?: EscolhaToca;
+  onEscolha?: (escolha: EscolhaToca) => void;
 }
 
 export default function CartaoConferencia({
@@ -34,18 +42,25 @@ export default function CartaoConferencia({
   onCancelar,
   podeFoto = false,
   onFotoSalva,
+  info = null,
+  instrumentos = [],
+  escolha = { toca: null, instrumentoId: "" },
+  onEscolha,
 }: CartaoConferenciaProps) {
   const [conferi, setConferi] = useState(false);
   const manual = origem === "MANUAL";
   const inativo = membro.status !== "Ativo";
   const jaRegistrado = membro.ja_registrado_em !== null;
-  const podeConfirmar = !inativo && !jaRegistrado && !registrando && (!manual || conferi);
+  // "Vai tocar?": quando a Portaria precisa perguntar, a resposta é obrigatória (o banco confere de novo)
+  const respondeu = validarEscolhaMembro(info, escolha) === null;
+  const podeConfirmar = !inativo && !jaRegistrado && !registrando && (!manual || conferi) && respondeu;
 
   const dados: { rotulo: string; valor: string | null }[] = [
     { rotulo: "Cargo", valor: membro.cargo },
     { rotulo: "Instrumento", valor: membro.instrumento },
     { rotulo: "Congregação", valor: membro.congregacao },
     { rotulo: "Localidade", valor: [membro.bairro, membro.cidade].filter(Boolean).join(", ") || null },
+    { rotulo: "Conta no painel como", valor: info?.linha_rotulo ?? null },
   ];
 
   return (
@@ -105,6 +120,23 @@ export default function CartaoConferencia({
             </p>
           )}
         </div>
+
+        {info?.pergunta_toca && !inativo && !jaRegistrado && onEscolha && (
+          <div className="mt-4">
+            <PerguntaToca
+              prefixo="conferencia"
+              perguntar
+              pedirInstrumento={escolha.toca === true}
+              toca={escolha.toca}
+              onToca={(valor) => onEscolha({ toca: valor, instrumentoId: valor ? escolha.instrumentoId : "" })}
+              instrumentoId={escolha.instrumentoId}
+              onInstrumento={(id) => onEscolha({ ...escolha, instrumentoId: id })}
+              instrumentos={instrumentos}
+              instrumentoCadastro={info.instrumento}
+              desabilitado={registrando}
+            />
+          </div>
+        )}
 
         {manual && !inativo && !jaRegistrado && (
           <label className="mt-4 flex items-start gap-2 text-sm text-slate-700">

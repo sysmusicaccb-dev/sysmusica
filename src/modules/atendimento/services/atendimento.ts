@@ -36,12 +36,16 @@ export async function buscarMembrosPorNome(portariaId: string, nome: string): Pr
 export async function registrarEntrada(
   portariaId: string,
   membroId: string,
-  origem: OrigemEntrada
+  origem: OrigemEntrada,
+  toca: boolean | null = null, // resposta de "Vai tocar?" (só para quem a Portaria pergunta)
+  instrumentoId: string | null = null // instrumento escolhido na entrada (vazio = o do cadastro)
 ): Promise<void> {
   const { error } = await supabase.rpc("registrar_entrada", {
     p_portaria_id: portariaId,
     p_membro_id: membroId,
     p_origem: origem,
+    p_toca: toca,
+    p_instrumento_id: instrumentoId,
   });
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível registrar a entrada."));
 }
