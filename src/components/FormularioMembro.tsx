@@ -21,6 +21,7 @@ import { formatarCpf, limparCpf, validarCpf } from "@/lib/cpf";
 import SeletorInstrumento, { FamiliaAutomatica } from "@/modules/instrumentos/components/SeletorInstrumento";
 import { validarInstrumentoDoCargo } from "@/modules/instrumentos/selecao";
 import { atualizarMembro, criarMembro } from "@/modules/membros/services/membros";
+import { CATEGORIAS, cargoUsaCategoria, validarCategoria } from "@/modules/painel/regras";
 import SeletorComum from "@/modules/organizacao/components/SeletorComum";
 import CampoFoto from "@/modules/membros/components/CampoFoto";
 import FotoMembro from "@/modules/membros/components/FotoMembro";
@@ -82,6 +83,7 @@ export default function FormularioMembro({
   const [cargoId, setCargoId] = useState(membro?.cargo_id ?? "");
   const [dataNascimento, setDataNascimento] = useState(membro?.data_nascimento ?? ""); // "AAAA-MM-DD"
   const [instrumentoId, setInstrumentoId] = useState(membro?.instrumento_id ?? "");
+  const [categoria, setCategoria] = useState(membro?.categoria ?? ""); // Oficializado, Culto Oficial ou RJM
   const [status, setStatus] = useState(membro?.status ?? "Ativo");
   const [foto, setFoto] = useState<Blob | null>(null); // foto nova já preparada (obrigatória no cadastro novo)
   const [salvando, setSalvando] = useState(false);
@@ -92,12 +94,15 @@ export default function FormularioMembro({
   const permiteInstrumento = cargoSelecionado?.permite_instrumento ?? false;
   const exigeInstrumento =
     (cargoSelecionado as (Cargo & { exige_instrumento?: boolean }) | undefined)?.exige_instrumento === true;
+  // Só Músico e Organista têm categoria (as demais pessoas contam no painel pelo próprio cargo)
+  const tipoCategoria = cargoUsaCategoria(cargoSelecionado?.nome);
 
   // Ao trocar de cargo, limpa o instrumento se o novo cargo não usar instrumento
   function trocarCargo(novoCargoId: string) {
     setCargoId(novoCargoId);
     const novoCargo = cargos.find((cargo) => cargo.id === novoCargoId);
     if (!novoCargo?.permite_instrumento) setInstrumentoId("");
+    if (!cargoUsaCategoria(novoCargo?.nome)) setCategoria("");
   }
 
   async function salvar(submissao: FormEvent<HTMLFormElement>) {
@@ -120,6 +125,10 @@ export default function FormularioMembro({
     const erroInstrumento = validarInstrumentoDoCargo(exigeInstrumento, instrumentoId, cargoSelecionado?.nome);
     if (erroInstrumento) return setErroForm(erroInstrumento);
 
+    // Categoria: obrigatória para Músico e Organista (define em qual linha do painel ao vivo ele conta)
+    const erroCategoria = validarCategoria(cargoSelecionado?.nome, categoria);
+    if (erroCategoria) return setErroForm(erroCategoria);
+
     // Fotografia: obrigatória no cadastro novo (o banco também recusa sem ela)
     if (!editando && !foto) {
       return setErroForm("A fotografia é obrigatória. Tire a foto ou escolha uma imagem.");
@@ -136,6 +145,7 @@ export default function FormularioMembro({
         cargo_id: cargoId,
         data_nascimento: dataNascimento || null,
         instrumento_id: permiteInstrumento && instrumentoId ? instrumentoId : null,
+        categoria: tipoCategoria && categoria ? categoria : null,
       };
       if (membro) {
         // O CPF só é enviado por quem tem a permissão (os demais nem tocam nele)
@@ -317,6 +327,30 @@ export default function FormularioMembro({
 
           <FamiliaAutomatica instrumentoId={instrumentoId} instrumentos={instrumentos} familias={familias} />
         </>
+      )}
+
+      {/* Categoria: só para Músico e Organista (define em qual linha do painel ao vivo a pessoa conta) */}
+      {tipoCategoria && (
+        <div className="space-y-1.5">
+          <label htmlFor="categoria" className="text-sm font-medium text-slate-700">
+            Categoria <span className="font-normal text-red-600">(obrigatória)</span>
+          </label>
+          <select
+            id="categoria"
+            required
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+            disabled={salvando}
+            className={classeInput}
+          >
+            <option value="">Selecione a categoria</option>
+            {CATEGORIAS.map((item) => (
+              <option key={item.valor} value={item.valor}>
+                {item[tipoCategoria]}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
 
       {/* Localidade: comum (lista do banco), cidade e bairro (com sugestões dos já cadastrados) */}

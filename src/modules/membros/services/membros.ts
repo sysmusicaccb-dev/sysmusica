@@ -65,6 +65,7 @@ export interface DadosAtualizacaoMembro {
   cidade: string | null;
   bairro: string | null;
   comum_id?: string | null; // a comum escolhida (o banco ajusta o nome da congregação)
+  categoria?: string | null; // Oficializado, Culto Oficial ou RJM (Músico e Organista)
   /** Só enviar quando o usuário tem a permissão membros.cpf (null = apagar o CPF). */
   cpf?: string | null;
 }

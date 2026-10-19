@@ -35,6 +35,7 @@ export const CATALOGO_PERMISSOES = [
   { codigo: "portaria.cadastrar_visitante", modulo: "Portaria", acao: "Cadastrar visitante" },
   { codigo: "auditoria.visualizar", modulo: "Auditoria", acao: "Visualizar" },
   { codigo: "relatorios.visualizar", modulo: "Relatórios", acao: "Visualizar" },
+  { codigo: "painel.visualizar", modulo: "Painel ao vivo", acao: "Visualizar" },
   { codigo: "backup.visualizar", modulo: "Backup", acao: "Visualizar" },
   { codigo: "backup.criar", modulo: "Backup", acao: "Criar" },
   { codigo: "backup.configurar", modulo: "Backup", acao: "Configurar" },

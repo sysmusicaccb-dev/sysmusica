@@ -7,6 +7,7 @@
  * (e a própria tela também é protegida por RequerPermissao).
  */
 import {
+  Activity,
   CalendarDays,
   Building2,
   Camera,
@@ -68,6 +69,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         qualquer: ["portarias.criar", "portarias.aprovar"],
       },
       { href: "/portaria", rotulo: "Portaria", icone: DoorOpen, permissao: "portaria.visualizar" },
+      { href: "/painel-ao-vivo", rotulo: "Painel ao vivo", icone: Activity, permissao: "painel.visualizar" },
       { href: "/relatorios", rotulo: "Relatórios", icone: FileText, permissao: "relatorios.visualizar" },
       { href: "/fotografias", rotulo: "Fotografias", icone: Camera, permissao: "membros.foto" },
     ],
