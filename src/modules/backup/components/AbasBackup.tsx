@@ -11,6 +11,7 @@ const ABAS: { href: string; rotulo: string; permissao: CodigoPermissao }[] = [
   { href: "/administracao/backup/notificacoes", rotulo: "Notificações", permissao: "backup.configurar" },
   { href: "/administracao/backup/destinos", rotulo: "Destinos", permissao: "backup.configurar" },
   { href: "/administracao/backup/agendamento", rotulo: "Agendamento", permissao: "backup.configurar" },
+  { href: "/administracao/backup/restauracao", rotulo: "Restauração", permissao: "backup.restaurar" },
 ];
 
 export default function AbasBackup() {
