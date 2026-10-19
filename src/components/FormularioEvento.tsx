@@ -20,6 +20,16 @@ import {
   validarFinalidade,
 } from "@/modules/eventos/regras";
 import { validarDataDoEvento } from "@/modules/eventos/dataEvento";
+import {
+  camposFaltando,
+  mensagemCamposFaltando,
+  ROTULO_CIDADE,
+  ROTULO_COMUM,
+  ROTULO_DATA,
+  ROTULO_FINALIDADE,
+  ROTULO_LOCAL,
+  ROTULO_TIPO,
+} from "@/modules/eventos/camposEvento";
 import { atualizarEvento, criarEvento } from "@/modules/eventos/services/eventos";
 import { obterOuCriarFinalidade } from "@/modules/eventos/services/finalidades";
 
@@ -59,6 +69,11 @@ export default function FormularioEvento({
   const [comumId, setComumId] = useState(evento?.comum_id ?? "");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [faltando, setFaltando] = useState<string[]>([]); // campos obrigatórios vazios (borda vermelha)
+
+  // Borda vermelha no campo obrigatório que ficou vazio
+  const classeCampo = (rotulo: string) =>
+    classeInput + (faltando.includes(rotulo) ? " !border-red-500 !ring-2 !ring-red-200" : "");
 
   // A finalidade digitada já existe? (comparação sem acento e sem diferenciar maiúsculas)
   const finalidadeDigitada = finalidadeTexto.trim();
@@ -73,7 +88,10 @@ export default function FormularioEvento({
     if (salvando) return; // evita envio duplicado
     setErro(null);
 
-    if (!tipo.trim() || !local.trim()) return setErro("Preencha o tipo e o local do evento.");
+    // Todos os campos são obrigatórios: o alerta lista os que faltam e eles ficam com borda vermelha
+    const vazios = camposFaltando({ tipo, finalidade: finalidadeTexto, dataEvento, local, cidade, comumId });
+    setFaltando(vazios);
+    if (vazios.length > 0) return setErro(mensagemCamposFaltando(vazios));
 
     const erroFinalidade = validarFinalidade(finalidadeTexto);
     if (erroFinalidade) return setErro(erroFinalidade);
@@ -118,10 +136,12 @@ export default function FormularioEvento({
   }
 
   return (
-    <form onSubmit={salvar} className="space-y-5">
+    <form onSubmit={salvar} noValidate className="space-y-5">
+      <p className="text-xs text-slate-500">Todos os campos são obrigatórios (marcados com *).</p>
+
       <div className="space-y-1.5">
         <label htmlFor="tipo" className="text-sm font-medium text-slate-700">
-          Tipo
+          Tipo <span className="text-red-600"> *</span>
         </label>
         {/* Campo livre com sugestões (datalist): aceita Ensaio, Culto ou qualquer outro tipo */}
         <input
@@ -133,7 +153,7 @@ export default function FormularioEvento({
           onChange={(e) => setTipo(e.target.value)}
           disabled={salvando}
           placeholder="Ex: Ensaio, Culto"
-          className={classeInput}
+          className={classeCampo(ROTULO_TIPO)}
         />
         <datalist id="sugestoes-tipo-evento">
           <option value="Ensaio" />
@@ -144,7 +164,7 @@ export default function FormularioEvento({
       {/* Finalidade (combobox): escolha uma cadastrada ou digite uma nova */}
       <div className="space-y-1.5">
         <label htmlFor="finalidade" className="text-sm font-medium text-slate-700">
-          Finalidade do evento
+          Finalidade do evento <span className="text-red-600"> *</span>
         </label>
         <input
           id="finalidade"
@@ -157,7 +177,7 @@ export default function FormularioEvento({
           onChange={(e) => setFinalidadeTexto(e.target.value)}
           disabled={salvando}
           placeholder="Digite ou escolha uma finalidade"
-          className={classeInput}
+          className={classeCampo(ROTULO_FINALIDADE)}
         />
         <datalist id="lista-finalidades">
           {finalidades.map((finalidade) => (
@@ -176,7 +196,7 @@ export default function FormularioEvento({
 
       <div className="space-y-1.5">
         <label htmlFor="data_evento" className="text-sm font-medium text-slate-700">
-          Data e hora
+          Data e hora <span className="text-red-600"> *</span>
         </label>
         <input
           id="data_evento"
@@ -185,13 +205,13 @@ export default function FormularioEvento({
           value={dataEvento}
           onChange={(e) => setDataEvento(e.target.value)}
           disabled={salvando}
-          className={classeInput}
+          className={classeCampo(ROTULO_DATA)}
         />
       </div>
 
       <div className="space-y-1.5">
         <label htmlFor="local" className="text-sm font-medium text-slate-700">
-          Local
+          Local <span className="text-red-600"> *</span>
         </label>
         <input
           id="local"
@@ -201,13 +221,13 @@ export default function FormularioEvento({
           onChange={(e) => setLocal(e.target.value)}
           disabled={salvando}
           placeholder="Ex: Congregação Central"
-          className={classeInput}
+          className={classeCampo(ROTULO_LOCAL)}
         />
       </div>
 
       <div className="space-y-1.5">
         <label htmlFor="cidade-evento" className="text-sm font-medium text-slate-700">
-          Cidade <span className="font-normal text-slate-400">(informativo)</span>
+          Cidade <span className="text-red-600"> *</span>
         </label>
         <datalist id="sugestoes-cidade-evento">
           {sugestoesCidade.map((sugestao) => (
@@ -223,20 +243,20 @@ export default function FormularioEvento({
           onChange={(e) => setCidade(e.target.value)}
           disabled={salvando}
           placeholder="Ex: Lauro de Freitas"
-          className={classeInput}
+          className={classeCampo(ROTULO_CIDADE)}
         />
       </div>
 
       <div className="space-y-1.5">
         <label htmlFor="comum-evento" className="text-sm font-medium text-slate-700">
-          Comum <span className="font-normal text-slate-400">(define o setor da portaria)</span>
+          Comum <span className="text-red-600"> *</span> <span className="font-normal text-slate-400">(define o setor da portaria)</span>
         </label>
         <SeletorComum
           id="comum-evento"
           valor={comumId}
           onChange={setComumId}
           disabled={salvando}
-          className={classeInput}
+          className={classeCampo(ROTULO_COMUM)}
         />
       </div>
 
