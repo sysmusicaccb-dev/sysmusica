@@ -126,7 +126,7 @@ export default function CartaoConferencia({
             <PerguntaToca
               prefixo="conferencia"
               perguntar
-              pedirInstrumento={escolha.toca === true}
+              pedirInstrumento={escolha.toca === true && !info.instrumento_id} // com instrumento cadastrado, vale o do cadastro
               toca={escolha.toca}
               onToca={(valor) => onEscolha({ toca: valor, instrumentoId: valor ? escolha.instrumentoId : "" })}
               instrumentoId={escolha.instrumentoId}
