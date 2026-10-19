@@ -11,6 +11,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import AbasBackup from "@/modules/backup/components/AbasBackup";
+import PainelRestaurar from "@/modules/backup/components/PainelRestaurar";
 import { dataHoraSalvador, ROTULO_TIPO } from "@/modules/backup/regras";
 import type { ItemDiferenca, ResultadoComparacao, ResultadoTabela } from "@/modules/backup/restauracao";
 import { listarBackups } from "@/modules/backup/services/backupApi";
@@ -148,8 +149,8 @@ export default function PaginaRestauracao() {
         <AbasBackup />
 
         <p className="mb-4 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
-          Esta etapa só <strong>compara</strong>: nada é restaurado nem alterado. Mostra o que foi apagado, alterado ou
-          criado depois do backup escolhido. CPF e segredos aparecem como &quot;(protegido)&quot;.
+          Compare o backup escolhido com os dados de hoje (apagado, alterado ou criado depois do backup). A comparação não
+          altera nada; a restauração só acontece no painel &quot;Restaurar&quot;, que aparece abaixo quando há diferenças. CPF e segredos aparecem como &quot;(protegido)&quot;.
         </p>
 
         {!pode("backup.restaurar") ? (
@@ -228,6 +229,13 @@ export default function PaginaRestauracao() {
                     ))}
                   </div>
                 ))}
+                {resultado.totais.apagados + resultado.totais.alterados + resultado.totais.novos > 0 && (
+                  <PainelRestaurar
+                    backupId={resultado.backup.id}
+                    grupos={resultado.grupos.map((g) => g.id)}
+                    podeRestaurar={pode("backup.restaurar")}
+                  />
+                )}
               </section>
             )}
           </div>

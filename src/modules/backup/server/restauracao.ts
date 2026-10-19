@@ -22,7 +22,7 @@ const TAMANHO_PAGINA = 1000;
 const LIMITE_LINHAS = 500_000;
 
 // Lê uma tabela inteira de hoje, de mil em mil linhas, em ordem estável
-async function lerTabelaAtual(admin: SupabaseClient, definicao: DefinicaoTabela): Promise<Linha[]> {
+export async function lerTabelaAtual(admin: SupabaseClient, definicao: DefinicaoTabela): Promise<Linha[]> {
   const linhas: Linha[] = [];
   let inicio = 0;
   while (inicio < LIMITE_LINHAS) {
