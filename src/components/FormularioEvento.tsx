@@ -19,6 +19,7 @@ import {
   formatarNomeFinalidade,
   validarFinalidade,
 } from "@/modules/eventos/regras";
+import { validarDataDoEvento } from "@/modules/eventos/dataEvento";
 import { atualizarEvento, criarEvento } from "@/modules/eventos/services/eventos";
 import { obterOuCriarFinalidade } from "@/modules/eventos/services/finalidades";
 
@@ -81,6 +82,10 @@ export default function FormularioEvento({
     // para ISO (UTC) é o que o campo timestamptz do banco espera.
     const dataIso = datetimeLocalParaIso(dataEvento);
     if (!dataIso) return setErro("Informe uma data e hora válidas.");
+
+    // Não se agenda evento em data e hora que já passaram (ao editar, só vale se a data for alterada)
+    const erroData = validarDataDoEvento(dataIso, Date.now(), evento?.data_evento ?? null);
+    if (erroData) return setErro(erroData);
 
     setSalvando(true);
     try {
