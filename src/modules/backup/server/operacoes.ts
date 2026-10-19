@@ -466,3 +466,19 @@ export async function excluirBackup(id: string, usuario: UsuarioAutenticado): Pr
   await auditar(admin, usuario.id, "backup_excluido", linha.id, { tipo: linha.tipo, criado_em: linha.criado_em });
   return { ok: true };
 }
+
+// ---------- Verificação feita pelo sistema (agendamento) ----------
+
+/** Verifica um backup sem usuário (conferência semanal do agendamento): grava o resultado e registra na Auditoria. */
+export async function verificarPeloSistema(id: string): Promise<ResultadoVerificacao> {
+  const admin = clienteAdmin();
+  const linha = await buscarLinha(admin, id);
+  const resultado = await verificarArquivo(admin, linha);
+  await gravarVerificacao(admin, linha.id, resultado, null);
+  await auditar(admin, null, "backup_verificado", linha.id, {
+    resultado: resultado.ok ? "integro" : "falhou",
+    automatica: true,
+    semanal: true,
+  });
+  return resultado;
+}

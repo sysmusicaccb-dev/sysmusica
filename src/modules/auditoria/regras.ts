@@ -38,6 +38,10 @@ const ROTULO_ACAO: Record<string, string> = {
   backup_destino_alterado: "Alterou o destino do backup",
   backup_destino_testado: "Testou o destino do backup",
   backup_copiado_destino: "Copiou o backup para o servidor local",
+  backup_agendamento_alterado: "Alterou o agendamento do backup",
+  backup_agendado_executado: "Executou o backup agendado",
+  backup_retencao_aplicada: "Apagou backups antigos (retenção)",
+  backup_agendado_atrasado: "Backup agendado não foi feito",
   backup_configuracao_alterada: "Alterou a configuração do backup",
 };
 
