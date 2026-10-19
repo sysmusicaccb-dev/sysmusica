@@ -7,7 +7,7 @@
  * Só aparecem portarias APROVADAS dentro da abrangência do usuário (o banco filtra). Toda consulta
  * e todo registro são conferidos de novo no banco, que também grava quem registrou e a origem.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import Drawer from "@/components/ui/Drawer";
@@ -52,10 +52,14 @@ function guardarPortaria(id: string | null) {
   }
 }
 
-// A portaria só pode ser usada de 2h antes a 2h depois do início do evento (quem tem controle total usa sempre)
+// Portaria encerrada (passou de 3h depois do início) não atende ninguém, nem o Administrador: ela sai da tela.
+// Antes da abertura, só o controle total atende (com registro na Auditoria). Depois do encerramento, o Administrador
+// só corrige registros em "Registros e correções".
 function janelaLiberada(portaria: PortariaDetalhada, agora: number, controleTotal: boolean): boolean {
+  const situacao = janelaDaPortaria(portaria.evento_data, agora)?.situacao;
+  if (situacao === "encerrada") return false;
   if (controleTotal) return true;
-  return janelaDaPortaria(portaria.evento_data, agora)?.situacao === "aberta";
+  return situacao === "aberta";
 }
 
 export default function AtendimentoPortaria() {
@@ -81,6 +85,12 @@ export default function AtendimentoPortaria() {
   const [info, setInfo] = useState<InfoEntrada | null>(null); // como o membro conferido será contado
   const [escolha, setEscolha] = useState<EscolhaToca>({ toca: null, instrumentoId: "" }); // resposta de "Vai tocar?"
   const [agora, setAgora] = useState(0); // relógio da tela (atualiza a cada 30 s) para abrir e fechar a janela sozinho
+
+  // Portarias que ainda podem aparecer: as ENCERRADAS saem da lista sozinhas (o relógio recalcula a cada 30 s)
+  const disponiveis = useMemo(
+    () => portarias.filter((portaria) => janelaDaPortaria(portaria.evento_data, agora)?.situacao !== "encerrada"),
+    [portarias, agora]
+  );
 
   // Portarias aprovadas disponíveis, da mais próxima do horário atual para a mais distante
   const carregar = useCallback(async () => {
@@ -135,6 +145,17 @@ export default function AtendimentoPortaria() {
       .then(setOpcoes)
       .catch((e: unknown) => console.error("Falha ao carregar as opções da entrada:", e));
   }, []);
+
+  // Se a portaria em atendimento encerrar, sai da tela na hora: fecha a conferência e a entrada sem cadastro
+  useEffect(() => {
+    if (portariaId && portarias.length > 0 && !disponiveis.some((portaria) => portaria.id === portariaId)) {
+      setCartao(null);
+      setSemCadastro(false);
+      setPortariaId(null);
+      guardarPortaria(null);
+      setAviso("Esta portaria foi encerrada e saiu da tela. Só o Administrador pode corrigir registros.");
+    }
+  }, [portariaId, portarias, disponiveis]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // O aviso de leitura some sozinho depois de alguns segundos
@@ -246,7 +267,7 @@ export default function AtendimentoPortaria() {
     }
   }
 
-  const portaria = portarias.find((item) => item.id === portariaId) ?? null;
+  const portaria = disponiveis.find((item) => item.id === portariaId) ?? null;
   const janela = portaria ? janelaDaPortaria(portaria.evento_data, agora) : null;
 
   return (
@@ -259,14 +280,14 @@ export default function AtendimentoPortaria() {
         </div>
       ) : erro ? (
         <ErrorState titulo="Não foi possível carregar as portarias." mensagem={erro} onTentarNovamente={tentarNovamente} />
-      ) : portarias.length === 0 ? (
+      ) : disponiveis.length === 0 ? (
         <EmptyState
           titulo="Nenhuma portaria aprovada disponível para você."
           descricao="Só é possível atender em portarias aprovadas, dentro da sua abrangência. Peça a criação e a aprovação da portaria do evento."
         />
       ) : !portaria ? (
         <SelecaoPortaria
-          portarias={portarias}
+          portarias={disponiveis}
           agora={agora}
           controleTotal={controleTotal}
           onEscolher={(id) => escolherPortaria(id)}
@@ -290,7 +311,7 @@ export default function AtendimentoPortaria() {
                 </p>
               )}
             </div>
-            {portarias.length > 1 && (
+            {disponiveis.length > 1 && (
               <button
                 type="button"
                 onClick={() => escolherPortaria(null)}
