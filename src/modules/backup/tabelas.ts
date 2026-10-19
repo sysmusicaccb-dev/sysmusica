@@ -33,7 +33,8 @@ export type NomeTabela =
   | "eventos"
   | "portarias"
   | "portarias_historico"
-  | "presencas";
+  | "presencas"
+  | "presencas_avulsas";
 
 export interface ReferenciaTabela {
   coluna: string; // coluna que aponta para o "pai"
@@ -145,6 +146,16 @@ export const TABELAS: DefinicaoTabela[] = [
       { coluna: "registrado_por", tabela: "usuarios" },
     ],
   }),
+  // Entradas sem cadastro feitas na Portaria (candidato, visitante...): não criam membro; exclusão lógica
+  tabela("presencas_avulsas", "Entradas sem cadastro", "presencas", {
+    exclusaoLogica: true,
+    referencias: [
+      { coluna: "evento_id", tabela: "eventos" },
+      { coluna: "portaria_id", tabela: "portarias" },
+      { coluna: "instrumento_id", tabela: "instrumentos" },
+      { coluna: "origem_casa_oracao_id", tabela: "casas_oracao" },
+    ],
+  }),
 ];
 
 /** Os grupos de dados que o administrador escolhe na hora de restaurar. */
@@ -194,8 +205,8 @@ export const GRUPOS_DADOS: DefinicaoGrupo[] = [
   {
     id: "presencas",
     rotulo: "Presenças",
-    descricao: "Presenças registradas nos eventos",
-    tabelas: ["presencas"],
+    descricao: "Presenças registradas nos eventos e entradas sem cadastro",
+    tabelas: ["presencas", "presencas_avulsas"],
   },
 ];
 

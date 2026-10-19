@@ -29,3 +29,16 @@ Aplique **em ordem numérica**, cada arquivo **uma única vez**, no SQL Editor d
 
 Atenção: **não reexecute o `0001` depois do `0002`**. O 0001 recria as políticas antigas, que liberavam
 o acesso anônimo. Novas alterações de banco entram sempre como um novo arquivo numerado.
+
+## Migrações 0026 a 0033 (aplicar no Supabase SQL Editor, na ordem, ANTES do git push)
+
+| Arquivo | O que faz |
+|---|---|
+| `0026_painel_ao_vivo.sql` | Painel ao vivo do evento (linhas, categorias e contagem) |
+| `0027_portaria_3h.sql` | A portaria fica aberta de 2h antes até 3h depois do início do evento |
+| `0028_portaria_toca_avulsa.sql` | Pergunta "Vai tocar?" e entrada sem cadastro (tabela presencas_avulsas) |
+| `0029_instrumento_do_cadastro.sql` | O músico toca só o instrumento do cadastro |
+| `0030_portaria_encerrada.sql` | Portaria encerrada não aceita nada (só o Administrador corrige registros) |
+| `0031_casa_de_oracao.sql` | Renomeia Comum para Casa de Oração em todo o banco (tabela casas_oracao, coluna casa_oracao_id, nível CASA_ORACAO) |
+| `0032_regras_de_regiao.sql` | Corrige regiao_eventos e regiao_membros: restritivas e só para usuários logados |
+| `0033_backup_presencas_avulsas.sql` | Entradas sem cadastro entram no backup e na restauração |
