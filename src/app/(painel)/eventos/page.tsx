@@ -20,12 +20,15 @@ import Notificacao from "@/components/ui/Notificacao";
 import PageHeader from "@/components/ui/PageHeader";
 import FormularioEvento from "@/components/FormularioEvento";
 import ListaEventos from "@/components/ListaEventos";
+import AbasDeLista from "@/components/AbasDeLista";
+import FormularioCancelamento from "@/modules/eventos/components/FormularioCancelamento";
+import { abaDoEvento, type AbaEvento } from "@/modules/eventos/ciclo";
 import { formatarDataHora } from "@/lib/datas";
 import { valoresDistintos } from "@/lib/listas";
 import type { Evento, FinalidadeEvento } from "@/types/database";
 
 // Qual painel lateral está aberto: novo evento, ou edição de um evento
-type PainelEvento = { tipo: "novo" } | { tipo: "editar"; evento: Evento };
+type PainelEvento = { tipo: "novo" } | { tipo: "editar"; evento: Evento } | { tipo: "cancelar"; evento: Evento };
 
 export default function EventosPage() {
   const { pode } = useSessao();
@@ -38,12 +41,15 @@ export default function EventosPage() {
   const [excluindo, setExcluindo] = useState(false);
   const [erroExclusao, setErroExclusao] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [aba, setAba] = useState<AbaEvento>("proximos");
+  const [agora, setAgora] = useState(0); // instante atual (ms); 0 até a primeira carga
 
   // Busca eventos e finalidades
   const carregar = useCallback(async () => {
     try {
       const dados = await buscarEventosEFinalidades();
       setEventos(dados.eventos);
+      setAgora(Date.now());
       setFinalidades(dados.finalidades);
       setErro(null);
     } catch (e) {
@@ -62,6 +68,12 @@ export default function EventosPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void carregar();
   }, [carregar]);
+
+  // Mantém a situação dos eventos em dia: um evento que termina sai de "Próximos" sozinho
+  useEffect(() => {
+    const id = setInterval(() => setAgora(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Botão "Tentar novamente": volta ao estado de loading e busca de novo
   function tentarNovamente() {
@@ -93,6 +105,28 @@ export default function EventosPage() {
     }
   }
 
+  // Cada evento aparece em UMA aba. Próximos: do mais perto para o mais longe; as demais: do mais recente.
+  const eventosDaAba = (alvo: AbaEvento) =>
+    eventos.filter((evento) => abaDoEvento(evento.data_evento, Boolean(evento.cancelado_em), agora) === alvo);
+  const proximos = eventosDaAba("proximos").reverse(); // a busca vem do mais recente para o mais antigo
+  const encerrados = eventosDaAba("encerrados");
+  const arquivo = eventosDaAba("arquivo");
+  const visiveis = aba === "proximos" ? proximos : aba === "encerrados" ? encerrados : arquivo;
+  const textosVazios: Record<AbaEvento, { titulo: string; descricao: string }> = {
+    proximos: {
+      titulo: "Nenhum evento em andamento ou agendado.",
+      descricao: "Clique em “Novo evento” para cadastrar o próximo. Os eventos já encerrados estão na aba Encerrados.",
+    },
+    encerrados: {
+      titulo: "Nenhum evento encerrado recentemente.",
+      descricao: "Quando um evento terminar (ou for cancelado), ele passa a aparecer aqui.",
+    },
+    arquivo: {
+      titulo: "O arquivo está vazio.",
+      descricao: "Eventos encerrados há mais de 30 dias ficam guardados aqui para consulta.",
+    },
+  };
+
   return (
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -110,14 +144,32 @@ export default function EventosPage() {
           }
         />
 
+        {!carregando && !erro && (
+          <AbasDeLista
+            descricao="Situação dos eventos"
+            atual={aba}
+            onTrocar={setAba}
+            abas={[
+              { id: "proximos", rotulo: "Próximos", total: proximos.length },
+              { id: "encerrados", rotulo: "Encerrados", total: encerrados.length },
+              { id: "arquivo", rotulo: "Arquivo", total: arquivo.length },
+            ]}
+          />
+        )}
+
         <ListaEventos
-          eventos={eventos}
+          eventos={eventos.length === 0 ? eventos : visiveis}
+          agora={agora}
+          tituloVazio={eventos.length === 0 ? undefined : textosVazios[aba].titulo}
+          descricaoVazia={eventos.length === 0 ? undefined : textosVazios[aba].descricao}
           finalidades={finalidades}
           carregando={carregando}
           erro={erro}
           onTentarNovamente={tentarNovamente}
           podeEditar={pode("eventos.editar")}
           podeExcluir={pode("eventos.excluir")}
+          podeCancelar={pode("eventos.cancelar")}
+          onCancelar={(evento) => setPainel({ tipo: "cancelar", evento })}
           onEditar={(evento) => setPainel({ tipo: "editar", evento })}
           onExcluir={(evento) => {
             setErroExclusao(null);
@@ -130,10 +182,17 @@ export default function EventosPage() {
       <Drawer
         aberto={painel !== null}
         onFechar={() => setPainel(null)}
-        titulo={painel?.tipo === "editar" ? "Editar evento" : "Novo evento"}
-        descricao="Preencha os dados do evento."
+        titulo={
+          painel?.tipo === "editar" ? "Editar evento" : painel?.tipo === "cancelar" ? "Cancelar evento" : "Novo evento"
+        }
+        descricao={
+          painel?.tipo === "cancelar"
+            ? "Informe o motivo: ele fica guardado no histórico."
+            : "Preencha os dados do evento."
+        }
       >
-        {painel && (
+        {painel?.tipo === "cancelar" && <FormularioCancelamento evento={painel.evento} onSalvo={aoSalvar} />}
+        {painel && painel.tipo !== "cancelar" && (
           <FormularioEvento
             evento={painel.tipo === "editar" ? painel.evento : null}
             sugestoesCidade={valoresDistintos(eventos.flatMap((item) => (item.cidade ? [item.cidade] : [])))}
@@ -152,8 +211,9 @@ export default function EventosPage() {
             <p>
               O evento de{" "}
               <strong>{alvoExclusao ? formatarDataHora(alvoExclusao.data_evento) : ""}</strong> em{" "}
-              <strong>{alvoExclusao?.local}</strong> deixará de aparecer nas telas. As presenças já
-              registradas nele são mantidas no histórico.
+              <strong>{alvoExclusao?.local}</strong> deixará de aparecer nas telas. Eventos que já têm
+              presenças registradas não podem ser excluídos: nesse caso o Administrador deve cancelá-lo (o histórico
+              fica guardado).
             </p>
             {erroExclusao && (
               <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-red-700">

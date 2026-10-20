@@ -108,6 +108,9 @@ export interface Evento {
   finalidade_id: string | null; // FK -> finalidades_evento.id (nula em eventos antigos)
   cidade?: string | null; // município do evento (informativo; o setor vem da casa de oração)
   casa_oracao_id?: string | null; // casa de oração do evento: define o setor da portaria e quem enxerga o evento
+  cancelado_em?: string | null; // preenchido quando o Administrador cancela o evento
+  cancelado_por?: string | null;
+  motivo_cancelamento?: string | null;
 }
 
 /** Payload para INSERT: o id é gerado pelo banco; a finalidade é opcional (eventos antigos não têm). */

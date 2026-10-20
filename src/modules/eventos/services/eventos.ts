@@ -49,6 +49,12 @@ export async function atualizarEvento(id: string, dados: DadosAtualizacaoEvento)
   }
 }
 
+/** Cancela o evento com motivo (função do banco, que confere a permissão eventos.cancelar: só o Administrador). */
+export async function cancelarEvento(id: string, motivo: string): Promise<void> {
+  const { error } = await supabase.rpc("cancelar_evento", { p_id: id, p_motivo: motivo });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível cancelar o evento."));
+}
+
 /** Exclusão lógica (função do banco, que confere a permissão eventos.excluir). */
 export async function excluirEvento(id: string): Promise<void> {
   const { error } = await supabase.rpc("excluir_evento", { p_id: id });

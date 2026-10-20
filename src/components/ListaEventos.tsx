@@ -9,7 +9,7 @@
  * Trata quatro cenários: carregando, erro, nenhum evento e tabela com dados.
  */
 import { useState } from "react";
-import { Pencil, Search, Trash2 } from "lucide-react";
+import { Ban, Pencil, Search, Trash2 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import BotaoIcone from "@/components/ui/BotaoIcone";
 import EmptyState from "@/components/ui/EmptyState";
@@ -17,6 +17,12 @@ import ErrorState from "@/components/ui/ErrorState";
 import Skeleton from "@/components/ui/Skeleton";
 import { formatarDataHora, partesDaData } from "@/lib/datas";
 import { normalizarTexto } from "@/lib/texto";
+import {
+  eventoAberto,
+  ROTULO_SITUACAO_EVENTO,
+  situacaoDoEvento,
+  varianteSituacaoEvento,
+} from "@/modules/eventos/ciclo";
 import type { Evento, FinalidadeEvento } from "@/types/database";
 
 interface ListaEventosProps {
@@ -27,8 +33,13 @@ interface ListaEventosProps {
   onTentarNovamente: () => void;
   podeEditar: boolean;
   podeExcluir: boolean;
+  podeCancelar: boolean; // só o Administrador (eventos.cancelar): cancela e corrige evento encerrado
+  agora: number; // instante atual (ms), para calcular a situação de cada evento
+  tituloVazio?: string;
+  descricaoVazia?: string;
   onEditar: (evento: Evento) => void;
   onExcluir: (evento: Evento) => void;
+  onCancelar: (evento: Evento) => void;
 }
 
 // Cor do selo conforme o tipo do evento (tipos desconhecidos usam o neutro)
@@ -50,11 +61,16 @@ export default function ListaEventos({
   onTentarNovamente,
   podeEditar,
   podeExcluir,
+  podeCancelar,
+  agora,
+  tituloVazio,
+  descricaoVazia,
   onEditar,
   onExcluir,
+  onCancelar,
 }: ListaEventosProps) {
   const [busca, setBusca] = useState("");
-  const mostrarAcoes = podeEditar || podeExcluir;
+  const mostrarAcoes = podeEditar || podeExcluir || podeCancelar;
 
   // 1) Carregando: skeleton (barra de ferramentas + linhas)
   if (carregando) {
@@ -92,8 +108,8 @@ export default function ListaEventos({
   if (eventos.length === 0) {
     return (
       <EmptyState
-        titulo="Nenhum evento cadastrado ainda."
-        descricao="Clique em “Novo evento” para cadastrar o primeiro."
+        titulo={tituloVazio ?? "Nenhum evento cadastrado ainda."}
+        descricao={descricaoVazia ?? "Clique em “Novo evento” para cadastrar o primeiro."}
       />
     );
   }
@@ -149,6 +165,9 @@ export default function ListaEventos({
               <th scope="col" className={classeCabecalho}>
                 Tipo
               </th>
+              <th scope="col" className={classeCabecalho}>
+                Situação
+              </th>
               <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>
                 Finalidade
               </th>
@@ -166,7 +185,7 @@ export default function ListaEventos({
             {filtrados.length === 0 ? (
               <tr>
                 <td
-                  colSpan={mostrarAcoes ? 5 : 4}
+                  colSpan={mostrarAcoes ? 6 : 5}
                   className="px-4 py-10 text-center text-sm text-slate-500"
                 >
                   Nenhum evento encontrado com a pesquisa atual.
@@ -176,6 +195,10 @@ export default function ListaEventos({
               filtrados.map((evento) => {
                 const { dia, mes } = partesDaData(evento.data_evento);
                 const finalidade = nomeDaFinalidade(evento);
+                const cancelado = Boolean(evento.cancelado_em);
+                const situacao = situacaoDoEvento(evento.data_evento, cancelado, agora);
+                // Evento encerrado ou cancelado é só leitura; o Administrador (podeCancelar) ainda corrige encerrados
+                const podeAlterar = !cancelado && (eventoAberto(evento.data_evento, cancelado, agora) || podeCancelar);
 
                 return (
                   <tr key={evento.id} className="transition hover:bg-slate-50">
@@ -198,6 +221,14 @@ export default function ListaEventos({
                     <td className="px-4 py-3">
                       <Badge variante={varianteTipo(evento.tipo)}>{evento.tipo}</Badge>
                     </td>
+                    <td className="px-4 py-3">
+                      <Badge variante={varianteSituacaoEvento(situacao)}>{ROTULO_SITUACAO_EVENTO[situacao]}</Badge>
+                      {cancelado && evento.motivo_cancelamento && (
+                        <span className="mt-1 block max-w-xs text-xs text-slate-500">
+                          Motivo: {evento.motivo_cancelamento}
+                        </span>
+                      )}
+                    </td>
                     <td className="hidden max-w-sm px-4 py-3 text-slate-700 md:table-cell">
                       {finalidade ?? <span className="text-slate-400">—</span>}
                     </td>
@@ -210,19 +241,27 @@ export default function ListaEventos({
                     {mostrarAcoes && (
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
-                          {podeEditar && (
+                          {podeEditar && podeAlterar && (
                             <BotaoIcone
                               icone={Pencil}
                               rotulo={`Editar o evento de ${formatarDataHora(evento.data_evento)}`}
                               onClick={() => onEditar(evento)}
                             />
                           )}
-                          {podeExcluir && (
+                          {podeExcluir && podeAlterar && (
                             <BotaoIcone
                               icone={Trash2}
                               variante="perigo"
                               rotulo={`Excluir o evento de ${formatarDataHora(evento.data_evento)}`}
                               onClick={() => onExcluir(evento)}
+                            />
+                          )}
+                          {podeCancelar && !cancelado && (
+                            <BotaoIcone
+                              icone={Ban}
+                              variante="perigo"
+                              rotulo={`Cancelar o evento de ${formatarDataHora(evento.data_evento)}`}
+                              onClick={() => onCancelar(evento)}
                             />
                           )}
                         </div>

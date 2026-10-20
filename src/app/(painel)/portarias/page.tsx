@@ -29,6 +29,8 @@ import type {
   HistoricoPortaria as ItemHistorico,
   PortariaDetalhada,
 } from "@/modules/portarias/tipos";
+import AbasDeLista from "@/components/AbasDeLista";
+import { janelaDaPortaria } from "@/modules/portarias/janela";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Drawer from "@/components/ui/Drawer";
@@ -64,6 +66,8 @@ export default function PortariasPage() {
   const [erroConfirmacao, setErroConfirmacao] = useState<string | null>(null);
   const [erroAcao, setErroAcao] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [aba, setAba] = useState<"ativas" | "historico">("ativas");
+  const [agora, setAgora] = useState(0); // instante atual (ms); 0 até a primeira carga
 
   // Busca as portarias e, conforme as permissões, os eventos, a cota e a abrangência
   const carregar = useCallback(async () => {
@@ -75,6 +79,7 @@ export default function PortariasPage() {
         podeAprovar ? minhasCidades() : Promise.resolve(null),
       ]);
       setPortarias(lista);
+      setAgora(Date.now());
       setEventos(listaEventos);
       setCota(cotaAtual);
       setCidades(cidadesAtuais);
@@ -94,6 +99,12 @@ export default function PortariasPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void carregar();
   }, [carregar]);
+
+  // Mantém a separação Ativas/Histórico em dia: a portaria cujo evento termina vai para o Histórico sozinha
+  useEffect(() => {
+    const id = setInterval(() => setAgora(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   function tentarNovamente() {
     setCarregando(true);
@@ -148,6 +159,15 @@ export default function PortariasPage() {
     }
   }
 
+  // Portaria cujo evento já encerrou (ou foi removido) vai para o Histórico
+  const noHistorico = (portaria: PortariaDetalhada) => {
+    const janela = janelaDaPortaria(portaria.evento_data, agora);
+    return janela === null || janela.situacao === "encerrada";
+  };
+  const historico = portarias.filter(noHistorico);
+  const ativas = portarias.filter((portaria) => !noHistorico(portaria));
+  const visiveis = aba === "ativas" ? ativas : historico;
+
   // Eventos que ainda podem receber portaria (sem uma pendente ou aprovada)
   const eventosDisponiveis = eventos.filter(
     (evento) => !portarias.some((portaria) => portaria.evento_id === evento.id && portaria.status !== "REJEITADA")
@@ -200,6 +220,18 @@ export default function PortariasPage() {
           </p>
         )}
 
+        {!carregando && !erro && (
+          <AbasDeLista
+            descricao="Situação das portarias"
+            atual={aba}
+            onTrocar={setAba}
+            abas={[
+              { id: "ativas", rotulo: "Ativas", total: ativas.length },
+              { id: "historico", rotulo: "Histórico", total: historico.length },
+            ]}
+          />
+        )}
+
         {carregando ? (
           <div role="status" aria-live="polite" className="space-y-3">
             <span className="sr-only">Carregando portarias...</span>
@@ -210,18 +242,26 @@ export default function PortariasPage() {
           </div>
         ) : erro ? (
           <ErrorState titulo="Não foi possível carregar as portarias." mensagem={erro} onTentarNovamente={tentarNovamente} />
-        ) : portarias.length === 0 ? (
+        ) : visiveis.length === 0 ? (
           <EmptyState
-            titulo="Nenhuma portaria por aqui ainda."
+            titulo={
+              portarias.length === 0
+                ? "Nenhuma portaria por aqui ainda."
+                : aba === "ativas"
+                  ? "Nenhuma portaria ativa no momento."
+                  : "O histórico está vazio."
+            }
             descricao={
-              podeCriar
+              aba === "historico"
+                ? "As portarias de eventos já encerrados ficam guardadas aqui."
+                : podeCriar
                 ? "Clique em “Nova portaria” para solicitar a portaria de um evento."
                 : "Quando houver portarias na sua abrangência, elas aparecem aqui."
             }
           />
         ) : (
           <TabelaPortarias
-            portarias={portarias}
+            portarias={visiveis}
             onAprovar={(portaria) => {
               setErroConfirmacao(null);
               setAlvoAprovar(portaria);

@@ -42,3 +42,10 @@ o acesso anônimo. Novas alterações de banco entram sempre como um novo arquiv
 | `0031_casa_de_oracao.sql` | Renomeia Comum para Casa de Oração em todo o banco (tabela casas_oracao, coluna casa_oracao_id, nível CASA_ORACAO) |
 | `0032_regras_de_regiao.sql` | Corrige regiao_eventos e regiao_membros: restritivas e só para usuários logados |
 | `0033_backup_presencas_avulsas.sql` | Entradas sem cadastro entram no backup e na restauração |
+
+## Migração 0034 (aplicar no Supabase SQL Editor ANTES do git push)
+
+| Arquivo | O que faz |
+|---|---|
+| `0034_ciclo_de_vida_eventos.sql` | Ciclo de vida do evento: cancelar com motivo (só Administrador, permissão eventos.cancelar), evento encerrado vira somente leitura, evento com presenças não pode ser excluído, portaria só para evento aberto |
+| `0035_libera_janela_portaria.sql` | Libera para usuários logados as funções que só calculam a janela de horário da portaria (corrige o erro ao editar evento) |

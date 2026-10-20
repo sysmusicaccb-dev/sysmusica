@@ -21,6 +21,7 @@ const ROTULO_ACAO: Record<string, string> = {
   comum_transferida: "Transferiu casa de oração de setor",
   evento_casa_oracao_alterada: "Mudou a casa de oração do evento",
   evento_comum_alterada: "Mudou a casa de oração do evento",
+  evento_cancelado: "Cancelou o evento",
   visitante_cadastrado: "Cadastrou visitante",
   foto_definida: "Definiu fotografia",
   foto_removida: "Removeu fotografia",

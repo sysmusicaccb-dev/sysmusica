@@ -19,6 +19,7 @@ export const CATALOGO_PERMISSOES = [
   { codigo: "eventos.criar", modulo: "Eventos", acao: "Criar" },
   { codigo: "eventos.editar", modulo: "Eventos", acao: "Editar" },
   { codigo: "eventos.excluir", modulo: "Eventos", acao: "Excluir" },
+  { codigo: "eventos.cancelar", modulo: "Eventos", acao: "Cancelar" },
   { codigo: "instrumentos.visualizar", modulo: "Instrumentos", acao: "Visualizar" },
   { codigo: "instrumentos.criar", modulo: "Instrumentos", acao: "Criar" },
   { codigo: "instrumentos.editar", modulo: "Instrumentos", acao: "Editar" },
