@@ -34,7 +34,13 @@ import { janelaDaPortaria } from "@/modules/portarias/janela";
 import { abrirJanelaImpressao, escreverImpressao } from "@/lib/exportacao";
 import { MARCA } from "@/lib/marca";
 import { registrarUso } from "@/modules/auditoria/services/auditoria";
-import { montarImpressaoPresenca } from "@/modules/relatorios/presencaPortaria";
+import FormularioRelatorioPresenca from "@/modules/relatorios/components/FormularioRelatorioPresenca";
+import {
+  lerOpcoesSalvas,
+  montarImpressaoPresenca,
+  salvarOpcoes,
+  type OpcoesRelatorioPresenca,
+} from "@/modules/relatorios/presencaPortaria";
 import { agoraEmSalvador } from "@/modules/relatorios/regras";
 import { buscarRelatorioPresencaPortaria } from "@/modules/relatorios/services/presencaPortaria";
 import Button from "@/components/ui/Button";
@@ -56,7 +62,8 @@ function enderecoDaLogo(): string {
 type Painel =
   | { tipo: "nova" }
   | { tipo: "rejeitar"; portaria: PortariaDetalhada }
-  | { tipo: "historico"; portaria: PortariaDetalhada; itens: ItemHistorico[] };
+  | { tipo: "historico"; portaria: PortariaDetalhada; itens: ItemHistorico[] }
+  | { tipo: "relatorio"; portaria: PortariaDetalhada };
 
 export default function PortariasPage() {
   const { pode, conta } = useSessao();
@@ -131,7 +138,7 @@ export default function PortariasPage() {
   }
 
   // Relatório de presença da portaria. A janela abre já no clique (antes da espera) para o navegador não bloqueá-la.
-  async function emitirRelatorioPresenca(portaria: PortariaDetalhada) {
+  async function emitirRelatorioPresenca(portaria: PortariaDetalhada, opcoes: OpcoesRelatorioPresenca) {
     if (gerandoRelatorio) return;
     setErroAcao(null);
     const janela = abrirJanelaImpressao();
@@ -140,6 +147,7 @@ export default function PortariasPage() {
       return;
     }
     setGerandoRelatorio(true);
+    salvarOpcoes(opcoes); // guarda a escolha para os próximos relatórios
     try {
       const dados = await buscarRelatorioPresencaPortaria(portaria.id);
       // Imprimir fica registrado na Auditoria
@@ -156,8 +164,9 @@ export default function PortariasPage() {
           geradoEm: agoraEmSalvador(),
           logoUrl: enderecoDaLogo(),
           abrirImpressao: false, // mostra a folha para conferir; o botão Imprimir da janela imprime
-        })
+        }, opcoes)
       );
+      setPainel(null);
     } catch (e) {
       janela.close();
       setErroAcao(e instanceof Error ? e.message : "Não foi possível gerar o relatório de presença.");
@@ -225,7 +234,11 @@ export default function PortariasPage() {
     `${portaria.evento_data ? formatarDataHora(portaria.evento_data) : "Evento removido"} · ${portaria.evento_local ?? ""}`;
 
   const tituloPainel =
-    painel?.tipo === "rejeitar" ? "Rejeitar portaria" : painel?.tipo === "historico" ? "Histórico da portaria" : "Nova portaria";
+    painel?.tipo === "rejeitar" ? "Rejeitar portaria" : painel?.tipo === "historico"
+      ? "Histórico da portaria"
+      : painel?.tipo === "relatorio"
+        ? "Relatório de presença"
+        : "Nova portaria";
 
   // Mensagem de erro reaproveitada pelos dois diálogos de confirmação
   const erroDialogo = erroConfirmacao && (
@@ -316,7 +329,10 @@ export default function PortariasPage() {
             }}
             onRejeitar={(portaria) => setPainel({ tipo: "rejeitar", portaria })}
             onHistorico={(portaria) => void abrirHistorico(portaria)}
-            onRelatorio={(portaria) => void emitirRelatorioPresenca(portaria)}
+            onRelatorio={(portaria) => {
+              setErroAcao(null);
+              setPainel({ tipo: "relatorio", portaria });
+            }}
             podeRelatorio={(portaria) => {
               // Portaria aprovada cujo evento já começou (em andamento ou encerrado)
               const janela = janelaDaPortaria(portaria.evento_data, agora);
@@ -340,7 +356,7 @@ export default function PortariasPage() {
             ? "A portaria só poderá ser usada depois de aprovada por outro usuário."
             : painel?.tipo === "rejeitar"
               ? "Informe o motivo: ele fica no histórico."
-              : painel?.tipo === "historico"
+              : painel?.tipo === "historico" || painel?.tipo === "relatorio"
                 ? descricaoEvento(painel.portaria)
                 : undefined
         }
@@ -348,6 +364,14 @@ export default function PortariasPage() {
         {painel?.tipo === "nova" && <FormularioNovaPortaria eventos={eventosDisponiveis} cota={cota} onSalvo={aoSalvar} />}
         {painel?.tipo === "rejeitar" && <FormularioRejeicao portaria={painel.portaria} onSalvo={aoSalvar} />}
         {painel?.tipo === "historico" && <HistoricoPortaria itens={painel.itens} />}
+        {painel?.tipo === "relatorio" && (
+          <FormularioRelatorioPresenca
+            opcoesIniciais={lerOpcoesSalvas()}
+            gerando={gerandoRelatorio}
+            erro={erroAcao}
+            onGerar={(opcoes) => void emitirRelatorioPresenca(painel.portaria, opcoes)}
+          />
+        )}
       </Drawer>
 
       <ConfirmDialog

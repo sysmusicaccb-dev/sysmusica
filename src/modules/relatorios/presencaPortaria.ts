@@ -61,7 +61,76 @@ export const ROTULO_BLOCO: Record<string, string> = {
   ORGANISTAS: "Organistas",
 };
 
-export const COLUNAS_PRESENCA = ["Nº", "Nome", "Cargo", "Instrumento", "Casa de Oração de origem", "Entrada"];
+/** O que aparece na folha. Por padrão o mínimo: logomarca, título, evento, local e total. */
+export interface OpcoesRelatorioPresenca {
+  // Quadro de informações do cabeçalho
+  local: boolean;
+  casaOracao: boolean;
+  regiaoSetor: boolean;
+  total: boolean;
+  semCadastro: boolean; // quantas entradas sem cadastro
+  resumo: boolean; // Ministério / Músicos / Organistas
+  familias: boolean; // quem toca, por família de instrumento
+  portaria: boolean; // situação da portaria (quem aprovou e quando)
+  // Colunas da lista (Nº e Nome sempre aparecem)
+  colCargo: boolean;
+  colInstrumento: boolean;
+  colOrigem: boolean;
+  colEntrada: boolean;
+  // Folha
+  logoCcb: boolean;
+  assinaturas: boolean;
+  emitidoPor: boolean;
+  emitidoEm: boolean;
+  paginacao: boolean;
+}
+
+export const OPCOES_PADRAO: OpcoesRelatorioPresenca = {
+  local: true,
+  casaOracao: false,
+  regiaoSetor: false,
+  total: true,
+  semCadastro: false,
+  resumo: false,
+  familias: false,
+  portaria: false,
+  colCargo: true,
+  colInstrumento: true,
+  colOrigem: true,
+  colEntrada: true,
+  logoCcb: true,
+  assinaturas: false,
+  emitidoPor: false,
+  emitidoEm: true,
+  paginacao: true,
+};
+
+const CHAVE_OPCOES = "sysmusica.relatorioPresenca.opcoes";
+
+/** Lê as opções guardadas neste navegador (o que faltar ou vier errado volta ao padrão). */
+export function lerOpcoesSalvas(): OpcoesRelatorioPresenca {
+  try {
+    const bruto = typeof window === "undefined" ? null : window.localStorage.getItem(CHAVE_OPCOES);
+    if (!bruto) return { ...OPCOES_PADRAO };
+    const lido = JSON.parse(bruto) as Record<string, unknown>;
+    const opcoes = { ...OPCOES_PADRAO };
+    for (const chave of Object.keys(OPCOES_PADRAO) as (keyof OpcoesRelatorioPresenca)[]) {
+      if (typeof lido[chave] === "boolean") opcoes[chave] = lido[chave];
+    }
+    return opcoes;
+  } catch {
+    return { ...OPCOES_PADRAO };
+  }
+}
+
+/** Guarda as opções escolhidas (se o navegador não deixar, simplesmente não guarda). */
+export function salvarOpcoes(opcoes: OpcoesRelatorioPresenca): void {
+  try {
+    window.localStorage.setItem(CHAVE_OPCOES, JSON.stringify(opcoes));
+  } catch {
+    /* sem armazenamento: a escolha vale só desta vez */
+  }
+}
 
 /** Hora da entrada no fuso de Salvador ("19:42"). */
 export function horaDaEntrada(iso: string): string {
@@ -92,12 +161,26 @@ interface ContextoPresenca {
   abrirImpressao?: boolean;
 }
 
-/** Monta tudo o que a folha de impressão precisa. */
-export function montarImpressaoPresenca(dados: DadosPresencaPortaria, contexto: ContextoPresenca): OpcoesImpressao {
+/** Monta tudo o que a folha de impressão precisa, só com o que as opções pedem. */
+export function montarImpressaoPresenca(
+  dados: DadosPresencaPortaria,
+  contexto: ContextoPresenca,
+  opcoes: OpcoesRelatorioPresenca = OPCOES_PADRAO
+): OpcoesImpressao {
   const { evento, portaria } = dados;
   const total = Number(dados.total) || 0;
   const semCadastro = Number(dados.sem_cadastro) || 0;
   const dataEvento = formatarDataHora(evento.data_evento);
+
+  // Colunas: Nº e Nome sempre; as demais conforme as opções
+  const colunas: { titulo: string; valor: (item: ItemPresenca, numero: number) => string }[] = [
+    { titulo: "Nº", valor: (_item, numero) => String(numero) },
+    { titulo: "Nome", valor: (item) => (item.sem_cadastro ? "(entrada sem cadastro)" : (item.nome ?? "")) },
+  ];
+  if (opcoes.colCargo) colunas.push({ titulo: "Cargo", valor: (item) => item.cargo ?? "" });
+  if (opcoes.colInstrumento) colunas.push({ titulo: "Instrumento", valor: (item) => instrumentoDoItem(item) });
+  if (opcoes.colOrigem) colunas.push({ titulo: "Casa de Oração de origem", valor: (item) => item.origem ?? "" });
+  if (opcoes.colEntrada) colunas.push({ titulo: "Entrada", valor: (item) => horaDaEntrada(item.entrada) });
 
   // Linhas da tabela, com o título de cada grupo (linha do painel) e o seu subtotal
   const linhas: string[][] = [];
@@ -110,65 +193,65 @@ export function montarImpressaoPresenca(dados: DadosPresencaPortaria, contexto: 
     });
     for (const item of grupo.itens) {
       numero += 1;
-      linhas.push([
-        String(numero),
-        item.sem_cadastro ? "(entrada sem cadastro)" : (item.nome ?? ""),
-        item.cargo ?? "",
-        instrumentoDoItem(item),
-        item.origem ?? "",
-        horaDaEntrada(item.entrada),
-      ]);
+      linhas.push(colunas.map((coluna) => coluna.valor(item, numero)));
     }
   }
   if (linhas.length === 0) {
-    linhas.push(["", "Nenhuma presença registrada neste evento.", "", "", "", ""]);
+    linhas.push(colunas.map((_, indice) => (indice === 1 ? "Nenhuma presença registrada neste evento." : "")));
   }
 
-  // Quadro de informações
+  // Quadro de informações: só o que foi pedido (a data já está no subtítulo)
   const informacoes: ItemInformacao[] = [];
-  informacoes.push({
-    rotulo: "Evento",
-    valor: [evento.tipo, evento.finalidade].filter(Boolean).join(" · ") + (evento.cancelado ? " · EVENTO CANCELADO" : ""),
-    largo: true,
-  });
-  informacoes.push({ rotulo: "Data e hora", valor: dataEvento });
-  informacoes.push({ rotulo: "Local", valor: [evento.local, evento.cidade].filter(Boolean).join(" · ") });
-  informacoes.push({ rotulo: "Casa de Oração", valor: evento.casa_oracao ?? "" });
-  informacoes.push({ rotulo: "Região › Setor", valor: [evento.regiao, evento.setor].filter(Boolean).join(" › ") });
-
-  let situacaoPortaria = ROTULO_STATUS[portaria.status] ?? portaria.status;
-  if (portaria.decidida_por && portaria.decidida_em) {
-    situacaoPortaria += ` por ${portaria.decidida_por} em ${formatarDataHora(portaria.decidida_em)}`;
+  if (opcoes.local) {
+    informacoes.push({ rotulo: "Local", valor: [evento.local, evento.cidade].filter(Boolean).join(" · ") });
   }
-  informacoes.push({ rotulo: "Portaria", valor: situacaoPortaria, largo: true });
+  if (opcoes.casaOracao) informacoes.push({ rotulo: "Casa de Oração", valor: evento.casa_oracao ?? "" });
+  if (opcoes.regiaoSetor) {
+    informacoes.push({ rotulo: "Região › Setor", valor: [evento.regiao, evento.setor].filter(Boolean).join(" › ") });
+  }
+  if (opcoes.total) informacoes.push({ rotulo: "Total de presentes", valor: String(total) });
+  if (opcoes.semCadastro && semCadastro > 0) {
+    informacoes.push({ rotulo: "Entradas sem cadastro", valor: String(semCadastro) });
+  }
+  if (opcoes.portaria) {
+    let situacao = ROTULO_STATUS[portaria.status] ?? portaria.status;
+    if (portaria.decidida_por && portaria.decidida_em) {
+      situacao += ` por ${portaria.decidida_por} em ${formatarDataHora(portaria.decidida_em)}`;
+    }
+    informacoes.push({ rotulo: "Portaria", valor: situacao, largo: true });
+  }
+  if (opcoes.resumo && dados.blocos.length > 0) {
+    const blocos = dados.blocos.map((bloco) => ({ nome: ROTULO_BLOCO[bloco.bloco] ?? bloco.bloco, qtd: Number(bloco.qtd) }));
+    informacoes.push({ rotulo: "Resumo", valor: juntarContagens(blocos), largo: true });
+  }
+  if (opcoes.familias && dados.familias.length > 0) {
+    const familias = dados.familias.map((familia) => ({ nome: familia.familia, qtd: Number(familia.qtd) }));
+    informacoes.push({ rotulo: "Instrumentos (quem toca)", valor: juntarContagens(familias), largo: true });
+  }
 
-  informacoes.push({ rotulo: "Total de presentes", valor: String(total) });
-  if (semCadastro > 0) informacoes.push({ rotulo: "Entradas sem cadastro", valor: String(semCadastro) });
-
-  const blocos = dados.blocos.map((bloco) => ({ nome: ROTULO_BLOCO[bloco.bloco] ?? bloco.bloco, qtd: Number(bloco.qtd) }));
-  if (blocos.length > 0) informacoes.push({ rotulo: "Resumo", valor: juntarContagens(blocos), largo: true });
-  const familias = dados.familias.map((familia) => ({ nome: familia.familia, qtd: Number(familia.qtd) }));
-  if (familias.length > 0) informacoes.push({ rotulo: "Instrumentos (quem toca)", valor: juntarContagens(familias), largo: true });
-
-  informacoes.push({ rotulo: "Emitido em", valor: contexto.geradoEm });
-  informacoes.push({ rotulo: "Emitido por", valor: contexto.emitidoPor });
+  // Rodapé: o nome do sistema fica só aqui
+  const rodapeItens = ["SysMúsica"];
+  if (opcoes.emitidoPor) rodapeItens.push(`Emitido por ${contexto.emitidoPor}`);
+  if (opcoes.emitidoEm) rodapeItens.push(`Emitido em ${contexto.geradoEm}`);
 
   return {
     titulo: "Relatório de presença",
-    subtitulo: [evento.tipo, evento.finalidade].filter(Boolean).join(" · ") + ` — ${dataEvento}`,
-    colunas: COLUNAS_PRESENCA,
+    subtitulo:
+      [evento.tipo, evento.finalidade].filter(Boolean).join(" · ") +
+      ` — ${dataEvento}` +
+      (evento.cancelado ? " (EVENTO CANCELADO)" : ""),
+    colunas: colunas.map((coluna) => coluna.titulo),
     linhas,
     agrupamento,
     colunasCompactas: true,
     orientacao: "retrato",
     tamanhoFonte: 9,
     margem: 12,
-    marca: "SysMúsica",
-    logoUrl: contexto.logoUrl,
+    logoUrl: opcoes.logoCcb ? contexto.logoUrl : undefined, // só a logomarca da CCB; sem o nome do sistema no topo
     informacoes,
-    paginacao: true,
-    assinaturas: ["Responsável pela portaria", "Encarregado Local"],
-    rodapeItens: ["SysMúsica", `Emitido por ${contexto.emitidoPor}`, `Emitido em ${contexto.geradoEm}`, `${total} presente(s)`],
+    paginacao: opcoes.paginacao,
+    assinaturas: opcoes.assinaturas ? ["Responsável pela portaria", "Encarregado Local"] : [],
+    rodapeItens,
     geradoEm: contexto.geradoEm,
     abrirImpressao: contexto.abrirImpressao ?? true,
   };

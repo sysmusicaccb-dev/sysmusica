@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { horaDaEntrada, montarImpressaoPresenca, type DadosPresencaPortaria } from "./presencaPortaria";
+import {
+  horaDaEntrada,
+  montarImpressaoPresenca,
+  OPCOES_PADRAO,
+  type DadosPresencaPortaria,
+  type OpcoesRelatorioPresenca,
+} from "./presencaPortaria";
 
 const dados: DadosPresencaPortaria = {
   total: 3,
@@ -46,6 +52,10 @@ const dados: DadosPresencaPortaria = {
   gerado_em: "2026-10-20T03:00:00Z",
 };
 const contexto = { emitidoPor: "Levi Alencar", geradoEm: "20/10/2026 00:30", logoUrl: "https://exemplo.com/logo-ccb.png" };
+const rotulos = (saida: ReturnType<typeof montarImpressaoPresenca>) => (saida.informacoes ?? []).map((item) => item.rotulo);
+const tudo: OpcoesRelatorioPresenca = Object.fromEntries(
+  Object.keys(OPCOES_PADRAO).map((chave) => [chave, true])
+) as unknown as OpcoesRelatorioPresenca;
 
 describe("horaDaEntrada", () => {
   it("mostra a hora no fuso de Salvador", () => {
@@ -54,13 +64,25 @@ describe("horaDaEntrada", () => {
   });
 });
 
-describe("montarImpressaoPresenca", () => {
+describe("montarImpressaoPresenca (padrão = mínimo)", () => {
   const saida = montarImpressaoPresenca(dados, contexto);
 
-  it("traz logomarca, título e o evento no subtítulo", () => {
+  it("tem logomarca da CCB e título, sem o nome do sistema no topo", () => {
     expect(saida.titulo).toBe("Relatório de presença");
     expect(saida.logoUrl).toBe("https://exemplo.com/logo-ccb.png");
-    expect(saida.subtitulo).toContain("Ensaio Local · Ensaio Técnico");
+    expect(saida.marca).toBeUndefined();
+    expect(saida.subtitulo).toBe("Ensaio Local · Ensaio Técnico — 19/10/2026 às 22:30");
+  });
+
+  it("no cabeçalho só vão local e total (a data não se repete)", () => {
+    expect(rotulos(saida)).toEqual(["Local", "Total de presentes"]);
+  });
+
+  it("não traz quem aprovou, nem quem emitiu, nem assinaturas", () => {
+    expect(saida.assinaturas).toEqual([]);
+    expect(saida.rodapeItens).toEqual(["SysMúsica", "Emitido em 20/10/2026 00:30"]);
+    expect(JSON.stringify(saida)).not.toContain("Lucas");
+    expect(JSON.stringify(saida)).not.toContain("Levi Alencar");
   });
 
   it("numera as linhas em sequência e agrupa com subtotal", () => {
@@ -75,14 +97,30 @@ describe("montarImpressaoPresenca", () => {
     expect(saida.linhas[1][1]).toBe("(entrada sem cadastro)");
     expect(saida.linhas[2][3]).toBe("Não toca");
   });
+});
 
-  it("resume os totais no quadro de informações", () => {
-    const valor = (rotulo: string) => saida.informacoes?.find((item) => item.rotulo === rotulo)?.valor;
-    expect(valor("Total de presentes")).toBe("3");
-    expect(valor("Entradas sem cadastro")).toBe("1");
-    expect(valor("Resumo")).toBe("Músicos: 2 · Organistas: 1");
-    expect(valor("Instrumentos (quem toca)")).toBe("Cordas: 1");
-    expect(valor("Portaria")).toContain("por Lucas");
+describe("montarImpressaoPresenca (opções)", () => {
+  it("com tudo ligado traz o cabeçalho completo, assinaturas e quem emitiu", () => {
+    const saida = montarImpressaoPresenca(dados, contexto, tudo);
+    expect(rotulos(saida)).toEqual([
+      "Local", "Casa de Oração", "Região › Setor", "Total de presentes", "Entradas sem cadastro", "Portaria", "Resumo", "Instrumentos (quem toca)",
+    ]);
+    expect(saida.informacoes?.find((i) => i.rotulo === "Portaria")?.valor).toContain("por Lucas");
+    expect(saida.informacoes?.find((i) => i.rotulo === "Resumo")?.valor).toBe("Músicos: 2 · Organistas: 1");
+    expect(saida.assinaturas).toHaveLength(2);
+    expect(saida.rodapeItens).toContain("Emitido por Levi Alencar");
+  });
+
+  it("tira colunas e a logomarca quando desligadas", () => {
+    const saida = montarImpressaoPresenca(dados, contexto, {
+      ...OPCOES_PADRAO,
+      colCargo: false,
+      colOrigem: false,
+      logoCcb: false,
+    });
+    expect(saida.colunas).toEqual(["Nº", "Nome", "Instrumento", "Entrada"]);
+    expect(saida.linhas[0]).toHaveLength(4);
+    expect(saida.logoUrl).toBeUndefined();
   });
 
   it("evento sem presença mostra uma linha avisando", () => {
@@ -91,8 +129,8 @@ describe("montarImpressaoPresenca", () => {
     expect(vazio.linhas[0][1]).toContain("Nenhuma presença");
   });
 
-  it("marca o evento cancelado", () => {
+  it("marca o evento cancelado no subtítulo", () => {
     const cancelado = montarImpressaoPresenca({ ...dados, evento: { ...dados.evento, cancelado: true } }, contexto);
-    expect(cancelado.informacoes?.[0].valor).toContain("EVENTO CANCELADO");
+    expect(cancelado.subtitulo).toContain("EVENTO CANCELADO");
   });
 });

@@ -7,7 +7,7 @@
  * Só aparecem portarias APROVADAS dentro da abrangência do usuário (o banco filtra). Toda consulta
  * e todo registro são conferidos de novo no banco, que também grava quem registrou e a origem.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import Drawer from "@/components/ui/Drawer";
@@ -84,6 +84,9 @@ export default function AtendimentoPortaria() {
   const [opcoes, setOpcoes] = useState<OpcoesEntrada | null>(null); // linhas do painel e instrumentos
   const [info, setInfo] = useState<InfoEntrada | null>(null); // como o membro conferido será contado
   const [escolha, setEscolha] = useState<EscolhaToca>({ toca: null, instrumentoId: "" }); // resposta de "Vai tocar?"
+  // Cada entrada registrada muda esta chave: a busca por nome é recriada vazia, pronta para o próximo membro
+  const [chaveBusca, setChaveBusca] = useState(0);
+  const refBusca = useRef<HTMLDivElement>(null);
   const [agora, setAgora] = useState(0); // relógio da tela (atualiza a cada 30 s) para abrir e fechar a janela sozinho
 
   // Portarias que ainda podem aparecer: as ENCERRADAS saem da lista sozinhas (o relógio recalcula a cada 30 s)
@@ -170,6 +173,13 @@ export default function AtendimentoPortaria() {
     const temporizador = setInterval(() => setAgora(Date.now()), 30_000);
     return () => clearInterval(temporizador);
   }, []);
+
+  // Depois de registrar uma entrada: devolve o cursor ao campo de busca (que já está vazio)
+  useEffect(() => {
+    if (chaveBusca === 0) return;
+    const temporizador = setTimeout(() => refBusca.current?.querySelector("input")?.focus(), 150);
+    return () => clearTimeout(temporizador);
+  }, [chaveBusca]);
 
   function tentarNovamente() {
     setCarregando(true);
@@ -259,6 +269,7 @@ export default function AtendimentoPortaria() {
       await registrarEntrada(portariaId, cartao.membro.membro_id, cartao.origem, valores.toca, valores.instrumentoId);
       setAviso(`Entrada registrada: ${cartao.membro.nome}`);
       setCartao(null);
+      setChaveBusca((n) => n + 1); // o nome sai do resultado e a busca fica limpa para o próximo
       await carregarEntradas(portariaId);
     } catch (e) {
       setErroCartao(e instanceof Error ? e.message : "Não foi possível registrar a entrada.");
@@ -338,7 +349,14 @@ export default function AtendimentoPortaria() {
                 </p>
               )}
 
-              <BuscaPorNome portariaId={portaria.id} desabilitado={cartao !== null} onEscolher={aoEscolherPorNome} />
+              <div ref={refBusca}>
+                <BuscaPorNome
+                  key={chaveBusca}
+                  portariaId={portaria.id}
+                  desabilitado={cartao !== null}
+                  onEscolher={aoEscolherPorNome}
+                />
+              </div>
 
               <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 shadow-sm">
                 <h2 className="text-sm font-semibold text-slate-900">Candidato, visitante ou irmão sem cadastro?</h2>
