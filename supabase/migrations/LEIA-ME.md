@@ -49,3 +49,9 @@ o acesso anônimo. Novas alterações de banco entram sempre como um novo arquiv
 |---|---|
 | `0034_ciclo_de_vida_eventos.sql` | Ciclo de vida do evento: cancelar com motivo (só Administrador, permissão eventos.cancelar), evento encerrado vira somente leitura, evento com presenças não pode ser excluído, portaria só para evento aberto |
 | `0035_libera_janela_portaria.sql` | Libera para usuários logados as funções que só calculam a janela de horário da portaria (corrige o erro ao editar evento) |
+
+## Migração 0036 (aplicar no Supabase SQL Editor ANTES do git push)
+
+| Arquivo | O que faz |
+|---|---|
+| `0036_relatorio_presenca_portaria.sql` | Relatório de presença de uma portaria (impressão): evento, resumo e lista de presentes agrupada por linha do painel, com entradas sem cadastro |

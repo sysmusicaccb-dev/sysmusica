@@ -63,6 +63,10 @@ export interface OpcoesImpressao {
   paginacao?: boolean;
   /** Nomes das linhas de assinatura ao final (até 4). */
   assinaturas?: string[];
+  /** Títulos de grupo dentro da tabela: aparece uma faixa antes da linha de índice "antesDaLinha". */
+  agrupamento?: { antesDaLinha: number; titulo: string }[];
+  /** Colunas curtas (até 26 caracteres) não quebram de linha: data, situação, número etc. ficam em uma linha só. */
+  colunasCompactas?: boolean;
 }
 
 /**
@@ -129,13 +133,29 @@ export function montarHtmlImpressao(opcoes: OpcoesImpressao): string {
           .join("")}</section>`
       : "";
 
-  const cabecalho = opcoes.colunas.map((coluna) => `<th>${escaparHtml(coluna)}</th>`).join("");
-  const corpo = opcoes.linhas
-    .map(
-      (linha) =>
-        `<tr>${opcoes.colunas.map((_, indice) => `<td>${escaparHtml(linha[indice] ?? "")}</td>`).join("")}</tr>`
-    )
+  // Colunas compactas: tudo (título e células) com até 26 caracteres fica em uma linha só
+  const compacta = opcoes.colunas.map(
+    (nome, indice) =>
+      opcoes.colunasCompactas === true &&
+      Math.max(nome.length, ...opcoes.linhas.map((linha) => (linha[indice] ?? "").length)) <= 26
+  );
+  const atributoColuna = (indice: number) => (compacta[indice] ? ' class="nq"' : "");
+  const cabecalho = opcoes.colunas
+    .map((coluna, indice) => `<th${atributoColuna(indice)}>${escaparHtml(coluna)}</th>`)
     .join("");
+  const titulosDeGrupo = new Map((opcoes.agrupamento ?? []).map((grupo): [number, string] => [grupo.antesDaLinha, grupo.titulo]));
+  const corpo = opcoes.linhas
+    .map((linha, posicao) => {
+      const titulo = titulosDeGrupo.get(posicao);
+      const faixa = titulo
+        ? `<tr class="grp"><td colspan="${opcoes.colunas.length}">${escaparHtml(titulo)}</td></tr>`
+        : "";
+      return `${faixa}<tr>${opcoes.colunas
+        .map((_, indice) => `<td${atributoColuna(indice)}>${escaparHtml(linha[indice] ?? "")}</td>`)
+        .join("")}</tr>`;
+    })
+    .join("");
+  const classeTabela = titulosDeGrupo.size > 0 ? ' class="agrupada"' : "";
 
   // Linhas de assinatura (até 4)
   const nomesAssinaturas = (opcoes.assinaturas ?? []).slice(0, 4);
@@ -186,6 +206,10 @@ export function montarHtmlImpressao(opcoes: OpcoesImpressao): string {
   td { border-bottom: 1px solid #e2e8f0; }
   tbody tr:nth-child(even) td { background: #f8fafc; }
   thead { display: table-header-group; }
+  th.nq, td.nq { white-space: nowrap; overflow-wrap: normal; word-break: normal; }
+  tr.grp { break-after: avoid; page-break-after: avoid; }
+  tr.grp td { background: #e0e7ff !important; color: #1e1b4b; font-weight: 700; border-bottom: 1px solid #a5b4fc; padding-top: 5px; }
+  table.agrupada tbody tr:nth-child(even) td { background: transparent; }
   tr { page-break-inside: avoid; break-inside: avoid; }
   .assinaturas { display: flex; gap: 28px; margin-top: 34px; page-break-inside: avoid; break-inside: avoid; }
   .ass { flex: 1; text-align: center; font-size: ${fonte}pt; }
@@ -207,7 +231,7 @@ export function montarHtmlImpressao(opcoes: OpcoesImpressao): string {
 ${marcaHtml}<div class="tit"><h1>${escaparHtml(opcoes.titulo)}</h1>${opcoes.subtitulo ? `<p class="sub">${escaparHtml(opcoes.subtitulo)}</p>` : ""}</div>
 </header>
 ${infoHtml}
-<table>
+<table${classeTabela}>
 <thead><tr>${cabecalho}</tr></thead>
 <tbody>${corpo}</tbody>
 </table>

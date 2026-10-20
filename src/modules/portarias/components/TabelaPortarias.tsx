@@ -6,7 +6,7 @@
  * (pode_decidir / pode_excluir); o histórico está sempre disponível.
  */
 import { useState } from "react";
-import { Check, History, Search, Trash2, X } from "lucide-react";
+import { Check, FileText, History, Search, Trash2, X } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import BotaoIcone from "@/components/ui/BotaoIcone";
 import { formatarDataHora } from "@/lib/datas";
@@ -20,6 +20,9 @@ interface TabelaPortariasProps {
   onRejeitar: (portaria: PortariaDetalhada) => void;
   onHistorico: (portaria: PortariaDetalhada) => void;
   onExcluir: (portaria: PortariaDetalhada) => void;
+  /** Relatório de presença (impressão): só aparece nas portarias em que {podeRelatorio} devolve verdadeiro. */
+  onRelatorio?: (portaria: PortariaDetalhada) => void;
+  podeRelatorio?: (portaria: PortariaDetalhada) => boolean;
 }
 
 const classeCabecalho = "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500";
@@ -33,6 +36,8 @@ export default function TabelaPortarias({
   onRejeitar,
   onHistorico,
   onExcluir,
+  onRelatorio,
+  podeRelatorio,
 }: TabelaPortariasProps) {
   const [busca, setBusca] = useState("");
   const [situacao, setSituacao] = useState<"" | StatusPortaria>(""); // "" = todas
@@ -162,6 +167,13 @@ export default function TabelaPortarias({
                           rotulo={`Histórico da portaria de ${nomeLocal}`}
                           onClick={() => onHistorico(portaria)}
                         />
+                        {onRelatorio && podeRelatorio?.(portaria) && (
+                          <BotaoIcone
+                            icone={FileText}
+                            rotulo={`Relatório de presença da portaria de ${nomeLocal}`}
+                            onClick={() => onRelatorio(portaria)}
+                          />
+                        )}
                         {portaria.pode_excluir && (
                           <BotaoIcone
                             icone={Trash2}

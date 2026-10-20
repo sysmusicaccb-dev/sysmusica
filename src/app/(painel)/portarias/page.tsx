@@ -31,6 +31,12 @@ import type {
 } from "@/modules/portarias/tipos";
 import AbasDeLista from "@/components/AbasDeLista";
 import { janelaDaPortaria } from "@/modules/portarias/janela";
+import { abrirJanelaImpressao, escreverImpressao } from "@/lib/exportacao";
+import { MARCA } from "@/lib/marca";
+import { registrarUso } from "@/modules/auditoria/services/auditoria";
+import { montarImpressaoPresenca } from "@/modules/relatorios/presencaPortaria";
+import { agoraEmSalvador } from "@/modules/relatorios/regras";
+import { buscarRelatorioPresencaPortaria } from "@/modules/relatorios/services/presencaPortaria";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Drawer from "@/components/ui/Drawer";
@@ -41,6 +47,11 @@ import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
 import { formatarDataHora } from "@/lib/datas";
 
+// Endereço da logomarca para a janela de impressão: completo (https) quando possível
+function enderecoDaLogo(): string {
+  return window.location.protocol === "https:" ? `${window.location.origin}${MARCA.logoCaminho}` : MARCA.logoCaminho;
+}
+
 // Qual painel lateral está aberto
 type Painel =
   | { tipo: "nova" }
@@ -48,7 +59,7 @@ type Painel =
   | { tipo: "historico"; portaria: PortariaDetalhada; itens: ItemHistorico[] };
 
 export default function PortariasPage() {
-  const { pode } = useSessao();
+  const { pode, conta } = useSessao();
   const podeCriar = pode("portarias.criar");
   const podeAprovar = pode("portarias.aprovar");
   const controleTotal = pode("portarias.controle_total"); // atua em qualquer cidade: não precisa de abrangência
@@ -67,6 +78,7 @@ export default function PortariasPage() {
   const [erroAcao, setErroAcao] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [aba, setAba] = useState<"ativas" | "historico">("ativas");
+  const [gerandoRelatorio, setGerandoRelatorio] = useState(false);
   const [agora, setAgora] = useState(0); // instante atual (ms); 0 até a primeira carga
 
   // Busca as portarias e, conforme as permissões, os eventos, a cota e a abrangência
@@ -116,6 +128,42 @@ export default function PortariasPage() {
     await carregar();
     setPainel(null);
     setAviso(mensagem);
+  }
+
+  // Relatório de presença da portaria. A janela abre já no clique (antes da espera) para o navegador não bloqueá-la.
+  async function emitirRelatorioPresenca(portaria: PortariaDetalhada) {
+    if (gerandoRelatorio) return;
+    setErroAcao(null);
+    const janela = abrirJanelaImpressao();
+    if (!janela) {
+      setErroAcao("O navegador bloqueou a janela. Libere os pop-ups deste site e tente de novo.");
+      return;
+    }
+    setGerandoRelatorio(true);
+    try {
+      const dados = await buscarRelatorioPresencaPortaria(portaria.id);
+      // Imprimir fica registrado na Auditoria
+      await registrarUso("relatorio_impresso", {
+        tipo: "presenca_portaria",
+        portaria_id: portaria.id,
+        evento_id: portaria.evento_id,
+        quantidade: Number(dados.total),
+      });
+      escreverImpressao(
+        janela,
+        montarImpressaoPresenca(dados, {
+          emitidoPor: conta?.nome ?? "usuário",
+          geradoEm: agoraEmSalvador(),
+          logoUrl: enderecoDaLogo(),
+          abrirImpressao: false, // mostra a folha para conferir; o botão Imprimir da janela imprime
+        })
+      );
+    } catch (e) {
+      janela.close();
+      setErroAcao(e instanceof Error ? e.message : "Não foi possível gerar o relatório de presença.");
+    } finally {
+      setGerandoRelatorio(false);
+    }
   }
 
   async function abrirHistorico(portaria: PortariaDetalhada) {
@@ -268,6 +316,12 @@ export default function PortariasPage() {
             }}
             onRejeitar={(portaria) => setPainel({ tipo: "rejeitar", portaria })}
             onHistorico={(portaria) => void abrirHistorico(portaria)}
+            onRelatorio={(portaria) => void emitirRelatorioPresenca(portaria)}
+            podeRelatorio={(portaria) => {
+              // Portaria aprovada cujo evento já começou (em andamento ou encerrado)
+              const janela = janelaDaPortaria(portaria.evento_data, agora);
+              return portaria.status === "APROVADA" && janela !== null && janela.situacao !== "antes";
+            }}
             onExcluir={(portaria) => {
               setErroConfirmacao(null);
               setAlvoExcluir(portaria);

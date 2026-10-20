@@ -245,6 +245,7 @@ export default function RelatoriosPage() {
           colunas: tabela.colunas,
           linhas: tabela.linhas,
           orientacao: pagina.orientacao,
+          colunasCompactas: true, // data, situação e números em uma linha só
           escala: manual?.escala,
           tamanhoFonte: manual?.tamanhoFonte,
           // (o texto livre do rodapé entra em rodapeItens)
