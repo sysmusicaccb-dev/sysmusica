@@ -26,7 +26,7 @@ import {
   type SimNao,
 } from "@/modules/membros/cadastroMusical";
 import { CATEGORIAS, cargoUsaCategoria } from "@/modules/painel/regras";
-import { formatarCpfParcial } from "../cpf";
+import { cpfValido, formatarCpfParcial, soDigitos } from "../cpf";
 import { itensDoAviso } from "../aviso";
 import { enviarCadastroPublico } from "../services/envio";
 import {
@@ -51,6 +51,40 @@ function hojeIso(): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+/** Mensagem vermelha junto do campo (para a pessoa ver exatamente o que falta). */
+function ErroCampo({ id, mensagem }: { id: string; mensagem?: string }) {
+  if (!mensagem) return null;
+  return (
+    <p id={id} role="alert" className="text-xs font-medium text-red-700">
+      {mensagem}
+    </p>
+  );
+}
+
+/** Confirmação verde de que a imagem já foi anexada. */
+function Anexada({ ok, texto }: { ok: boolean; texto: string }) {
+  if (!ok) return null;
+  return (
+    <p className="flex items-center gap-1 text-xs font-medium text-emerald-700">
+      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> {texto}
+    </p>
+  );
+}
+
+/** Mensagem do CPF digitado: só fala quando os 11 números já foram digitados (ou ao sair do campo). */
+function problemaDoCpf(texto: string, terminou: boolean): string | undefined {
+  const n = soDigitos(texto);
+  if (n.length === 11) return cpfValido(n) ? undefined : "CPF inválido. Confira os números digitados.";
+  if (terminou) return n.length === 0 ? "Informe o CPF." : "CPF incompleto: são 11 números.";
+  return undefined;
+}
+
+/** Rola a tela até o campo (pelo id do bloco) para a pessoa ver o que corrigir. */
+function irParaCampo(id: string) {
+  if (typeof document === "undefined") return;
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
 export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPublico }) {
   const [dados, setDados] = useState<DadosFormularioPublico>(() => formularioVazio(CADASTRO_VAZIO));
   const [foto, setFoto] = useState<Blob | null>(null);
@@ -63,6 +97,8 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
   const [enviado, setEnviado] = useState(false);
   const [avisoCep, setAvisoCep] = useState<string | null>(null);
   const [buscandoCep, setBuscandoCep] = useState(false);
+  const [cpfTocado, setCpfTocado] = useState(false); // saiu do campo CPF pelo menos uma vez
+  const [errosCampo, setErrosCampo] = useState<{ foto?: string; frente?: string; verso?: string }>({});
 
   const cargos = useMemo(() => cargosDoFormularioPublico(opcoes.cargos), [opcoes.cargos]);
   const cargo = cargos.find((c) => c.id === dados.cargoId);
@@ -77,6 +113,21 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
     setDados((d) => ({ ...d, cadastro: { ...d.cadastro, [campo]: valor } }));
 
   const aoToken = useCallback((t: string) => setToken(t), []);
+
+  // Ao anexar/remover uma imagem, guarda o arquivo e apaga o aviso vermelho daquele campo
+  const aoFoto = useCallback((b: Blob | null) => {
+    setFoto(b);
+    if (b) setErrosCampo((e) => ({ ...e, foto: undefined }));
+  }, []);
+  const aoFrente = useCallback((b: Blob | null) => {
+    setFrente(b);
+    if (b) setErrosCampo((e) => ({ ...e, frente: undefined }));
+  }, []);
+  const aoVerso = useCallback((b: Blob | null) => {
+    setVerso(b);
+    if (b) setErrosCampo((e) => ({ ...e, verso: undefined }));
+  }, []);
+  const erroCpf = problemaDoCpf(dados.cpf, cpfTocado);
 
   // Preenche o endereço pelo CEP (ViaCEP); se falhar, a pessoa digita
   async function aoSairDoCep() {
@@ -107,6 +158,22 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
     e.preventDefault();
     if (enviando) return;
     const hoje = hojeIso();
+
+    // Confere primeiro o que costuma ser esquecido (imagens e CPF) e mostra o aviso junto de cada campo
+    const faltas: { foto?: string; frente?: string; verso?: string } = {};
+    if (!foto) faltas.foto = "Falta a sua fotografia. Tire uma foto ou escolha da galeria.";
+    if (!frente) faltas.frente = "Falta a foto da frente do documento.";
+    if (!verso) faltas.verso = "Falta a foto do verso do documento.";
+    setErrosCampo(faltas);
+    setCpfTocado(true);
+    const cpfProblema = problemaDoCpf(dados.cpf, true);
+    const primeiro = faltas.foto ? "campo-foto" : cpfProblema ? "cpf" : faltas.frente ? "campo-frente" : faltas.verso ? "campo-verso" : null;
+    if (primeiro) {
+      setErro("Corrija os campos marcados em vermelho.");
+      irParaCampo(primeiro);
+      return;
+    }
+
     const problema = validarEnvioPublico(dados, {
       cargo,
       temFoto: foto !== null,
@@ -154,7 +221,11 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
       </div>
 
       <Secao titulo="Fotografia">
-        <CampoFoto nome={dados.nome || "você"} obrigatoria onChange={setFoto} disabled={bloqueado} />
+        <div id="campo-foto" className="space-y-2">
+          <CampoFoto nome={dados.nome || "você"} obrigatoria onChange={aoFoto} disabled={bloqueado} />
+          <Anexada ok={foto !== null} texto="Fotografia anexada" />
+          <ErroCampo id="erro-foto" mensagem={errosCampo.foto} />
+        </div>
       </Secao>
 
       <Secao titulo="Identificação">
@@ -163,7 +234,8 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
         </Campo>
         <div className="grid gap-3 sm:grid-cols-2">
           <Campo id="cpf" rotulo="CPF" obrigatorio>
-            <input id="cpf" type="text" inputMode="numeric" autoComplete="off" value={dados.cpf} onChange={(e) => mudar("cpf", formatarCpfParcial(e.target.value))} disabled={bloqueado} className={classeInput} placeholder="000.000.000-00" />
+            <input id="cpf" type="text" inputMode="numeric" autoComplete="off" value={dados.cpf} onChange={(e) => mudar("cpf", formatarCpfParcial(e.target.value))} onBlur={() => setCpfTocado(true)} aria-invalid={erroCpf ? true : undefined} aria-describedby={erroCpf ? "erro-cpf" : undefined} disabled={bloqueado} className={`${classeInput}${erroCpf ? " border-red-500" : ""}`} placeholder="000.000.000-00" maxLength={14} />
+            <ErroCampo id="erro-cpf" mensagem={erroCpf} />
           </Campo>
           <Campo id="nascimento" rotulo="Data de nascimento" obrigatorio>
             <input id="nascimento" type="date" autoComplete="bday" max={hojeIso()} value={dados.dataNascimento} onChange={(e) => mudar("dataNascimento", e.target.value)} disabled={bloqueado} className={classeInput} />
@@ -335,8 +407,16 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
 
       <Secao titulo="Documento de identificação">
         <p className="text-xs text-slate-500">Anexe uma foto da frente e uma do verso (RG ou CNH). Os arquivos ficam em armazenamento privado.</p>
-        <CampoDocumento id="pub-doc-frente" rotulo="Frente do documento" obrigatorio onChange={setFrente} disabled={bloqueado} />
-        <CampoDocumento id="pub-doc-verso" rotulo="Verso do documento" obrigatorio onChange={setVerso} disabled={bloqueado} />
+        <div id="campo-frente" className="space-y-2">
+          <CampoDocumento id="pub-doc-frente" rotulo="Frente do documento" obrigatorio onChange={aoFrente} disabled={bloqueado} />
+          <Anexada ok={frente !== null} texto="Frente anexada" />
+          <ErroCampo id="erro-frente" mensagem={errosCampo.frente} />
+        </div>
+        <div id="campo-verso" className="space-y-2">
+          <CampoDocumento id="pub-doc-verso" rotulo="Verso do documento" obrigatorio onChange={aoVerso} disabled={bloqueado} />
+          <Anexada ok={verso !== null} texto="Verso anexado" />
+          <ErroCampo id="erro-verso" mensagem={errosCampo.verso} />
+        </div>
       </Secao>
 
       <Secao titulo="Aviso de privacidade (LGPD)">
