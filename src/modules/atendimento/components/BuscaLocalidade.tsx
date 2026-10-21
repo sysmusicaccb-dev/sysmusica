@@ -1,12 +1,15 @@
 "use client";
 
 /**
- * SysMúsica — Localidade de origem (opcional) de quem entra sem cadastro.
- * Busca pelas primeiras letras do nome da casa de oração (a partir de 2 letras) ou, se não estiver na lista,
- * "Outra localidade" com texto livre. Sem escolher nada também é permitido.
+ * SysMúsica — Casa de Oração de origem (opcional) de quem entra sem cadastro.
+ * Busca pelas primeiras letras do nome da casa de oração (a partir de 2 letras). Se houver casas com o mesmo
+ * nome em lugares diferentes, a lista mostra o caminho (estado, região, setor) de cada uma para a pessoa escolher.
+ * Se a casa não estiver na lista: nome digitado + Estado (UF) + Cidade, com a lista de municípios do IBGE.
+ * Sem escolher nada também é permitido.
  */
 import { useRef, useState } from "react";
 import { buscarLocalidades } from "../services/entrada";
+import CampoCidadeUf from "./CampoCidadeUf";
 import type { LocalidadeBusca } from "../tiposEntrada";
 
 interface BuscaLocalidadeProps {
@@ -14,8 +17,12 @@ interface BuscaLocalidadeProps {
   onEscolher: (localidade: LocalidadeBusca | null) => void;
   outra: boolean;
   onOutra: (valor: boolean) => void;
-  texto: string;
+  texto: string; // nome da casa de oração digitada (fora da lista)
   onTexto: (valor: string) => void;
+  uf: string; // estado da casa fora da lista
+  onUf: (valor: string) => void;
+  cidade: string; // cidade da casa fora da lista (lista oficial do IBGE)
+  onCidade: (valor: string) => void;
   desabilitado?: boolean;
 }
 
@@ -29,6 +36,10 @@ export default function BuscaLocalidade({
   onOutra,
   texto,
   onTexto,
+  uf,
+  onUf,
+  cidade,
+  onCidade,
   desabilitado = false,
 }: BuscaLocalidadeProps) {
   const [termo, setTermo] = useState("");
@@ -74,10 +85,14 @@ export default function BuscaLocalidade({
     setResultados([]);
   }
 
+  // Casas com o mesmo nome (ex.: "Centro" em cidades diferentes): avisa para conferir o caminho antes de escolher
+  const nomes = resultados.map((item) => item.nome.trim().toLowerCase());
+  const haNomeRepetido = nomes.some((nome, indice) => nomes.indexOf(nome) !== indice);
+
   return (
     <fieldset className="space-y-3" disabled={desabilitado}>
       <legend className="text-sm font-medium text-slate-700">
-        Localidade de origem <span className="font-normal text-slate-500">(opcional)</span>
+        Casa de Oração <span className="font-normal text-slate-500">(opcional)</span>
       </legend>
 
       {escolhida ? (
@@ -119,7 +134,13 @@ export default function BuscaLocalidade({
               </p>
             )}
             {!buscando && !erro && termo.trim().length >= 2 && resultados.length === 0 && (
-              <p className="text-xs text-slate-500">Nenhuma casa de oração encontrada. Use &quot;Outra localidade&quot;.</p>
+              <p className="text-xs text-slate-500">Nenhuma casa de oração encontrada. Use &quot;A casa de oração não está na lista&quot;.</p>
+            )}
+            {haNomeRepetido && (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Há casas de oração com o mesmo nome em lugares diferentes. Confira o caminho (estado, região e setor)
+                abaixo de cada nome antes de escolher.
+              </p>
             )}
             {resultados.length > 0 && (
               <ul className="max-h-56 divide-y divide-slate-100 overflow-y-auto rounded-lg border border-slate-200">
@@ -149,24 +170,28 @@ export default function BuscaLocalidade({
             onChange={(e) => onOutra(e.target.checked)}
             className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-300"
           />
-          Outra localidade (não está na lista)
+          A casa de oração não está na lista
         </label>
       )}
 
       {outra && !escolhida && (
-        <div className="space-y-1.5">
-          <label htmlFor="localidade-outra" className="sr-only">
-            Nome da localidade
-          </label>
-          <input
-            id="localidade-outra"
-            type="text"
-            maxLength={120}
-            value={texto}
-            onChange={(e) => onTexto(e.target.value)}
-            placeholder="Ex.: Itaju do Colônia - BA"
-            className={classeInput}
-          />
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <label htmlFor="localidade-outra" className="text-xs font-medium text-slate-600">
+              Nome da Casa de Oração
+            </label>
+            <input
+              id="localidade-outra"
+              type="text"
+              maxLength={70}
+              value={texto}
+              onChange={(e) => onTexto(e.target.value)}
+              placeholder="Ex.: Centro"
+              className={classeInput}
+            />
+          </div>
+          {/* Estado e cidade: a lista de cidades vem do IBGE (busca online) */}
+          <CampoCidadeUf idBase="localidade-outra" uf={uf} onUf={onUf} cidade={cidade} onCidade={onCidade} />
         </div>
       )}
     </fieldset>

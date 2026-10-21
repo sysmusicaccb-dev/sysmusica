@@ -1,0 +1,1173 @@
+### A. onde aparece 'Localidade de origem' / visitante
+src/lib/permissoes.ts
+src/modules/atendimento/components/AtendimentoPortaria.tsx
+src/modules/atendimento/components/BuscaLocalidade.tsx
+src/modules/atendimento/components/EntradaSemCadastro.tsx
+src/modules/atendimento/components/FormularioVisitante.tsx
+src/modules/atendimento/regras.test.ts
+src/modules/atendimento/regras.ts
+src/modules/atendimento/services/atendimento.ts
+src/modules/atendimento/services/entrada.ts
+src/modules/atendimento/tipos.ts
+src/modules/auditoria/regras.ts
+src/modules/backup/tabelas.ts
+src/modules/instrumentos/components/SeletorInstrumento.tsx
+src/modules/instrumentos/selecao.ts
+src/modules/membros/services/fotos.ts
+src/modules/relatorios/catalogo.ts
+src/modules/relatorios/components/FiltrosDoRelatorio.tsx
+src/modules/relatorios/regras.ts
+src/modules/relatorios/services/relatorios.ts
+src/modules/relatorios/tipos.ts
+
+### B. conteúdo dos arquivos do formulário de entrada sem cadastro
+################ src/modules/atendimento/components/BuscaLocalidade.tsx
+"use client";
+
+/**
+ * SysMúsica — Localidade de origem (opcional) de quem entra sem cadastro.
+ * Busca pelas primeiras letras do nome da casa de oração (a partir de 2 letras) ou, se não estiver na lista,
+ * "Outra localidade" com texto livre. Sem escolher nada também é permitido.
+ */
+import { useRef, useState } from "react";
+import { buscarLocalidades } from "../services/entrada";
+import type { LocalidadeBusca } from "../tiposEntrada";
+
+interface BuscaLocalidadeProps {
+  escolhida: LocalidadeBusca | null;
+  onEscolher: (localidade: LocalidadeBusca | null) => void;
+  outra: boolean;
+  onOutra: (valor: boolean) => void;
+  texto: string;
+  onTexto: (valor: string) => void;
+  desabilitado?: boolean;
+}
+
+const classeInput =
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:opacity-60";
+
+export default function BuscaLocalidade({
+  escolhida,
+  onEscolher,
+  outra,
+  onOutra,
+  texto,
+  onTexto,
+  desabilitado = false,
+}: BuscaLocalidadeProps) {
+  const [termo, setTermo] = useState("");
+  const [resultados, setResultados] = useState<LocalidadeBusca[]>([]);
+  const [buscando, setBuscando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const contador = useRef(0); // ignora respostas antigas quando a pessoa continua digitando
+
+  // A busca espera 300 ms depois da última letra para não consultar a cada tecla
+  function aoDigitar(valor: string) {
+    setTermo(valor);
+    setErro(null);
+    if (temporizador.current) clearTimeout(temporizador.current);
+    const atual = ++contador.current;
+
+    if (valor.trim().length < 2) {
+      setResultados([]);
+      setBuscando(false);
+      return;
+    }
+    setBuscando(true);
+    temporizador.current = setTimeout(() => {
+      buscarLocalidades(valor.trim())
+        .then((lista) => {
+          if (atual === contador.current) setResultados(lista);
+        })
+        .catch((e: unknown) => {
+          if (atual === contador.current) {
+            setResultados([]);
+            setErro(e instanceof Error ? e.message : "Não foi possível buscar a localidade.");
+          }
+        })
+        .finally(() => {
+          if (atual === contador.current) setBuscando(false);
+        });
+    }, 300);
+  }
+
+  function escolher(localidade: LocalidadeBusca) {
+    onEscolher(localidade);
+    setTermo("");
+    setResultados([]);
+  }
+
+  return (
+    <fieldset className="space-y-3" disabled={desabilitado}>
+      <legend className="text-sm font-medium text-slate-700">
+        Localidade de origem <span className="font-normal text-slate-500">(opcional)</span>
+      </legend>
+
+      {escolhida ? (
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+          <div className="min-w-0 text-sm">
+            <p className="font-medium text-emerald-900">{escolhida.nome}</p>
+            <p className="text-xs text-emerald-800">{escolhida.caminho}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onEscolher(null)}
+            className="shrink-0 text-xs font-semibold text-emerald-900 hover:underline"
+          >
+            Trocar
+          </button>
+        </div>
+      ) : (
+        !outra && (
+          <div className="space-y-2">
+            <label htmlFor="busca-localidade" className="sr-only">
+              Buscar a casa de oração pelas primeiras letras
+            </label>
+            <input
+              id="busca-localidade"
+              type="search"
+              autoComplete="off"
+              value={termo}
+              onChange={(e) => aoDigitar(e.target.value)}
+              placeholder="Digite as primeiras letras da casa de oração"
+              className={classeInput}
+            />
+            {termo.trim().length > 0 && termo.trim().length < 2 && (
+              <p className="text-xs text-slate-500">Digite pelo menos 2 letras.</p>
+            )}
+            {buscando && <p className="text-xs text-slate-500">Buscando...</p>}
+            {erro && (
+              <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+                {erro}
+              </p>
+            )}
+            {!buscando && !erro && termo.trim().length >= 2 && resultados.length === 0 && (
+              <p className="text-xs text-slate-500">Nenhuma casa de oração encontrada. Use &quot;Outra localidade&quot;.</p>
+            )}
+            {resultados.length > 0 && (
+              <ul className="max-h-56 divide-y divide-slate-100 overflow-y-auto rounded-lg border border-slate-200">
+                {resultados.map((item) => (
+                  <li key={item.casa_oracao_id}>
+                    <button
+                      type="button"
+                      onClick={() => escolher(item)}
+                      className="block w-full px-3 py-2 text-left transition hover:bg-slate-50"
+                    >
+                      <span className="block text-sm font-medium text-slate-900">{item.nome}</span>
+                      <span className="block text-xs text-slate-500">{item.caminho}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )
+      )}
+
+      {!escolhida && (
+        <label className="flex items-start gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={outra}
+            onChange={(e) => onOutra(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-300"
+          />
+          Outra localidade (não está na lista)
+        </label>
+      )}
+
+      {outra && !escolhida && (
+        <div className="space-y-1.5">
+          <label htmlFor="localidade-outra" className="sr-only">
+            Nome da localidade
+          </label>
+          <input
+            id="localidade-outra"
+            type="text"
+            maxLength={120}
+            value={texto}
+            onChange={(e) => onTexto(e.target.value)}
+            placeholder="Ex.: Itaju do Colônia - BA"
+            className={classeInput}
+          />
+        </div>
+      )}
+    </fieldset>
+  );
+}
+
+################ src/modules/atendimento/components/EntradaSemCadastro.tsx
+"use client";
+
+/**
+ * SysMúsica — Entrada SEM cadastro (candidato, visitante...). Não cria membro: registra só o cargo/categoria,
+ * se vai tocar, o instrumento e a localidade de origem (opcional). A entrada entra na contagem do painel ao vivo.
+ */
+import { useState, type FormEvent } from "react";
+import Button from "@/components/ui/Button";
+import {
+  agruparLinhas,
+  precisaInstrumento,
+  precisaPerguntar,
+  textoDaLocalidade,
+  validarEntradaAvulsa,
+} from "../regrasEntrada";
+import { registrarEntradaAvulsa } from "../services/entrada";
+import type { LinhaEntrada, LocalidadeBusca, OpcoesEntrada } from "../tiposEntrada";
+import BuscaLocalidade from "./BuscaLocalidade";
+import PerguntaToca from "./PerguntaToca";
+
+interface EntradaSemCadastroProps {
+  portariaId: string;
+  opcoes: OpcoesEntrada;
+  onRegistrada: (descricao: string) => void;
+}
+
+export default function EntradaSemCadastro({ portariaId, opcoes, onRegistrada }: EntradaSemCadastroProps) {
+  const [linhaCodigo, setLinhaCodigo] = useState("");
+  const [toca, setToca] = useState<boolean | null>(null);
+  const [instrumentoId, setInstrumentoId] = useState("");
+  const [localidade, setLocalidade] = useState<LocalidadeBusca | null>(null);
+  const [outra, setOutra] = useState(false);
+  const [texto, setTexto] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const linha: LinhaEntrada | null = opcoes.linhas.find((item) => item.codigo === linhaCodigo) ?? null;
+  const perguntar = precisaPerguntar(linha);
+  const pedirInstrumento = precisaInstrumento(linha, toca);
+
+  // Trocar a linha limpa as respostas que dependem dela
+  function escolherLinha(codigo: string) {
+    setLinhaCodigo(codigo);
+    setToca(null);
+    setInstrumentoId("");
+    setErro(null);
+  }
+
+  async function salvar(submissao: FormEvent<HTMLFormElement>) {
+    submissao.preventDefault();
+    if (salvando) return;
+
+    const mensagem = validarEntradaAvulsa({ linha, toca, instrumentoId, outraLocalidade: outra, localidadeTexto: texto });
+    if (mensagem) return setErro(mensagem);
+
+    setSalvando(true);
+    setErro(null);
+    try {
+      await registrarEntradaAvulsa(portariaId, {
+        linhaCodigo,
+        toca: perguntar ? toca : null,
+        instrumentoId: pedirInstrumento ? instrumentoId : null,
+        origemCasaOracaoId: localidade?.casa_oracao_id ?? null,
+        origemTexto: localidade ? null : textoDaLocalidade(outra, texto),
+      });
+      onRegistrada(linha?.rotulo ?? "Entrada sem cadastro");
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível registrar a entrada.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={salvar} noValidate className="space-y-5">
+      <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
+        Não cria cadastro. A pessoa só entra na contagem do evento.
+      </p>
+
+      <div className="space-y-1.5">
+        <label htmlFor="avulsa-linha" className="text-sm font-medium text-slate-700">
+          Cargo / categoria
+        </label>
+        <select
+          id="avulsa-linha"
+          value={linhaCodigo}
+          onChange={(e) => escolherLinha(e.target.value)}
+          disabled={salvando}
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:opacity-60"
+        >
+          <option value="">Selecione</option>
+          {agruparLinhas(opcoes.linhas).map((grupo) => (
+            <optgroup key={grupo.bloco} label={grupo.rotulo}>
+              {grupo.linhas.map((item) => (
+                <option key={item.codigo} value={item.codigo}>
+                  {item.rotulo}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </div>
+
+      {(perguntar || pedirInstrumento) && (
+        <PerguntaToca
+          prefixo="avulsa"
+          perguntar={perguntar}
+          pedirInstrumento={pedirInstrumento}
+          toca={toca}
+          onToca={(valor) => {
+            setToca(valor);
+            if (!valor) setInstrumentoId("");
+          }}
+          instrumentoId={instrumentoId}
+          onInstrumento={setInstrumentoId}
+          instrumentos={opcoes.instrumentos}
+          desabilitado={salvando}
+        />
+      )}
+
+      <BuscaLocalidade
+        escolhida={localidade}
+        onEscolher={setLocalidade}
+        outra={outra}
+        onOutra={setOutra}
+        texto={texto}
+        onTexto={setTexto}
+        desabilitado={salvando}
+      />
+
+      {erro && (
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erro}
+        </p>
+      )}
+
+      <Button type="submit" disabled={salvando} className="w-full py-3 text-base">
+        {salvando ? "Registrando..." : "Registrar entrada"}
+      </Button>
+    </form>
+  );
+}
+
+################ src/modules/auditoria/regras.ts
+/**
+ * SysMúsica — Regras puras da Auditoria (sem banco): nomes legíveis, "antes e depois" e período dos filtros.
+ * Testadas em regras.test.ts.
+ */
+import { formatarDataHora } from "@/lib/datas";
+import type { LinhaAuditoria, MudancaCampo } from "./tipos";
+
+const ROTULO_ACAO: Record<string, string> = {
+  registro_criado: "Cadastrou",
+  registro_alterado: "Alterou",
+  registro_excluido: "Excluiu",
+  login: "Entrou no sistema",
+  portaria_criada: "Criou portaria",
+  portaria_aprovada: "Aprovou portaria",
+  portaria_rejeitada: "Rejeitou portaria",
+  portaria_excluida: "Excluiu portaria",
+  organizacao_criada: "Cadastrou na organização",
+  organizacao_alterada: "Alterou na organização",
+  organizacao_excluida: "Excluiu da organização",
+  casa_oracao_transferida: "Transferiu casa de oração de setor",
+  comum_transferida: "Transferiu casa de oração de setor",
+  evento_casa_oracao_alterada: "Mudou a casa de oração do evento",
+  evento_comum_alterada: "Mudou a casa de oração do evento",
+  evento_cancelado: "Cancelou o evento",
+  visitante_cadastrado: "Cadastrou visitante",
+  foto_definida: "Definiu fotografia",
+  foto_removida: "Removeu fotografia",
+  vinculos_definidos: "Definiu vínculos do usuário",
+  usuario_grupos_definidos: "Definiu grupos do usuário",
+  abrangencia_definida: "Definiu abrangência (cidades)",
+  relatorio_impresso: "Imprimiu relatório",
+  relatorio_exportado: "Exportou relatório",
+  auditoria_impressa: "Imprimiu a auditoria",
+  auditoria_exportada: "Exportou a auditoria",
+  backup_criado: "Fez um backup",
+  backup_restaurado: "Restaurou dados de um backup",
+  backup_excluido: "Excluiu um backup",
+  backup_baixado: "Baixou um backup",
+  backup_verificado: "Verificou um backup",
+  backup_aviso_testado: "Testou os avisos do backup",
+  backup_destino_alterado: "Alterou o destino do backup",
+  backup_destino_testado: "Testou o destino do backup",
+  backup_copiado_destino: "Copiou o backup para o servidor local",
+  backup_agendamento_alterado: "Alterou o agendamento do backup",
+  backup_agendado_executado: "Executou o backup agendado",
+  backup_retencao_aplicada: "Apagou backups antigos (retenção)",
+  backup_agendado_atrasado: "Backup agendado não foi feito",
+  backup_configuracao_alterada: "Alterou a configuração do backup",
+  backup_restauracao_falhou: "A restauração de backup falhou (nada foi alterado)",
+  presenca_fora_da_janela: "Registrou entrada fora do horário da portaria (controle total)",
+  entrada_avulsa_registrada: "Registrou entrada sem cadastro",
+  entrada_avulsa_desfeita: "Desfez entrada sem cadastro",
+};
+
+const ROTULO_ENTIDADE: Record<string, string> = {
+  membro: "Membro",
+  evento: "Evento",
+  presenca: "Presença",
+  instrumento: "Instrumento",
+  cargo: "Cargo",
+  familia: "Família",
+  finalidade: "Finalidade de evento",
+  usuario: "Usuário",
+  grupo: "Grupo",
+  grupo_permissao: "Permissão do grupo",
+  vinculo: "Vínculo do usuário",
+  estado: "Estado",
+  regiao: "Região",
+  setor: "Setor",
+  casa_oracao: "Casa de Oração",
+  comum: "Casa de Oração",
+  organizacao: "Organização",
+  portaria: "Portaria",
+  relatorio: "Relatório",
+  backup: "Backup",
+};
+
+const ROTULO_CAMPO: Record<string, string> = {
+  nome: "Nome",
+  congregacao: "Casa de Oração",
+  cargo_id: "Cargo",
+  data_nascimento: "Data de nascimento",
+  instrumento_id: "Instrumento",
+  status: "Situação",
+  cidade: "Cidade",
+  bairro: "Bairro",
+  casa_oracao_id: "Casa de Oração",
+  comum_id: "Casa de Oração",
+  origem_casa_oracao_id: "Casa de Oração de origem",
+  origem_comum_id: "Casa de Oração de origem",
+  visitante: "Visitante",
+  ativo: "Ativo",
+  tipo: "Tipo",
+  data_evento: "Data do evento",
+  local: "Local",
+  finalidade_id: "Finalidade",
+  excluido_em: "Excluído em",
+  foto_path: "Fotografia",
+  email: "E-mail",
+  grupo_id: "Grupo",
+  setor_id: "Setor",
+  regiao_id: "Região",
+  estado_id: "Estado",
+  descricao: "Descrição",
+  hora_entrada: "Hora de entrada",
+  hora_saida: "Hora de saída",
+  portaria_id: "Portaria",
+  membro_id: "Membro",
+  evento_id: "Evento",
+  usuario_id: "Usuário",
+  origem: "Origem do registro",
+  familia_id: "Família",
+  permite_instrumento: "Permite instrumento",
+  permissao_codigo: "Permissão",
+  nivel: "Nível",
+  alvo_id: "Alvo do vínculo",
+  cpf: "CPF",
+  cpf_mascarado: "CPF (parcial)",
+  qr_secret: "QR Code",
+  inicio_do_evento: "Início do evento",
+  registrado_em: "Registrado em",
+  situacao: "Situação",
+  backup_id: "Backup",
+  seguranca_id: "Backup de segurança",
+  modo: "Modo",
+  grupos: "Grupos de dados",
+  operacoes: "Operações",
+  linha: "Cargo ou categoria",
+  toca: "Vai tocar",
+  localidade: "Localidade de origem",
+  sem_cadastro: "Sem cadastro",
+};
+
+/** "registro_criado" -> "Registro criado" (para códigos que não têm texto próprio). */
+export function humanizar(codigo: string): string {
+  const texto = codigo.replace(/_/g, " ").trim();
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+export function rotuloAcao(acao: string): string {
+  return ROTULO_ACAO[acao] ?? humanizar(acao);
+}
+
+export function rotuloEntidade(entidade: string): string {
+  return ROTULO_ENTIDADE[entidade] ?? humanizar(entidade);
+}
+
+export function rotuloCampo(campo: string): string {
+  return ROTULO_CAMPO[campo] ?? humanizar(campo);
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DATA_HORA_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Valor de um campo em texto legível (sim/não, datas em português, identificadores abreviados). */
+export function formatarValor(valor: unknown): string {
+  if (valor === null || valor === undefined || valor === "") return "—";
+  if (typeof valor === "boolean") return valor ? "Sim" : "Não";
+  if (typeof valor === "number") return String(valor);
+  if (typeof valor === "string") {
+    if (UUID.test(valor)) return `${valor.slice(0, 8)}…`;
+    if (DATA_HORA_ISO.test(valor)) return formatarDataHora(valor);
+    if (DATA_ISO.test(valor)) {
+      const [ano, mes, dia] = valor.split("-");
+      return `${dia}/${mes}/${ano}`;
+    }
+    return valor;
+  }
+  const json = JSON.stringify(valor);
+  return json.length > 120 ? `${json.slice(0, 117)}...` : json;
+}
+
+function comoObjeto(valor: unknown): Record<string, unknown> | null {
+  return valor !== null && typeof valor === "object" && !Array.isArray(valor)
+    ? (valor as Record<string, unknown>)
+    : null;
+}
+
+/**
+ * Transforma os detalhes de um registro em linhas legíveis:
+ *  - alteração: campo, valor antes e valor depois;
+ *  - cadastro: os dados gravados; exclusão: os dados que existiam;
+ *  - ações do sistema (portaria, organização...): os dados informados.
+ */
+export function descreverDetalhes(detalhes: Record<string, unknown> | null): MudancaCampo[] {
+  if (!detalhes) return [];
+
+  const mudancas = comoObjeto(detalhes.mudancas);
+  if (mudancas) {
+    return Object.entries(mudancas).map(([campo, valor]) => {
+      const par = comoObjeto(valor);
+      if (par && ("de" in par || "para" in par)) {
+        return { campo: rotuloCampo(campo), de: formatarValor(par.de), para: formatarValor(par.para) };
+      }
+      return { campo: rotuloCampo(campo), de: null, para: formatarValor(valor) };
+    });
+  }
+
+  const depois = comoObjeto(detalhes.depois);
+  if (depois) {
+    return Object.entries(depois)
+      .filter(([, valor]) => valor !== null && valor !== undefined)
+      .map(([campo, valor]) => ({ campo: rotuloCampo(campo), de: null, para: formatarValor(valor) }));
+  }
+
+  const antes = comoObjeto(detalhes.antes);
+  if (antes) {
+    return Object.entries(antes)
+      .filter(([, valor]) => valor !== null && valor !== undefined)
+      .map(([campo, valor]) => ({ campo: rotuloCampo(campo), de: formatarValor(valor), para: null }));
+  }
+
+  return Object.entries(detalhes)
+    .filter(([campo, valor]) => campo !== "rotulo" && valor !== null && valor !== undefined)
+    .map(([campo, valor]) => ({ campo: rotuloCampo(campo), de: null, para: formatarValor(valor) }));
+}
+
+/** Resumo em uma linha (impressão e CSV): "Nome: Ana → Ana Maria; Situação: Ativo → Inativo". */
+export function resumoAlteracoes(detalhes: Record<string, unknown> | null): string {
+  return descreverDetalhes(detalhes)
+    .map((item) =>
+      item.de !== null && item.para !== null
+        ? `${item.campo}: ${item.de} → ${item.para}`
+        : `${item.campo}: ${item.para ?? item.de ?? "—"}`
+    )
+    .join("; ");
+}
+
+/** "Membro · Maria da Silva" (o nome vem do próprio registro, quando existe). */
+export function rotuloDoItem(linha: Pick<LinhaAuditoria, "entidade" | "detalhes">): string {
+  const rotulo = linha.detalhes?.rotulo;
+  const nome = typeof rotulo === "string" && rotulo.trim() !== "" ? ` · ${rotulo}` : "";
+  return `${rotuloEntidade(linha.entidade)}${nome}`;
+}
+
+function proximoDia(dia: string): string {
+  const data = new Date(`${dia}T12:00:00Z`);
+  data.setUTCDate(data.getUTCDate() + 1);
+  return `${data.toISOString().slice(0, 10)}T00:00:00-03:00`;
+}
+
+/**
+ * Período do filtro: do início do primeiro dia até o fim do último dia, no horário de Salvador (-03:00,
+ * sem horário de verão). Data vazia ou inválida = sem limite.
+ */
+export function intervaloDoFiltro(inicio: string, fim: string): { inicio: string | null; fim: string | null } {
+  return {
+    inicio: DATA_ISO.test(inicio) ? `${inicio}T00:00:00-03:00` : null,
+    fim: DATA_ISO.test(fim) ? proximoDia(fim) : null,
+  };
+}
+
+### C. serviços da portaria que cadastram visitante
+################ src/lib/permissoes.ts
+/**
+ * SysMúsica — Catálogo de permissões (fonte única no frontend).
+ *
+ * Cada permissão tem o formato "modulo.acao". O tipo CodigoPermissao faz o TypeScript recusar
+ * códigos digitados errado (ex: pode("membros.editr") não compila).
+ * Mantenha igual ao catálogo do banco (supabase/migrations): o teste permissoes.test.ts
+ * confere se todo código daqui existe nas migrações.
+ */
+export const CATALOGO_PERMISSOES = [
+  { codigo: "dashboard.visualizar", modulo: "Dashboard", acao: "Visualizar" },
+  { codigo: "membros.visualizar", modulo: "Membros", acao: "Visualizar" },
+  { codigo: "membros.criar", modulo: "Membros", acao: "Criar" },
+  { codigo: "membros.editar", modulo: "Membros", acao: "Editar" },
+  { codigo: "membros.excluir", modulo: "Membros", acao: "Excluir" },
+  { codigo: "membros.cpf", modulo: "Membros", acao: "CPF" },
+  { codigo: "membros.qr", modulo: "Membros", acao: "QR Code" },
+  { codigo: "membros.qr_revogar", modulo: "Membros", acao: "Substituir QR Code" },
+  { codigo: "eventos.visualizar", modulo: "Eventos", acao: "Visualizar" },
+  { codigo: "eventos.criar", modulo: "Eventos", acao: "Criar" },
+  { codigo: "eventos.editar", modulo: "Eventos", acao: "Editar" },
+  { codigo: "eventos.excluir", modulo: "Eventos", acao: "Excluir" },
+  { codigo: "eventos.cancelar", modulo: "Eventos", acao: "Cancelar" },
+  { codigo: "instrumentos.visualizar", modulo: "Instrumentos", acao: "Visualizar" },
+  { codigo: "instrumentos.criar", modulo: "Instrumentos", acao: "Criar" },
+  { codigo: "instrumentos.editar", modulo: "Instrumentos", acao: "Editar" },
+  { codigo: "instrumentos.excluir", modulo: "Instrumentos", acao: "Excluir" },
+  { codigo: "portaria.visualizar", modulo: "Portaria", acao: "Visualizar" },
+  { codigo: "portaria.registrar", modulo: "Portaria", acao: "Registrar" },
+  { codigo: "portaria.editar", modulo: "Portaria", acao: "Editar" },
+  { codigo: "portaria.excluir", modulo: "Portaria", acao: "Excluir" },
+  { codigo: "portarias.visualizar", modulo: "Gestão de portarias", acao: "Visualizar" },
+  { codigo: "portarias.criar", modulo: "Gestão de portarias", acao: "Criar" },
+  { codigo: "portarias.aprovar", modulo: "Gestão de portarias", acao: "Aprovar" },
+  { codigo: "portarias.excluir", modulo: "Gestão de portarias", acao: "Excluir" },
+  { codigo: "portarias.controle_total", modulo: "Gestão de portarias", acao: "Controle total" },
+  { codigo: "portaria.cadastrar_visitante", modulo: "Portaria", acao: "Cadastrar visitante" },
+  { codigo: "auditoria.visualizar", modulo: "Auditoria", acao: "Visualizar" },
+  { codigo: "relatorios.visualizar", modulo: "Relatórios", acao: "Visualizar" },
+  { codigo: "painel.visualizar", modulo: "Painel ao vivo", acao: "Visualizar" },
+  { codigo: "backup.visualizar", modulo: "Backup", acao: "Visualizar" },
+  { codigo: "backup.criar", modulo: "Backup", acao: "Criar" },
+  { codigo: "backup.configurar", modulo: "Backup", acao: "Configurar" },
+  { codigo: "backup.restaurar", modulo: "Backup", acao: "Restaurar" },
+  { codigo: "organizacao.visualizar", modulo: "Organização", acao: "Visualizar" },
+  { codigo: "organizacao.criar", modulo: "Organização", acao: "Criar" },
+  { codigo: "organizacao.editar", modulo: "Organização", acao: "Editar" },
+  { codigo: "organizacao.transferir", modulo: "Organização", acao: "Transferir" },
+  { codigo: "organizacao.excluir", modulo: "Organização", acao: "Excluir" },
+  { codigo: "organizacao.acesso_total", modulo: "Organização", acao: "Acesso total" },
+  { codigo: "usuarios.vinculos", modulo: "Usuários", acao: "Vínculos" },
+  { codigo: "membros.foto", modulo: "Membros", acao: "Fotografia" },
+  { codigo: "usuarios.visualizar", modulo: "Usuários", acao: "Visualizar" },
+  { codigo: "usuarios.criar", modulo: "Usuários", acao: "Criar" },
+  { codigo: "usuarios.editar", modulo: "Usuários", acao: "Editar" },
+  { codigo: "grupos.visualizar", modulo: "Grupos e permissões", acao: "Visualizar" },
+  { codigo: "grupos.criar", modulo: "Grupos e permissões", acao: "Criar" },
+  { codigo: "grupos.editar", modulo: "Grupos e permissões", acao: "Editar" },
+  { codigo: "grupos.excluir", modulo: "Grupos e permissões", acao: "Excluir" },
+] as const;
+
+export type CodigoPermissao = (typeof CATALOGO_PERMISSOES)[number]["codigo"];
+
+################ src/modules/atendimento/components/FormularioVisitante.tsx
+"use client";
+
+/**
+ * SysMúsica — Cadastro rápido de visitante na portaria (painel lateral).
+ * Para o irmão de outra região (ou sem cadastro) que vem congregar: nome completo, cargo ou ministério,
+ * instrumento e a IGREJA DE ORIGEM, escolhida em listas encadeadas que vêm do banco
+ * (Estado > Região > Setor > Casa de Oração, cadastrados em Organização): nada de origem digitada à mão.
+ *
+ * Instrumento: o MESMO seletor do cadastro de membro (lista por família), obrigatório nos cargos que
+ * exigem (o Músico), com a família preenchida automaticamente.
+ * O visitante é cadastrado na CASA DE ORAÇÃO da portaria em atendimento e só a região dela o enxerga.
+ * Depois de salvar, abre a conferência para registrar a entrada.
+ * O banco confere permissão, portaria aprovada, abrangência, instrumento, origem e nome repetido na casa de oração.
+ */
+import { useEffect, useState, type FormEvent } from "react";
+import Button from "@/components/ui/Button";
+import SeletorInstrumento, { FamiliaAutomatica } from "@/modules/instrumentos/components/SeletorInstrumento";
+import CampoFoto from "@/modules/membros/components/CampoFoto";
+import { descartarFoto, subirFotoNova } from "@/modules/membros/services/fotos";
+import { validarInstrumentoDoCargo } from "@/modules/instrumentos/selecao";
+import { filhosDe } from "@/modules/organizacao/regras";
+import type { NoOrganizacao } from "@/modules/organizacao/tipos";
+import { validarDadosVisitante } from "../regras";
+import { cadastrarVisitante, listarOpcoesVisitante, listarOrigensVisitante } from "../services/atendimento";
+import type { CartaoMembro, OpcoesVisitante } from "../tipos";
+
+interface FormularioVisitanteProps {
+  portariaId: string;
+  onCadastrado: (cartao: CartaoMembro) => void;
+}
+
+const classeInput =
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 " +
+  "shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:opacity-60";
+
+export default function FormularioVisitante({ portariaId, onCadastrado }: FormularioVisitanteProps) {
+  const [opcoes, setOpcoes] = useState<OpcoesVisitante | null>(null); // nulo = carregando
+  const [origens, setOrigens] = useState<NoOrganizacao[]>([]);
+  const [nome, setNome] = useState("");
+  const [cargoId, setCargoId] = useState("");
+  const [instrumentoId, setInstrumentoId] = useState("");
+  const [estadoId, setEstadoId] = useState("");
+  const [regiaoId, setRegiaoId] = useState("");
+  const [setorId, setSetorId] = useState("");
+  const [casaOracaoId, setCasaOracaoId] = useState("");
+  const [foto, setFoto] = useState<Blob | null>(null); // fotografia obrigatória do visitante
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    let cancelado = false;
+    void Promise.all([listarOpcoesVisitante(), listarOrigensVisitante()])
+      .then(([listaOpcoes, listaOrigens]) => {
+        if (cancelado) return;
+        setOpcoes(listaOpcoes);
+        setOrigens(listaOrigens);
+        // Com um único estado cadastrado, ele já vem escolhido
+        const estados = filhosDe(listaOrigens, null, "ESTADO");
+        if (estados.length === 1) setEstadoId(estados[0].id);
+      })
+      .catch((e: unknown) => {
+        if (cancelado) return;
+        setOpcoes({ cargos: [], instrumentos: [], familias: [] });
+        setErro(e instanceof Error ? e.message : "Não foi possível carregar as opções.");
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const cargo = opcoes?.cargos.find((item) => item.id === cargoId);
+  const exigeInstrumento = cargo?.exige_instrumento === true;
+
+  // Listas encadeadas: cada nível só mostra o que pertence à escolha anterior
+  const estados = filhosDe(origens, null, "ESTADO");
+  const regioes = estadoId ? filhosDe(origens, estadoId, "REGIAO") : [];
+  const setores = regiaoId ? filhosDe(origens, regiaoId, "SETOR") : [];
+  const casasOracao = setorId ? filhosDe(origens, setorId, "CASA_ORACAO") : [];
+
+  // Ao trocar um nível, limpa os de baixo
+  function trocarEstado(id: string) {
+    setEstadoId(id);
+    setRegiaoId("");
+    setSetorId("");
+    setCasaOracaoId("");
+  }
+  function trocarRegiao(id: string) {
+    setRegiaoId(id);
+    setSetorId("");
+    setCasaOracaoId("");
+  }
+  function trocarSetor(id: string) {
+    setSetorId(id);
+    setCasaOracaoId("");
+  }
+
+  // Ao trocar o cargo, limpa o instrumento se o novo cargo não usar instrumento
+  function trocarCargo(novoId: string) {
+    setCargoId(novoId);
+    const novo = opcoes?.cargos.find((item) => item.id === novoId);
+    if (!novo?.permite_instrumento) setInstrumentoId("");
+  }
+
+  async function salvar(submissao: FormEvent<HTMLFormElement>) {
+    submissao.preventDefault();
+    if (salvando) return; // evita envio duplicado
+    setErro(null);
+
+    const erroDados = validarDadosVisitante({ nome, cargoId, origemCasaOracaoId: casaOracaoId });
+    if (erroDados) return setErro(erroDados);
+    const erroInstrumento = validarInstrumentoDoCargo(exigeInstrumento, instrumentoId, cargo?.nome);
+    if (erroInstrumento) return setErro(erroInstrumento);
+    if (!foto) return setErro("A fotografia do visitante é obrigatória. Tire a foto ou escolha uma imagem.");
+
+    setSalvando(true);
+    try {
+      // O identificador do visitante é gerado aqui para a foto subir para a pasta dele antes do cadastro
+      const membroId = crypto.randomUUID();
+      const caminho = await subirFotoNova(membroId, foto);
+      let cartao: CartaoMembro;
+      try {
+        cartao = await cadastrarVisitante(portariaId, {
+          nome: nome.trim(),
+          cargoId,
+          instrumentoId: cargo?.permite_instrumento && instrumentoId ? instrumentoId : null,
+          origemCasaOracaoId: casaOracaoId,
+          membroId,
+          fotoPath: caminho,
+        });
+      } catch (e) {
+        await descartarFoto(caminho); // o cadastro falhou: não deixa a foto solta
+        throw e;
+      }
+      onCadastrado(cartao);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível cadastrar o visitante.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  if (opcoes === null) return <p className="text-sm text-slate-600">Carregando...</p>;
+
+  return (
+    <form onSubmit={salvar} className="space-y-5">
+      <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
+        O visitante é cadastrado na casa de oração desta portaria e só aparece para esta região. Depois de salvar, você
+        confere os dados e registra a entrada.
+      </p>
+
+      <div className="space-y-1.5">
+        <label htmlFor="nome-visitante" className="text-sm font-medium text-slate-700">
+          Nome completo
+        </label>
+        <input
+          id="nome-visitante"
+          type="text"
+          required
+          maxLength={120}
+          autoComplete="off"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          disabled={salvando}
+          placeholder="Ex: João da Silva Santos"
+          className={classeInput}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="cargo-visitante" className="text-sm font-medium text-slate-700">
+          Cargo ou ministério
+        </label>
+        <select
+          id="cargo-visitante"
+          required
+          value={cargoId}
+          onChange={(e) => trocarCargo(e.target.value)}
+          disabled={salvando}
+          className={classeInput}
+        >
+          <option value="">Selecione</option>
+          {opcoes.cargos.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.nome}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Instrumento: o mesmo seletor do cadastro de membro (obrigatório para Músico) + família automática */}
+      {cargo?.permite_instrumento && (
+        <>
+          <div className="space-y-1.5">
+            <label htmlFor="instrumento-visitante" className="text-sm font-medium text-slate-700">
+              Instrumento{" "}
+              {exigeInstrumento ? (
+                <span className="font-normal text-red-600">(obrigatório)</span>
+              ) : (
+                <span className="font-normal text-slate-400">(opcional)</span>
+              )}
+            </label>
+            <SeletorInstrumento
+              id="instrumento-visitante"
+              valor={instrumentoId}
+              onChange={setInstrumentoId}
+              instrumentos={opcoes.instrumentos}
+              familias={opcoes.familias}
+              obrigatorio={exigeInstrumento}
+              disabled={salvando}
+              className={classeInput}
+            />
+          </div>
+
+          <FamiliaAutomatica
+            instrumentoId={instrumentoId}
+            instrumentos={opcoes.instrumentos}
+            familias={opcoes.familias}
+          />
+        </>
+      )}
+
+      {/* Fotografia obrigatória: identifica o visitante e evita intrusos */}
+      <div className="space-y-1.5">
+        <span className="text-sm font-medium text-slate-700">
+          Fotografia <span className="font-normal text-red-600">(obrigatória)</span>
+        </span>
+        <CampoFoto nome={nome.trim() || "Visitante"} obrigatoria onChange={setFoto} disabled={salvando} />
+      </div>
+
+      {/* Origem: listas encadeadas que vêm do banco (Organização) */}
+      <fieldset className="space-y-3 rounded-xl border border-slate-200 p-4">
+        <legend className="px-1 text-sm font-medium text-slate-700">Igreja de origem</legend>
+
+        <div className="space-y-1.5">
+          <label htmlFor="estado-visitante" className="text-xs font-medium text-slate-600">
+            Estado
+          </label>
+          <select
+            id="estado-visitante"
+            value={estadoId}
+            onChange={(e) => trocarEstado(e.target.value)}
+            disabled={salvando}
+            className={classeInput}
+          >
+            <option value="">Selecione o estado</option>
+            {estados.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="regiao-visitante" className="text-xs font-medium text-slate-600">
+            Região
+          </label>
+          <select
+            id="regiao-visitante"
+            value={regiaoId}
+            onChange={(e) => trocarRegiao(e.target.value)}
+            disabled={salvando || !estadoId}
+            className={classeInput}
+          >
+            <option value="">Selecione a região</option>
+            {regioes.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="setor-visitante" className="text-xs font-medium text-slate-600">
+            Setor
+          </label>
+          <select
+            id="setor-visitante"
+            value={setorId}
+            onChange={(e) => trocarSetor(e.target.value)}
+            disabled={salvando || !regiaoId}
+            className={classeInput}
+          >
+            <option value="">Selecione o setor</option>
+            {setores.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="casa-oracao-visitante" className="text-xs font-medium text-slate-600">
+            Casa de Oração
+          </label>
+          <select
+            id="casa-oracao-visitante"
+            value={casaOracaoId}
+            onChange={(e) => setCasaOracaoId(e.target.value)}
+            disabled={salvando || !setorId}
+            className={classeInput}
+          >
+            <option value="">Selecione a casa de oração</option>
+            {casasOracao.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <p className="text-xs text-slate-500">
+          A cidade e a igreja de origem são preenchidas por esta escolha. Se a origem não aparecer na lista,
+          peça a um administrador para cadastrá-la em Administração &gt; Organização.
+        </p>
+      </fieldset>
+
+      {erro && (
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erro}
+        </p>
+      )}
+
+      <Button type="submit" disabled={salvando} className="w-full">
+        {salvando ? "Cadastrando..." : "Cadastrar e conferir"}
+      </Button>
+    </form>
+  );
+}
+
+################ src/modules/atendimento/services/atendimento.ts
+/**
+ * SysMúsica — Serviço de dados do atendimento da portaria.
+ * Todas as regras (portaria aprovada, abrangência do usuário, QR Code válido, nome completo,
+ * duplicidade) são aplicadas pelo banco; a tela só chama e mostra o resultado. Sem acesso à portaria,
+ * o banco responde "Portaria indisponível para você" sem revelar nada de outras portarias.
+ */
+import { supabase } from "@/lib/supabase";
+import { mensagemDoErro } from "@/lib/erros";
+import type { NoOrganizacao } from "@/modules/organizacao/tipos";
+import type { CartaoMembro, EntradaRecente, OpcoesVisitante, OrigemEntrada } from "../tipos";
+
+/** Localiza o membro pelo conteúdo lido do QR Code. */
+export async function buscarMembroPorQr(portariaId: string, codigo: string): Promise<CartaoMembro> {
+  const { data, error } = await supabase.rpc("buscar_membro_por_qr", {
+    p_portaria_id: portariaId,
+    p_codigo: codigo,
+  });
+  const membro = ((data ?? []) as CartaoMembro[])[0];
+  if (error || !membro) {
+    throw new Error(error ? mensagemDoErro(error, "Não foi possível consultar o QR Code.") : "Membro não encontrado.");
+  }
+  return membro;
+}
+
+/** Localiza membros pelo nome completo (até 6 resultados). */
+export async function buscarMembrosPorNome(portariaId: string, nome: string): Promise<CartaoMembro[]> {
+  const { data, error } = await supabase.rpc("buscar_membros_por_nome", {
+    p_portaria_id: portariaId,
+    p_nome: nome,
+  });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível buscar o membro."));
+  return (data ?? []) as CartaoMembro[];
+}
+
+/** Registra a entrada (o banco confere tudo de novo e define a hora, quem registrou e a origem). */
+export async function registrarEntrada(
+  portariaId: string,
+  membroId: string,
+  origem: OrigemEntrada,
+  toca: boolean | null = null, // resposta de "Vai tocar?" (só para quem a Portaria pergunta)
+  instrumentoId: string | null = null // instrumento escolhido na entrada (vazio = o do cadastro)
+): Promise<void> {
+  const { error } = await supabase.rpc("registrar_entrada", {
+    p_portaria_id: portariaId,
+    p_membro_id: membroId,
+    p_origem: origem,
+    p_toca: toca,
+    p_instrumento_id: instrumentoId,
+  });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível registrar a entrada."));
+}
+
+/** Estrutura ativa (estados, regiões, setores e casas de oração) para escolher a origem do visitante. */
+export async function listarOrigensVisitante(): Promise<NoOrganizacao[]> {
+  const { data, error } = await supabase.rpc("listar_origens_visitante");
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar as origens."));
+  return (data ?? []) as NoOrganizacao[];
+}
+
+/** Cargos e instrumentos para o formulário de visitante (exige a permissão de cadastrar visitante). */
+export async function listarOpcoesVisitante(): Promise<OpcoesVisitante> {
+  const { data, error } = await supabase.rpc("opcoes_visitante");
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar as opções do visitante."));
+
+  const linhas = (data ?? []) as {
+    tipo: string;
+    id: string;
+    nome: string;
+    permite_instrumento: boolean;
+    exige_instrumento: boolean;
+    familia_id: string | null;
+  }[];
+  return {
+    cargos: linhas
+      .filter((linha) => linha.tipo === "CARGO")
+      .map((linha) => ({
+        id: linha.id,
+        nome: linha.nome,
+        permite_instrumento: linha.permite_instrumento,
+        exige_instrumento: linha.exige_instrumento,
+      })),
+    instrumentos: linhas
+      .filter((linha) => linha.tipo === "INSTRUMENTO")
+      .map((linha) => ({ id: linha.id, nome: linha.nome, familia_id: linha.familia_id })),
+    familias: linhas
+      .filter((linha) => linha.tipo === "FAMILIA")
+      .map((linha) => ({ id: linha.id, nome: linha.nome })),
+  };
+}
+
+/**
+ * Cadastra o visitante na casa de oração da portaria e devolve o cartão para a conferência.
+ * O banco confere permissão, portaria aprovada, abrangência, nome completo e nome repetido na casa de oração.
+ */
+export async function cadastrarVisitante(
+  portariaId: string,
+  dados: {
+    nome: string;
+    cargoId: string;
+    instrumentoId: string | null;
+    origemCasaOracaoId: string;
+    membroId: string; // gerado na tela: a foto sobe para a pasta deste identificador antes do cadastro
+    fotoPath: string;
+  }
+): Promise<CartaoMembro> {
+  const { data, error } = await supabase.rpc("cadastrar_visitante", {
+    p_portaria_id: portariaId,
+    p_nome: dados.nome,
+    p_cargo_id: dados.cargoId,
+    p_instrumento_id: dados.instrumentoId,
+    p_origem_casa_oracao_id: dados.origemCasaOracaoId,
+    p_membro_id: dados.membroId,
+    p_foto_path: dados.fotoPath,
+  });
+  if (error || typeof data !== "string") {
+    throw new Error(
+      error ? mensagemDoErro(error, "Não foi possível cadastrar o visitante.") : "Não foi possível cadastrar o visitante."
+    );
+  }
+
+  const resposta = await supabase.rpc("cartao_do_membro", { p_portaria_id: portariaId, p_membro_id: data });
+  const cartao = ((resposta.data ?? []) as CartaoMembro[])[0];
+  if (resposta.error || !cartao) {
+    throw new Error("Visitante cadastrado, mas não foi possível abrir a conferência. Busque-o pelo nome completo.");
+  }
+  return cartao;
+}
+
+/** Recarrega o cartão de conferência de um membro (por exemplo, depois de tirar a foto na hora). */
+export async function recarregarCartao(portariaId: string, membroId: string): Promise<CartaoMembro> {
+  const { data, error } = await supabase.rpc("cartao_do_membro", { p_portaria_id: portariaId, p_membro_id: membroId });
+  const cartao = ((data ?? []) as CartaoMembro[])[0];
+  if (error || !cartao) {
+    throw new Error(error ? mensagemDoErro(error, "Não foi possível atualizar a conferência.") : "Membro não encontrado.");
+  }
+  return cartao;
+}
+
+/** Últimas entradas da portaria (e o total). */
+export async function entradasDaPortaria(portariaId: string): Promise<EntradaRecente[]> {
+  const { data, error } = await supabase.rpc("entradas_da_portaria", { p_portaria_id: portariaId });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar as entradas."));
+  return (data ?? []) as EntradaRecente[];
+}
+
+### D. banco: funções de visitante (definição mais recente de cada migração)
+supabase/migrations/0014_visitantes_portaria.sql:54:create or replace function public.cadastrar_visitante(
+supabase/migrations/0015_auditoria_e_origem_visitante.sql:302:create or replace function public.cadastrar_visitante(
+supabase/migrations/0016_instrumento_obrigatorio.sql:85:create or replace function public.cadastrar_visitante(
+supabase/migrations/0017_foto_obrigatoria.sql:121:create or replace function public.cadastrar_visitante(
+supabase/migrations/0017_foto_obrigatoria.sql:208:revoke all on function public.cadastrar_visitante(uuid, text, uuid, uuid, uuid, uuid, text) from public, anon;
+supabase/migrations/0017_foto_obrigatoria.sql:209:grant execute on function public.cadastrar_visitante(uuid, text, uuid, uuid, uuid, uuid, text) to authenticated;
+supabase/migrations/0031_casa_de_oracao.sql:63:alter table public.membros rename column origem_comum_id to origem_casa_oracao_id;
+supabase/migrations/0031_casa_de_oracao.sql:65:alter table public.presencas_avulsas rename column origem_comum_id to origem_casa_oracao_id;
+supabase/migrations/0031_casa_de_oracao.sql:72:alter table public.membros rename constraint membros_origem_comum_id_fkey to membros_origem_casa_oracao_id_fkey;
+supabase/migrations/0031_casa_de_oracao.sql:74:alter table public.presencas_avulsas rename constraint presencas_avulsas_origem_comum_id_fkey to presencas_avulsas_origem_casa_oracao_id_fkey;
+supabase/migrations/0031_casa_de_oracao.sql:194:CREATE OR REPLACE FUNCTION public.cadastrar_visitante(p_portaria_id uuid, p_nome text, p_cargo_id uuid, p_instrumento_id uuid, p_origem_casa_oracao_id u
+supabase/migrations/0031_casa_de_oracao.sql:251:  where c.id = p_origem_casa_oracao_id and c.ativo and s.ativo and r.ativo and e.ativo;
+supabase/migrations/0031_casa_de_oracao.sql:266:     origem_casa_oracao_id, foto_path)
+supabase/migrations/0031_casa_de_oracao.sql:269:     coalesce(v_origem.cidade, v_origem.regiao), v_origem.casa_oracao, true, p_origem_casa_oracao_id, p_foto_path)
+supabase/migrations/0031_casa_de_oracao.sql:274:                               'origem_casa_oracao_id', p_origem_casa_oracao_id, 'rotulo', v_nome));
+supabase/migrations/0031_casa_de_oracao.sql:579:      left join public.casas_oracao c on c.id = a.origem_casa_oracao_id
+supabase/migrations/0031_casa_de_oracao.sql:1092:CREATE OR REPLACE FUNCTION public.registrar_entrada_avulsa(p_portaria_id uuid, p_linha_codigo text, p_toca boolean DEFAULT NULL::boolean, p_instrumento
+supabase/migrations/0031_casa_de_oracao.sql:1160:  if p_origem_casa_oracao_id is not null then
+supabase/migrations/0031_casa_de_oracao.sql:1161:    if not exists (select 1 from public.casas_oracao c where c.id = p_origem_casa_oracao_id and c.ativo) then
+supabase/migrations/0031_casa_de_oracao.sql:1170:    (portaria_id, evento_id, linha_codigo, toca, instrumento_id, origem_casa_oracao_id, origem_texto, registrado_por)
+supabase/migrations/0031_casa_de_oracao.sql:1171:  values (p_portaria_id, v_p.evento_id, l.codigo, v_toca, v_inst, p_origem_casa_oracao_id, v_texto, (select auth.uid()))
+supabase/migrations/0031_casa_de_oracao.sql:1176:      coalesce((select c.nome from public.casas_oracao c where c.id = p_origem_casa_oracao_id), v_texto)));
+supabase/migrations/0036_relatorio_presenca_portaria.sql:67:      left join public.casas_oracao co on co.id = m.origem_casa_oracao_id
+supabase/migrations/0036_relatorio_presenca_portaria.sql:74:      left join public.casas_oracao co on co.id = a.origem_casa_oracao_id
+### E. banco: casas_oracao
+supabase/migrations/0012_hierarquia_organizacional.sql:69:create table if not exists public.comuns (
+supabase/migrations/0012_hierarquia_organizacional.sql:91:create table if not exists public.comuns_historico (
+### F. teste IBGE (rede do Codespaces)
+IBGE estados HTTP 200
+[{"id":2900108,"nome":"Abaíra","microrregiao":{"id":29023,"nome":"Seabra","mesorregiao":{"id":2906,"nome":"Centro Sul Baiano","UF":{"id":29,"sigla":"BA","nome":"Bahia","regiao":{"id":2,"sigla":"NE","nome":"Nordeste"}}}},"regiao-imediata":{"id":290013,"nome":"Brumado","regiao-intermediaria":{"id":29

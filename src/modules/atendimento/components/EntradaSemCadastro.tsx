@@ -2,7 +2,8 @@
 
 /**
  * SysMúsica — Entrada SEM cadastro (candidato, visitante...). Não cria membro: registra só o cargo/categoria,
- * se vai tocar, o instrumento e a localidade de origem (opcional). A entrada entra na contagem do painel ao vivo.
+ * se vai tocar, o instrumento e a Casa de Oração de origem (opcional). A entrada entra na contagem do painel ao vivo.
+ * Casa fora da lista: o texto gravado é "Casa - Cidade/UF" (cidade da lista do IBGE), no campo que já existia.
  */
 import { useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
@@ -13,6 +14,7 @@ import {
   textoDaLocalidade,
   validarEntradaAvulsa,
 } from "../regrasEntrada";
+import { montarLocalidadeTexto, validarLocalidadeAvulsa } from "@/lib/municipios";
 import { registrarEntradaAvulsa } from "../services/entrada";
 import type { LinhaEntrada, LocalidadeBusca, OpcoesEntrada } from "../tiposEntrada";
 import BuscaLocalidade from "./BuscaLocalidade";
@@ -30,7 +32,9 @@ export default function EntradaSemCadastro({ portariaId, opcoes, onRegistrada }:
   const [instrumentoId, setInstrumentoId] = useState("");
   const [localidade, setLocalidade] = useState<LocalidadeBusca | null>(null);
   const [outra, setOutra] = useState(false);
-  const [texto, setTexto] = useState("");
+  const [texto, setTexto] = useState(""); // nome da casa de oração fora da lista
+  const [uf, setUf] = useState(""); // estado da casa fora da lista
+  const [cidade, setCidade] = useState(""); // cidade da casa fora da lista (IBGE)
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -50,7 +54,15 @@ export default function EntradaSemCadastro({ portariaId, opcoes, onRegistrada }:
     submissao.preventDefault();
     if (salvando) return;
 
-    const mensagem = validarEntradaAvulsa({ linha, toca, instrumentoId, outraLocalidade: outra, localidadeTexto: texto });
+    // Casa fora da lista: nome, estado e cidade; o texto final é "Casa - Cidade/UF"
+    const foraDaLista = outra && !localidade;
+    if (foraDaLista) {
+      const erroLocal = validarLocalidadeAvulsa({ casa: texto, cidade, uf });
+      if (erroLocal) return setErro(erroLocal);
+    }
+    const textoOutra = foraDaLista ? montarLocalidadeTexto(texto, cidade, uf) : "";
+
+    const mensagem = validarEntradaAvulsa({ linha, toca, instrumentoId, outraLocalidade: outra, localidadeTexto: textoOutra });
     if (mensagem) return setErro(mensagem);
 
     setSalvando(true);
@@ -61,7 +73,7 @@ export default function EntradaSemCadastro({ portariaId, opcoes, onRegistrada }:
         toca: perguntar ? toca : null,
         instrumentoId: pedirInstrumento ? instrumentoId : null,
         origemCasaOracaoId: localidade?.casa_oracao_id ?? null,
-        origemTexto: localidade ? null : textoDaLocalidade(outra, texto),
+        origemTexto: localidade ? null : textoDaLocalidade(outra, textoOutra),
       });
       onRegistrada(linha?.rotulo ?? "Entrada sem cadastro");
     } catch (e) {
@@ -125,6 +137,10 @@ export default function EntradaSemCadastro({ portariaId, opcoes, onRegistrada }:
         onOutra={setOutra}
         texto={texto}
         onTexto={setTexto}
+        uf={uf}
+        onUf={setUf}
+        cidade={cidade}
+        onCidade={setCidade}
         desabilitado={salvando}
       />
 
