@@ -720,6 +720,45 @@ describe("linhasOrganizacao", () => {
   adm_novo: "ADM nova",
   estado_id: "Estado",
 '''),
+    ("src/modules/relatorios/catalogo.ts",
+     r'''{ id: "regiao", rotulo: "Região", padrao: false },
+      { id: "setor", rotulo: "Setor", padrao: false },
+      { id: "casa_oracao", rotulo: "Casa de Oração do evento", padrao: false },''',
+     r'''{ id: "regiao", rotulo: "RA", padrao: false },
+      { id: "setor", rotulo: "Setor", padrao: false },
+      { id: "casa_oracao", rotulo: "Casa de Oração do evento", padrao: false },'''),
+    ("src/modules/relatorios/catalogo.ts",
+     r'''casa de oração, setor e região.''',
+     r'''casa de oração, setor e RA.'''),
+    ("src/modules/relatorios/catalogo.ts",
+     r'''{ id: "familia", rotulo: "Família do instrumento", padrao: false },
+      { id: "regiao", rotulo: "Região", padrao: false },''',
+     r'''{ id: "familia", rotulo: "Família do instrumento", padrao: false },
+      { id: "regiao", rotulo: "RA", padrao: false },'''),
+    ("src/modules/relatorios/catalogo.ts",
+     r'''{ id: "regiao", rotulo: "Região", padrao: false },
+      { id: "cidade", rotulo: "Cidade", padrao: false },
+    ],''',
+     r'''{ id: "regiao", rotulo: "RA", padrao: false },
+      { id: "cidade", rotulo: "Cidade", padrao: false },
+    ],'''),
+    ("src/modules/relatorios/catalogo.ts",
+     r'''titulo: "Regiões, setores e casas de oração",
+    descricao: "A estrutura organizacional completa, com situação e quantidade de membros.",''',
+     r'''titulo: "Estrutura da Organização",
+    descricao: "A estrutura completa (estado, RRM, RA, ADM, setores e casas de oração), com situação e quantidade de membros.",'''),
+    ("src/modules/relatorios/catalogo.ts",
+     r'''      { id: "regiao", rotulo: "Região", padrao: true },
+      { id: "setor", rotulo: "Setor", padrao: true },
+      { id: "casa_oracao", rotulo: "Casa de Oração", padrao: true },''',
+     r'''      { id: "rrm", rotulo: "RRM", padrao: true },
+      { id: "regiao", rotulo: "RA", padrao: true },
+      { id: "adm", rotulo: "ADM", padrao: true },
+      { id: "setor", rotulo: "Setor", padrao: true },
+      { id: "casa_oracao", rotulo: "Casa de Oração", padrao: true },'''),
+    ("src/modules/relatorios/catalogo.ts",
+     r'''rotulo: "Região › Setor"''',
+     r'''rotulo: "RA › ADM › Setor"'''),
 ]
 
 
@@ -2883,159 +2922,6 @@ export default function FormularioTransferencia({ casaOracao, nos, onSalvo }: Fo
   );
 }
 '''},
-    "src/modules/relatorios/catalogo.ts": {'sha': "93c3f1af591d90ad14b432a86ea94a6bb2ee08a90a7b46ca52a13f16e322620b", 'novo': r'''/**
- * SysMúsica — Catálogo dos relatórios: o que cada tipo traz (colunas, filtros e quem pode ver).
- * Para incluir uma coluna ou um tipo novo, basta acrescentar aqui e no serviço que busca os dados.
- */
-import type { DefinicaoRelatorio } from "./tipos";
-
-export const DEFINICOES_RELATORIO: DefinicaoRelatorio[] = [
-  {
-    id: "presenca",
-    titulo: "Presença por evento",
-    descricao: "Quem entrou em cada evento: situação, horários, origem do registro e quem registrou.",
-    permissoes: ["portaria.visualizar"],
-    filtros: ["periodo", "evento", "regiao", "setor", "casa_oracao", "statusPresenca"],
-    colunas: [
-      { id: "numero", rotulo: "Nº", padrao: true },
-      { id: "membro", rotulo: "Membro", padrao: true },
-      { id: "cargo", rotulo: "Cargo", padrao: true },
-      { id: "instrumento", rotulo: "Instrumento", padrao: true },
-      { id: "membro_casa_oracao", rotulo: "Congregação do membro", padrao: true },
-      { id: "status", rotulo: "Situação", padrao: true },
-      { id: "entrada", rotulo: "Entrada", padrao: true },
-      { id: "saida", rotulo: "Saída", padrao: false },
-      { id: "evento_data", rotulo: "Data do evento", padrao: false },
-      { id: "evento_tipo", rotulo: "Tipo do evento", padrao: false },
-      { id: "evento_local", rotulo: "Local do evento", padrao: false },
-      { id: "evento_finalidade", rotulo: "Finalidade", padrao: false },
-      { id: "regiao", rotulo: "RA", padrao: false },
-      { id: "setor", rotulo: "Setor", padrao: false },
-      { id: "casa_oracao", rotulo: "Casa de Oração do evento", padrao: false },
-      { id: "familia", rotulo: "Família do instrumento", padrao: false },
-      { id: "cidade", rotulo: "Cidade", padrao: false },
-      { id: "visitante", rotulo: "Visitante", padrao: false },
-      { id: "origem", rotulo: "Origem do registro", padrao: false },
-      { id: "registrado_por", rotulo: "Registrado por", padrao: false },
-    ],
-  },
-  {
-    id: "membros",
-    titulo: "Membros",
-    descricao: "Lista de membros com cargo, instrumento, casa de oração, setor e RA.",
-    permissoes: ["membros.visualizar"],
-    filtros: ["regiao", "setor", "casa_oracao", "cargo", "instrumento", "situacaoMembro", "visitante"],
-    colunas: [
-      { id: "numero", rotulo: "Nº", padrao: true },
-      { id: "nome", rotulo: "Nome", padrao: true },
-      { id: "cargo", rotulo: "Cargo", padrao: true },
-      { id: "instrumento", rotulo: "Instrumento", padrao: true },
-      { id: "casa_oracao", rotulo: "Casa de Oração", padrao: true },
-      { id: "status", rotulo: "Situação", padrao: true },
-      { id: "familia", rotulo: "Família do instrumento", padrao: false },
-      { id: "regiao", rotulo: "RA", padrao: false },
-      { id: "setor", rotulo: "Setor", padrao: false },
-      { id: "cidade", rotulo: "Cidade", padrao: false },
-      { id: "bairro", rotulo: "Bairro / igreja de referência", padrao: false },
-      { id: "visitante", rotulo: "Visitante", padrao: false },
-      { id: "data_nascimento", rotulo: "Data de nascimento", padrao: false },
-      { id: "cadastrado_em", rotulo: "Cadastrado em", padrao: false },
-      { id: "cpf_parcial", rotulo: "CPF (parcial)", padrao: false, exigePermissao: "membros.cpf" },
-    ],
-  },
-  {
-    id: "eventos",
-    titulo: "Eventos",
-    descricao: "Eventos com local, casa de oração, quantidade de presenças e situação da portaria.",
-    permissoes: ["eventos.visualizar"],
-    filtros: ["periodo", "regiao", "setor", "casa_oracao"],
-    colunas: [
-      { id: "numero", rotulo: "Nº", padrao: true },
-      { id: "data", rotulo: "Data e hora", padrao: true },
-      { id: "tipo", rotulo: "Tipo", padrao: true },
-      { id: "local", rotulo: "Local", padrao: true },
-      { id: "finalidade", rotulo: "Finalidade", padrao: true },
-      { id: "presentes", rotulo: "Presentes", padrao: true },
-      { id: "portaria", rotulo: "Portaria", padrao: true },
-      { id: "registros", rotulo: "Registros de presença", padrao: false },
-      { id: "casa_oracao", rotulo: "Casa de Oração", padrao: false },
-      { id: "setor", rotulo: "Setor", padrao: false },
-      { id: "regiao", rotulo: "RA", padrao: false },
-      { id: "cidade", rotulo: "Cidade", padrao: false },
-    ],
-  },
-  {
-    id: "instrumentos",
-    titulo: "Instrumentos e famílias",
-    descricao: "Instrumentos cadastrados, com a família e a quantidade de membros.",
-    permissoes: ["instrumentos.visualizar"],
-    filtros: [],
-    colunas: [
-      { id: "numero", rotulo: "Nº", padrao: true },
-      { id: "instrumento", rotulo: "Instrumento", padrao: true },
-      { id: "familia", rotulo: "Família", padrao: true },
-      { id: "membros", rotulo: "Membros", padrao: true, exigePermissao: "membros.visualizar" },
-    ],
-  },
-  {
-    id: "cargos",
-    titulo: "Cargos e categorias",
-    descricao: "Cargos cadastrados, se usam instrumento e a quantidade de membros.",
-    permissoes: ["membros.visualizar"],
-    filtros: [],
-    colunas: [
-      { id: "numero", rotulo: "Nº", padrao: true },
-      { id: "cargo", rotulo: "Cargo", padrao: true },
-      { id: "permite_instrumento", rotulo: "Permite instrumento", padrao: true },
-      { id: "exige_instrumento", rotulo: "Exige instrumento", padrao: true },
-      { id: "membros", rotulo: "Membros", padrao: true },
-    ],
-  },
-  {
-    id: "organizacao",
-    titulo: "Estrutura da Organização",
-    descricao: "A estrutura completa (estado, RRM, RA, ADM, setores e casas de oração), com situação e quantidade de membros.",
-    permissoes: ["organizacao.visualizar"],
-    filtros: ["regiao", "setor"],
-    colunas: [
-      { id: "numero", rotulo: "Nº", padrao: true },
-      { id: "nivel", rotulo: "Nível", padrao: true },
-      { id: "rrm", rotulo: "RRM", padrao: true },
-      { id: "regiao", rotulo: "RA", padrao: true },
-      { id: "adm", rotulo: "ADM", padrao: true },
-      { id: "setor", rotulo: "Setor", padrao: true },
-      { id: "casa_oracao", rotulo: "Casa de Oração", padrao: true },
-      { id: "situacao", rotulo: "Situação", padrao: true },
-      { id: "membros", rotulo: "Membros", padrao: true },
-      { id: "estado", rotulo: "Estado", padrao: false },
-      { id: "cidade", rotulo: "Cidade", padrao: false },
-      { id: "bairro", rotulo: "Bairro", padrao: false },
-      { id: "itens", rotulo: "Itens abaixo", padrao: false },
-    ],
-  },
-  {
-    id: "portarias",
-    titulo: "Portarias",
-    descricao: "Portarias criadas, com situação, quem criou e quem aprovou ou rejeitou.",
-    permissoes: ["portarias.visualizar", "portarias.criar", "portarias.aprovar", "portaria.registrar"],
-    filtros: ["periodo", "situacaoPortaria"],
-    colunas: [
-      { id: "numero", rotulo: "Nº", padrao: true },
-      { id: "data_evento", rotulo: "Data do evento", padrao: true },
-      { id: "tipo", rotulo: "Tipo", padrao: true },
-      { id: "local", rotulo: "Local", padrao: true },
-      { id: "setor", rotulo: "RA › ADM › Setor", padrao: true },
-      { id: "situacao", rotulo: "Situação", padrao: true },
-      { id: "criada_por", rotulo: "Criada por", padrao: true },
-      { id: "finalidade", rotulo: "Finalidade", padrao: false },
-      { id: "criada_em", rotulo: "Criada em", padrao: false },
-      { id: "decidida_por", rotulo: "Decidida por", padrao: false },
-      { id: "decidida_em", rotulo: "Decidida em", padrao: false },
-      { id: "motivo", rotulo: "Motivo da rejeição", padrao: false },
-    ],
-  },
-];
-'''},
 }
 
 
@@ -3048,6 +2934,9 @@ def eol_de(txt):
 
 def adaptar(trecho, eol):
     return trecho.replace("\n", eol) if eol != "\n" else trecho
+
+def norm(t):
+    return t.replace("\r\n", "\n").rstrip("\n")
 
 conteudo, problemas = {}, []
 for arq, antigo, novo in EDITS:
@@ -3069,9 +2958,14 @@ for arq, antigo, novo in EDITS:
         resumo = antigo.strip().split("\n")[0][:80]
         problemas.append(f"{arq}: trecho «{resumo}…» aparece {n} vez(es) (esperado 1)")
 
-for arq in NOVOS:
-    if os.path.exists(os.path.join(RAIZ, arq)):
-        problemas.append(f"JÁ EXISTE (não vou sobrescrever): {arq}")
+for arq in list(NOVOS):
+    p = os.path.join(RAIZ, arq)
+    if os.path.exists(p):
+        if norm(ler(p)) == norm(NOVOS[arq]):
+            print(f"já existe, idêntico (mantido): {arq}")
+            del NOVOS[arq]
+        else:
+            problemas.append(f"JÁ EXISTE E É DIFERENTE (não vou sobrescrever): {arq}")
 
 for arq, esperado in REMOVER.items():
     caminho = os.path.join(RAIZ, arq)
@@ -3079,9 +2973,6 @@ for arq, esperado in REMOVER.items():
         problemas.append(f"PARA REMOVER, NÃO ENCONTRADO: {arq}")
     elif ler(caminho).replace("\r\n", "\n").strip() != esperado.replace("\r\n", "\n").strip():
         problemas.append(f"PARA REMOVER, CONTEÚDO DIFERENTE DO ESPERADO (não vou apagar): {arq}")
-
-def norm(t):
-    return t.replace("\r\n", "\n").rstrip("\n")
 
 for arq, info in SUBST.items():
     caminho = os.path.join(RAIZ, arq)
