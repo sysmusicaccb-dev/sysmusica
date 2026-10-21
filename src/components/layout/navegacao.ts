@@ -132,7 +132,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
       },
       {
         href: "/administracao/usuarios",
-        rotulo: "Usuários",
+        rotulo: "Usuários e Grupos", // abas dentro: Usuários | Grupos e Permissões
         icone: KeyRound,
         permissao: "usuarios.visualizar",
         // Grupos e Permissões é ABA dentro de Usuários: o item continua marcado nessa tela

@@ -95,14 +95,14 @@ describe("menu de Administração", () => {
 
     const comUsuarios = filtrarMenu(GRUPOS_MENU, criarPode(["usuarios.visualizar"]));
     const administracao = comUsuarios.find((grupo) => grupo.titulo === "Administração");
-    expect(administracao?.itens.map((item) => item.rotulo)).toEqual(["Usuários"]);
+    expect(administracao?.itens.map((item) => item.rotulo)).toEqual(["Usuários e Grupos"]);
   });
 
   it("monta os breadcrumbs Início > Administração > Usuários", () => {
     expect(montarMigalhas("/administracao/usuarios")).toEqual([
       { rotulo: "Início", href: "/" },
       { rotulo: "Administração" },
-      { rotulo: "Usuários" },
+      { rotulo: "Usuários e Grupos" },
     ]);
   });
 });
@@ -111,7 +111,7 @@ describe("Grupos e Permissões como aba de Usuários", () => {
   it("quem vê os dois tem um único item (Usuários) no menu de Administração", () => {
     const menu = filtrarMenu(GRUPOS_MENU, criarPode(["usuarios.visualizar", "grupos.visualizar"]));
     const administracao = menu.find((grupo) => grupo.titulo === "Administração");
-    expect(administracao?.itens.map((item) => item.rotulo)).toEqual(["Usuários"]);
+    expect(administracao?.itens.map((item) => item.rotulo)).toEqual(["Usuários e Grupos"]);
   });
 
   it("quem só tem Grupos vê o item Grupos e Permissões", () => {
