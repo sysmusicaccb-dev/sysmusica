@@ -46,6 +46,8 @@ describe("GRUPOS_DADOS", () => {
       "usuarios",
       "usuario_grupos",
       "usuario_vinculos",
+      "usuario_cidades",
+      "usuario_preferencias",
     ]);
   });
 });

@@ -1,0 +1,213 @@
+=== backup_aplicar na 0042 ===
+--   F) Backup: backup_aplicar passa a conhecer cadastros_pendentes e membros_cadastro.
+--
+-- LIMITES DE SEGURANÇA (ajuste aqui se precisar): 30 envios por hora por IP, 600 por hora no total,
+-- 3 envios por dia por CPF. Pendente sem análise vence em 60 dias; recusado tem os arquivos apagados em 30 dias.
+begin;
+set local check_function_bodies = off;
+
+do $$
+begin
+  if to_regclass('public.membros') is null or to_regclass('public.membros_cadastro') is null
+     or to_regclass('public.hinos') is null
+     or to_regprocedure('public.exigir_permissao(text)') is null
+     or to_regprocedure('public.registrar_auditoria(text, text, uuid, jsonb)') is null
+     or to_regprocedure('public.casa_oracao_na_abrangencia(uuid)') is null
+     or to_regprocedure('public.validar_foto_membro(uuid, text)') is null
+     or to_regprocedure('public.cpf_valido(text)') is null
+     or to_regprocedure('public.limpar_espacos(text)') is null
+     or to_regprocedure('public.instrumento_e_orgao(text)') is null
+     or to_regprocedure('public.backup_aplicar(uuid, jsonb, jsonb)') is null then
+    raise exception 'Aplique primeiro as migrações até a 0041. Nada foi alterado.';
+  end if;
+  if to_regclass('public.cadastros_pendentes') is not null then
+    raise exception 'A migração 0042 já foi aplicada. Nada foi alterado.';
+  end if;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- 1. Apoio
+-- ---------------------------------------------------------------------------
+-- Cargos que têm Cadastro Musical (mesma lista de CARGOS_DO_CADASTRO em src/modules/membros/cadastroMusical.ts)
+create or replace function public.cargo_aceita_cadastro_publico(p_nome text)
+returns boolean language sql immutable set search_path to 'public'
+as $$ select public.normalizar_texto(p_nome) ~ '^(encarregado regional|encarregado local|examinadora|instrutor|musico|organista)' $$;
+
+-- Texto -> data, ou nulo se não for uma data válida (evita erro técnico aparecer para o público)
+create or replace function public.data_ou_nula(p_texto text)
+returns date language plpgsql immutable set search_path to 'public'
+as $$
+begin
+  if p_texto is null or p_texto !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' then return null; end if;
+  return p_texto::date;
+exception when others then
+  return null;
+end;
+$$;
+create or replace function public.backup_aplicar(p_usuario uuid, p_operacoes jsonb, p_resumo jsonb)
+returns jsonb
+language plpgsql security definer set search_path to 'public'
+as $$
+declare
+  v_op        jsonb;
+  v_tabela    text;
+  v_acao      text;
+  v_linhas    jsonb;
+  v_colunas   text[];
+  v_def       record;
+  v_cols      text;
+  v_bcols     text;
+  v_set       text;
+  v_pk_cond   text;
+  v_extra     text;
+  v_n         bigint;
+  v_ignorados bigint;
+  v_resultado jsonb := '[]'::jsonb;
+begin
+  if p_operacoes is null or jsonb_typeof(p_operacoes) <> 'array' then
+    raise exception 'Operações inválidas.';
+  end if;
+
+  perform set_config('sysmusica.restaurando', 'sim', true);
+
+  for v_op in select * from jsonb_array_elements(p_operacoes) loop
+    v_tabela := v_op ->> 'tabela';
+    v_acao   := v_op ->> 'acao';
+    v_linhas := coalesce(v_op -> 'linhas', '[]'::jsonb);
+
+    select t.* into v_def
+    from (values
+      ('estados',             array['id'],                              false, false, ''),
+      ('rrms',                array['id'],                              false, false, ''),
+      ('ras',                 array['id'],                              false, false, ''),
+      ('adms',                array['id'],                              false, false, ''),
+      ('setores',             array['id'],                              false, false, ''),
+      ('casas_oracao',        array['id'],                              false, false, ''),
+      ('familias',            array['id'],                              false, false, ''),
+      ('cargos',              array['id'],                              false, false, ''),
+      ('finalidades_evento',  array['id'],                              false, false, ''),
+      ('instrumentos',        array['id'],                              false, false, ''),
+      ('tipos_evento',        array['id'],                              false, false, ''),
+      ('hinos',               array['id'],                              false, false, ''),
+      ('cadastros_pendentes', array['id'],                              false, false, ''),
+      ('membros_cadastro',    array['membro_id'],                       false, false, ''),
+      ('dados_ensaio',        array['id'],                              false, false, ''),
+      ('dados_ensaio_encarregados', array['id'],                        false, false, ''),
+      ('dados_ensaio_hinos',  array['id'],                              false, false, ''),
+      ('grupos',              array['id'],                              false, false, ''),
+      ('grupo_permissoes',    array['grupo_id', 'permissao_codigo'],    false, false, ''),
+      ('usuarios',            array['id'],                              false, false, 'login'),
+      ('usuario_grupos',      array['usuario_id', 'grupo_id'],          false, false, ''),
+      ('usuario_vinculos',    array['usuario_id', 'nivel', 'alvo_id'],  false, false, ''),
+      ('membros',             array['id'],                              true,  false, ''),
+      ('eventos',             array['id'],                              true,  false, ''),
+      ('portarias',           array['id'],                              true,  false, ''),
+      ('portarias_historico', array['id'],                              false, true,  ''),
+      ('presencas',           array['id'],                              true,  false, ''),
+      ('presencas_avulsas',   array['id'],                              true,  false, '')
+    ) as t(tabela, pk, soft, so_inserir, extra)
+    where t.tabela = v_tabela;
+    if not found then
+      raise exception 'Tabela não permitida na restauração: %', coalesce(v_tabela, '(vazia)');
+    end if;
+
+    if v_acao is null or v_acao not in ('inserir', 'atualizar', 'excluir_logico', 'excluir') then
+      raise exception 'Ação inválida na restauração: %', coalesce(v_acao, '(vazia)');
+    end if;
+    if v_def.so_inserir and v_acao <> 'inserir' then
+      raise exception 'A tabela % só aceita devolver registros apagados.', v_tabela;
+    end if;
+    if v_acao = 'excluir_logico' and not v_def.soft then
+      raise exception 'A tabela % não usa exclusão lógica.', v_tabela;
+    end if;
+    if v_acao = 'excluir' and v_def.soft then
+      raise exception 'Os itens da tabela % são excluídos logicamente.', v_tabela;
+    end if;
+    if jsonb_typeof(v_linhas) <> 'array' then
+      raise exception 'Linhas inválidas em %.', v_tabela;
+    end if;
+    if jsonb_array_length(v_linhas) = 0 then
+      continue;
+    end if;
+
+    select coalesce(array_agg(x), '{}'::text[]) into v_colunas
+    from jsonb_array_elements_text(coalesce(v_op -> 'colunas', '[]'::jsonb)) as x;
+
+    if not (v_def.pk <@ v_colunas) then
+      raise exception 'Faltam as colunas de identificação em %.', v_tabela;
+    end if;
+
+    -- Só colunas que existem e podem ser gravadas (as geradas ficam de fora)
+    select string_agg(quote_ident(c.column_name), ', ' order by c.ordinal_position),
+           string_agg(format('b.%I', c.column_name), ', ' order by c.ordinal_position),
+           string_agg(format('%1$I = b.%1$I', c.column_name), ', ' order by c.ordinal_position)
+             filter (where c.column_name <> all (v_def.pk))
+      into v_cols, v_bcols, v_set
+    from information_schema.columns c
+    where c.table_schema = 'public' and c.table_name = v_tabela
+      and c.is_generated = 'NEVER' and c.column_name = any (v_colunas);
+
+    select string_agg(format('c.%1$I = b.%1$I', k), ' and ') into v_pk_cond from unnest(v_def.pk) as k;
+
+    v_ignorados := 0;
+
+    if v_acao = 'inserir' then
+      -- Usuários só voltam se a conta de login ainda existir (a senha não é guardada no backup)
+      v_extra := case when v_def.extra = 'login' then 'where exists (select 1 from auth.users a where a.id = b.id)' else '' end;
+      execute format(
+        'insert into public.%1$I (%2$s) select %3$s from jsonb_populate_recordset(null::public.%1$I, $1) b %4$s',
+        v_tabela, v_cols, v_bcols, v_extra) using v_linhas;
+      get diagnostics v_n = row_count;
+      v_ignorados := jsonb_array_length(v_linhas) - v_n;
+
+    elsif v_acao = 'atualizar' then
+      if v_set is null then
+        v_n := 0;
+      else
+        execute format(
+          'update public.%1$I c set %2$s from jsonb_populate_recordset(null::public.%1$I, $1) b where %3$s',
+          v_tabela, v_set, v_pk_cond) using v_linhas;
+        get diagnostics v_n = row_count;
+      end if;
+
+    elsif v_acao = 'excluir_logico' then
+      execute format(
+        'update public.%1$I c set excluido_em = now() from jsonb_populate_recordset(null::public.%1$I, $1) b where %2$s and c.excluido_em is null',
+        v_tabela, v_pk_cond) using v_linhas;
+      get diagnostics v_n = row_count;
+
+    else
+      execute format(
+        'delete from public.%1$I c using jsonb_populate_recordset(null::public.%1$I, $1) b where %2$s',
+        v_tabela, v_pk_cond) using v_linhas;
+      get diagnostics v_n = row_count;
+    end if;
+
+    v_resultado := v_resultado || jsonb_build_object(
+      'tabela', v_tabela, 'acao', v_acao, 'afetados', v_n, 'ignorados', v_ignorados);
+  end loop;
+
+  perform set_config('sysmusica.restaurando', '', true);
+
+  -- Uma única entrada resumida na auditoria (a auditoria linha a linha ficou pausada)
+  insert into public.auditoria (usuario_id, acao, entidade, entidade_id, detalhes)
+  values (p_usuario, 'backup_restaurado', 'backup', null,
+          coalesce(p_resumo, '{}'::jsonb) || jsonb_build_object('operacoes', v_resultado));
+
+  return v_resultado;
+end;
+$$;
+=== testes do backup ===
+=== quem lista as tabelas fora de tabelas.ts ===
+src/modules/backup/tabelas.ts
+supabase/migrations/0028_portaria_toca_avulsa.sql
+supabase/migrations/0030_portaria_encerrada.sql
+supabase/migrations/0031_casa_de_oracao.sql
+supabase/migrations/0033_backup_presencas_avulsas.sql
+supabase/migrations/0034_ciclo_de_vida_eventos.sql
+supabase/migrations/0036_relatorio_presenca_portaria.sql
+supabase/migrations/0039_organizacao_rrm_ra_adm.sql
+supabase/migrations/0041_dados_do_ensaio_hinos.sql
+supabase/migrations/0042_cadastro_publico.sql
+supabase/migrations/0046_endurecimento_grants_indices.sql
+supabase/migrations/LEIA-ME.md

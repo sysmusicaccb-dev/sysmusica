@@ -43,7 +43,12 @@ export type NomeTabela =
   | "portarias"
   | "portarias_historico"
   | "presencas"
-  | "presencas_avulsas";
+  | "presencas_avulsas"
+  | "usuario_cidades"
+  | "usuario_preferencias"
+  | "casas_oracao_historico"
+  | "qr_historico"
+  | "cadastro_publico_config";
 
 export interface ReferenciaTabela {
   coluna: string; // coluna que aponta para o "pai"
@@ -125,6 +130,23 @@ export const TABELAS: DefinicaoTabela[] = [
     pk: ["usuario_id", "nivel", "alvo_id"],
     referencias: [{ coluna: "usuario_id", tabela: "usuarios" }],
   }),
+  tabela("usuario_cidades", "Cidades dos usuários", "usuarios", {
+    pk: ["usuario_id", "cidade"],
+    referencias: [{ coluna: "usuario_id", tabela: "usuarios" }],
+  }),
+  tabela("usuario_preferencias", "Preferências dos usuários (tema, cor, fonte)", "usuarios", {
+    pk: ["usuario_id"],
+    referencias: [{ coluna: "usuario_id", tabela: "usuarios" }],
+  }),
+  // Histórico de mudança de setor/ADM das casas: só se devolve o que foi apagado (fica depois dos usuários na ordem)
+  tabela("casas_oracao_historico", "Histórico das casas de oração", "organizacao", {
+    somenteInserir: true,
+    referencias: [{ coluna: "casa_oracao_id", tabela: "casas_oracao" }],
+  }),
+  // Prazo (em dias) dos pedidos do link público: uma linha só
+  tabela("cadastro_publico_config", "Prazo dos cadastros pendentes", "membros", {
+    referencias: [{ coluna: "atualizado_por", tabela: "usuarios" }],
+  }),
   tabela("membros", "Membros", "membros", {
     exclusaoLogica: true,
     sensiveis: ["cpf", "cpf_mascarado", "qr_secret"],
@@ -161,6 +183,12 @@ export const TABELAS: DefinicaoTabela[] = [
       { coluna: "instrumento_id", tabela: "instrumentos" },
     ],
     sensiveis: ["cpf", "dados", "responsavel_nome", "responsavel_telefone", "ip_hash"],
+  }),
+  // QR de membros já revogados: o código (token_hash) nunca vai para o navegador
+  tabela("qr_historico", "Histórico de QR revogados", "membros", {
+    somenteInserir: true,
+    referencias: [{ coluna: "membro_id", tabela: "membros" }],
+    sensiveis: ["token_hash"],
   }),
   tabela("eventos", "Eventos", "eventos", {
     exclusaoLogica: true,
@@ -225,8 +253,8 @@ export const GRUPOS_DADOS: DefinicaoGrupo[] = [
   {
     id: "organizacao",
     rotulo: "Organização",
-    descricao: "Estados, RRMs, RAs, ADMs, setores e casas de oração",
-    tabelas: ["estados", "rrms", "ras", "adms", "setores", "casas_oracao"],
+    descricao: "Estados, RRMs, RAs, ADMs, setores, casas de oração e o histórico delas",
+    tabelas: ["estados", "rrms", "ras", "adms", "setores", "casas_oracao", "casas_oracao_historico"],
   },
   {
     id: "cadastros",
@@ -243,14 +271,14 @@ export const GRUPOS_DADOS: DefinicaoGrupo[] = [
   {
     id: "usuarios",
     rotulo: "Usuários",
-    descricao: "Perfil, grupos e vínculos (a senha não é guardada no backup)",
-    tabelas: ["usuarios", "usuario_grupos", "usuario_vinculos"],
+    descricao: "Perfil, grupos, vínculos, cidades e preferências (a senha não é guardada no backup)",
+    tabelas: ["usuarios", "usuario_grupos", "usuario_vinculos", "usuario_cidades", "usuario_preferencias"],
   },
   {
     id: "membros",
     rotulo: "Membros",
     descricao: "Cadastro de membros, cadastro musical e cadastros pendentes do link público (as fotos e documentos não entram)",
-    tabelas: ["membros", "membros_cadastro", "cadastros_pendentes"],
+    tabelas: ["membros", "membros_cadastro", "cadastros_pendentes", "cadastro_publico_config", "qr_historico"],
   },
   {
     id: "eventos",
