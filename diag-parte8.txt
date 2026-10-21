@@ -1,0 +1,1878 @@
+##### ARVORE DE ROTAS
+src/app/(auth)/login/page.tsx
+src/app/(painel)/administracao/auditoria/page.tsx
+src/app/(painel)/administracao/backup/agendamento/page.tsx
+src/app/(painel)/administracao/backup/destinos/page.tsx
+src/app/(painel)/administracao/backup/notificacoes/page.tsx
+src/app/(painel)/administracao/backup/page.tsx
+src/app/(painel)/administracao/backup/restauracao/page.tsx
+src/app/(painel)/administracao/grupos/page.tsx
+src/app/(painel)/administracao/organizacao/page.tsx
+src/app/(painel)/administracao/usuarios/page.tsx
+src/app/(painel)/eventos/page.tsx
+src/app/(painel)/fotografias/page.tsx
+src/app/(painel)/instrumentos/page.tsx
+src/app/(painel)/membros/page.tsx
+src/app/(painel)/page.tsx
+src/app/(painel)/painel-ao-vivo/page.tsx
+src/app/(painel)/portaria/page.tsx
+src/app/(painel)/portaria/registros/page.tsx
+src/app/(painel)/portarias/page.tsx
+src/app/(painel)/relatorios/page.tsx
+
+##### MODULOS
+administracao
+atendimento
+auditoria
+autenticacao
+backup
+dashboard
+eventos
+instrumentos
+membros
+organizacao
+painel
+portaria
+portarias
+preferencias
+relatorios
+
+##### MIGRATIONS
+0001_baseline.sql
+0002_rbac.sql
+0003_administracao.sql
+0004_cadastros.sql
+0005_portaria_edicao.sql
+0006_identidade_membro.sql
+0007_portarias.sql
+0008_atendimento_portaria.sql
+0009_controle_total_portarias.sql
+0010_duplicidade_por_evento.sql
+0011_varios_grupos_por_usuario.sql
+0012_hierarquia_organizacional.sql
+0013_excluir_organizacao.sql
+0014_visitantes_portaria.sql
+0015_auditoria_e_origem_visitante.sql
+0016_instrumento_obrigatorio.sql
+0017_foto_obrigatoria.sql
+0018_relatorios.sql
+0019_preferencias_visuais.sql
+0020_backup.sql
+0021_backup_verificacao.sql
+0022_backup_destinos.sql
+0023_backup_agendamento.sql
+0024_janela_portaria.sql
+0025_eventos_sem_passado.sql
+0026_painel_ao_vivo.sql
+0027_portaria_3h.sql
+0028_portaria_toca_avulsa.sql
+0029_instrumento_do_cadastro.sql
+0030_portaria_encerrada.sql
+0031_casa_de_oracao.sql
+0032_regras_de_regiao.sql
+0033_backup_presencas_avulsas.sql
+0034_ciclo_de_vida_eventos.sql
+0035_libera_janela_portaria.sql
+0036_relatorio_presenca_portaria.sql
+0037_dados_casa_oracao.sql
+0038_cadastro_musical.sql
+0039_organizacao_rrm_ra_adm.sql
+0040_cadastro_musical_obrigatorios.sql
+LEIA-ME.md
+
+##### ARQUIVOS DE EVENTOS E PORTARIA
+src/modules/eventos/camposEvento.test.ts
+src/modules/eventos/camposEvento.ts
+src/modules/eventos/casaDoEvento.test.ts
+src/modules/eventos/casaDoEvento.ts
+src/modules/eventos/ciclo.test.ts
+src/modules/eventos/ciclo.ts
+src/modules/eventos/components/FormularioCancelamento.tsx
+src/modules/eventos/dataEvento.test.ts
+src/modules/eventos/dataEvento.ts
+src/modules/eventos/regras.test.ts
+src/modules/eventos/regras.ts
+src/modules/eventos/services/casaDoEvento.ts
+src/modules/eventos/services/eventos.ts
+src/modules/eventos/services/finalidades.ts
+src/modules/portaria/components/FormularioEdicaoPresenca.tsx
+src/modules/portaria/regras.test.ts
+src/modules/portaria/regras.ts
+src/modules/portaria/services/portaria.ts
+src/modules/portarias/components/CotaPortarias.tsx
+src/modules/portarias/components/FormularioNovaPortaria.tsx
+src/modules/portarias/components/FormularioRejeicao.tsx
+src/modules/portarias/components/HistoricoPortaria.tsx
+src/modules/portarias/components/TabelaPortarias.tsx
+src/modules/portarias/janela.test.ts
+src/modules/portarias/janela.ts
+src/modules/portarias/regras.test.ts
+src/modules/portarias/regras.ts
+src/modules/portarias/services/portarias.ts
+src/modules/portarias/tipos.ts
+
+=================== src/modules/eventos/camposEvento.test.ts
+import { describe, expect, it } from "vitest";
+import { camposFaltando, mensagemCamposFaltando, type CamposEvento } from "./camposEvento";
+
+const completo: CamposEvento = {
+  tipo: "Ensaio Regional",
+  dataEvento: "2026-10-25T10:00",
+  cidade: "Jequié",
+  casaOracaoId: "abc",
+};
+
+describe("camposFaltando", () => {
+  it("nada falta quando tudo está preenchido", () => {
+    expect(camposFaltando(completo)).toEqual([]);
+  });
+
+  it("aponta o campo vazio e respeita a ordem do formulário", () => {
+    expect(camposFaltando({ ...completo, cidade: "" })).toEqual(["Cidade"]);
+    expect(camposFaltando({ tipo: "", dataEvento: "", cidade: "", casaOracaoId: "" })).toEqual([
+      "Descrição do evento",
+      "Data e hora",
+      "Casa de Oração",
+      "Cidade",
+    ]);
+  });
+
+  it("espaços em branco contam como vazio", () => {
+    expect(camposFaltando({ ...completo, cidade: "   ", tipo: " " })).toEqual(["Descrição do evento", "Cidade"]);
+  });
+
+  it("a casa de oração escolhida é obrigatória ('Nenhuma' = vazio)", () => {
+    expect(camposFaltando({ ...completo, casaOracaoId: "" })).toEqual(["Casa de Oração"]);
+  });
+});
+
+describe("mensagemCamposFaltando", () => {
+  it("monta o texto do alerta", () => {
+    expect(mensagemCamposFaltando(["Local", "Cidade"])).toBe("Preencha todos os campos obrigatórios: Local, Cidade.");
+  });
+});
+
+=================== src/modules/eventos/camposEvento.ts
+/**
+ * SysMúsica — Campos obrigatórios do evento (regra pura, sem banco).
+ * Todos os campos do formulário de evento são obrigatórios. Devolve os NOMES (como aparecem na tela) dos
+ * campos que estão vazios, na ordem do formulário, para a tela marcar cada um e mostrar o alerta.
+ */
+export interface CamposEvento {
+  tipo: string; // "Descrição do evento" na tela
+  dataEvento: string; // valor do campo data e hora (vazio = não preenchido)
+  cidade: string;
+  casaOracaoId: string;
+}
+
+export const ROTULO_TIPO = "Descrição do evento";
+export const ROTULO_DATA = "Data e hora";
+export const ROTULO_CIDADE = "Cidade";
+export const ROTULO_CASA_ORACAO = "Casa de Oração";
+
+export function camposFaltando(campos: CamposEvento): string[] {
+  const faltando: string[] = [];
+  // Ordem do formulário: Descrição do evento, Data e hora, Casa de Oração, Cidade
+  if (!campos.tipo.trim()) faltando.push(ROTULO_TIPO);
+  if (!campos.dataEvento.trim()) faltando.push(ROTULO_DATA);
+  if (!campos.casaOracaoId.trim()) faltando.push(ROTULO_CASA_ORACAO);
+  if (!campos.cidade.trim()) faltando.push(ROTULO_CIDADE);
+  return faltando;
+}
+
+/** Mensagem do alerta: "Preencha todos os campos obrigatórios: Local, Cidade." */
+export function mensagemCamposFaltando(faltando: string[]): string {
+  return `Preencha todos os campos obrigatórios: ${faltando.join(", ")}.`;
+}
+
+=================== src/modules/eventos/casaDoEvento.test.ts
+import { describe, expect, it } from "vitest";
+import { AVISO_SEM_CIDADE, cidadeDaCasa } from "./casaDoEvento";
+
+describe("cidadeDaCasa", () => {
+  it("usa a cidade cadastrada na casa e trava o campo", () => {
+    expect(cidadeDaCasa({ nome: "Cidade Nova", cidade: "Jequié" })).toEqual({
+      cidade: "Jequié",
+      travada: true,
+      aviso: null,
+    });
+  });
+
+  it("tira espaços extras da cidade", () => {
+    expect(cidadeDaCasa({ nome: "Cidade Nova", cidade: "  Jequié  " }).cidade).toBe("Jequié");
+  });
+
+  it("casa sem cidade cadastrada: campo livre e aviso", () => {
+    for (const cidade of [null, "", "   "]) {
+      expect(cidadeDaCasa({ nome: "Cidade Nova", cidade })).toEqual({
+        cidade: "",
+        travada: false,
+        aviso: AVISO_SEM_CIDADE,
+      });
+    }
+  });
+
+  it("casa não encontrada (fora da abrangência): campo livre e aviso", () => {
+    expect(cidadeDaCasa(null)).toEqual({ cidade: "", travada: false, aviso: AVISO_SEM_CIDADE });
+  });
+});
+
+=================== src/modules/eventos/casaDoEvento.ts
+/**
+ * SysMúsica — Regra pura: cidade do evento a partir da Casa de Oração escolhida (sem banco).
+ * A cidade vem do cadastro da casa e fica travada na tela. Se a casa não tem cidade cadastrada
+ * (ou o cadastro não pôde ser lido), o campo fica livre para digitar e um aviso orienta a completar o cadastro.
+ */
+export interface DadosDaCasa {
+  nome: string;
+  cidade: string | null;
+}
+
+export interface CidadeDaCasa {
+  cidade: string; // texto para o campo Cidade ("" = a pessoa precisa informar)
+  travada: boolean; // true = veio do cadastro da casa (campo somente leitura)
+  aviso: string | null;
+}
+
+export const AVISO_SEM_CIDADE =
+  "Esta Casa de Oração ainda não tem cidade cadastrada. Informe a cidade abaixo e depois complete o cadastro dela em Organização.";
+
+export function cidadeDaCasa(casa: DadosDaCasa | null): CidadeDaCasa {
+  const cidade = casa?.cidade?.trim() ?? "";
+  if (cidade) return { cidade, travada: true, aviso: null };
+  return { cidade: "", travada: false, aviso: AVISO_SEM_CIDADE };
+}
+
+=================== src/modules/eventos/ciclo.test.ts
+import { describe, expect, it } from "vitest";
+import {
+  abaDoEvento,
+  DIAS_ARQUIVO,
+  eventoAberto,
+  situacaoDoEvento,
+  validarMotivoCancelamento,
+  varianteSituacaoEvento,
+} from "./ciclo";
+
+const HORA = 60 * 60 * 1000;
+const DIA = 24 * HORA;
+const INICIO = new Date("2026-10-20T19:30:00-03:00").getTime();
+const DATA = new Date(INICIO).toISOString();
+
+describe("situacaoDoEvento", () => {
+  it("fica Agendado até 2h antes do início", () => {
+    expect(situacaoDoEvento(DATA, false, INICIO - 2 * HORA - 1)).toBe("AGENDADO");
+  });
+  it("fica Em andamento de 2h antes até 3h depois do início (limites incluídos)", () => {
+    expect(situacaoDoEvento(DATA, false, INICIO - 2 * HORA)).toBe("EM_ANDAMENTO");
+    expect(situacaoDoEvento(DATA, false, INICIO)).toBe("EM_ANDAMENTO");
+    expect(situacaoDoEvento(DATA, false, INICIO + 3 * HORA)).toBe("EM_ANDAMENTO");
+  });
+  it("fica Encerrado depois de 3h do início", () => {
+    expect(situacaoDoEvento(DATA, false, INICIO + 3 * HORA + 1)).toBe("ENCERRADO");
+  });
+  it("vira Arquivado só depois de 30 dias do encerramento", () => {
+    const fecha = INICIO + 3 * HORA;
+    expect(situacaoDoEvento(DATA, false, fecha + DIAS_ARQUIVO * DIA)).toBe("ENCERRADO");
+    expect(situacaoDoEvento(DATA, false, fecha + DIAS_ARQUIVO * DIA + 1)).toBe("ARQUIVADO");
+  });
+  it("cancelado vence a data", () => {
+    expect(situacaoDoEvento(DATA, true, INICIO - 10 * DIA)).toBe("CANCELADO");
+    expect(situacaoDoEvento(DATA, true, INICIO + 90 * DIA)).toBe("CANCELADO");
+  });
+  it("data inválida continua visível como Agendado", () => {
+    expect(situacaoDoEvento("isto não é data", false, INICIO)).toBe("AGENDADO");
+  });
+});
+
+describe("abaDoEvento", () => {
+  it("agendado e em andamento ficam em Próximos", () => {
+    expect(abaDoEvento(DATA, false, INICIO - 5 * DIA)).toBe("proximos");
+    expect(abaDoEvento(DATA, false, INICIO)).toBe("proximos");
+  });
+  it("encerrado vai para Encerrados e depois de 30 dias para o Arquivo", () => {
+    expect(abaDoEvento(DATA, false, INICIO + 4 * HORA)).toBe("encerrados");
+    expect(abaDoEvento(DATA, false, INICIO + 40 * DIA)).toBe("arquivo");
+  });
+  it("cancelado nunca fica em Próximos", () => {
+    expect(abaDoEvento(DATA, true, INICIO - 5 * DIA)).toBe("encerrados");
+    expect(abaDoEvento(DATA, true, INICIO + 40 * DIA)).toBe("arquivo");
+  });
+});
+
+describe("eventoAberto", () => {
+  it("só é aberto quando agendado ou em andamento e não cancelado", () => {
+    expect(eventoAberto(DATA, false, INICIO - DIA)).toBe(true);
+    expect(eventoAberto(DATA, false, INICIO)).toBe(true);
+    expect(eventoAberto(DATA, false, INICIO + 4 * HORA)).toBe(false);
+    expect(eventoAberto(DATA, true, INICIO - DIA)).toBe(false);
+  });
+});
+
+describe("varianteSituacaoEvento", () => {
+  it("destaca o que está acontecendo e o que foi cancelado", () => {
+    expect(varianteSituacaoEvento("EM_ANDAMENTO")).toBe("sucesso");
+    expect(varianteSituacaoEvento("CANCELADO")).toBe("perigo");
+    expect(varianteSituacaoEvento("ENCERRADO")).toBe("neutro");
+  });
+});
+
+describe("validarMotivoCancelamento", () => {
+  it("exige entre 5 e 250 caracteres", () => {
+    expect(validarMotivoCancelamento("   ab  ")).not.toBeNull();
+    expect(validarMotivoCancelamento("Chuva forte")).toBeNull();
+    expect(validarMotivoCancelamento("a".repeat(251))).not.toBeNull();
+  });
+});
+
+=================== src/modules/eventos/ciclo.ts
+/**
+ * SysMúsica — Ciclo de vida do evento (regras puras, sem banco).
+ *
+ * A situação é CALCULADA pela data (ninguém precisa "finalizar" o evento na mão):
+ *   Agendado     -> ainda falta mais de 2h para começar
+ *   Em andamento -> de 2h antes até 3h depois do início (a mesma janela da portaria)
+ *   Encerrado    -> passou de 3h depois do início (somente leitura; só o Administrador corrige)
+ *   Arquivado    -> encerrado há mais de 30 dias (continua consultável, na aba Arquivo)
+ *   Cancelado    -> só o Administrador cancela, sempre com motivo; o histórico fica guardado
+ * O banco aplica as mesmas regras (migração 0034); aqui ficam só os cálculos para a tela.
+ */
+import type { VarianteBadge } from "@/components/ui/Badge";
+import { janelaDaPortaria } from "@/modules/portarias/janela";
+
+export type SituacaoEvento = "AGENDADO" | "EM_ANDAMENTO" | "ENCERRADO" | "ARQUIVADO" | "CANCELADO";
+export type AbaEvento = "proximos" | "encerrados" | "arquivo";
+
+/** Dias depois do encerramento em que o evento passa para o Arquivo. */
+export const DIAS_ARQUIVO = 30;
+const MS_DIA = 24 * 60 * 60 * 1000;
+
+export const ROTULO_SITUACAO_EVENTO: Record<SituacaoEvento, string> = {
+  AGENDADO: "Agendado",
+  EM_ANDAMENTO: "Em andamento",
+  ENCERRADO: "Encerrado",
+  ARQUIVADO: "Arquivado",
+  CANCELADO: "Cancelado",
+};
+
+export const MOTIVO_CANCELAMENTO_MINIMO = 5;
+export const MOTIVO_CANCELAMENTO_MAXIMO = 250;
+
+/** Situação do evento no instante "agora" (ms), ignorando o cancelamento. */
+function situacaoPelaData(dataEvento: string, agora: number): Exclude<SituacaoEvento, "CANCELADO"> {
+  const janela = janelaDaPortaria(dataEvento, agora);
+  if (!janela) return "AGENDADO"; // data inválida: mantém visível para alguém corrigir
+  if (janela.situacao === "antes") return "AGENDADO";
+  if (janela.situacao === "aberta") return "EM_ANDAMENTO";
+  return agora - janela.fecha.getTime() > DIAS_ARQUIVO * MS_DIA ? "ARQUIVADO" : "ENCERRADO";
+}
+
+/** Situação do evento: cancelado vence a data. */
+export function situacaoDoEvento(dataEvento: string, cancelado: boolean, agora: number): SituacaoEvento {
+  if (cancelado) return "CANCELADO";
+  return situacaoPelaData(dataEvento, agora);
+}
+
+/** Em qual aba da tela de Eventos o evento aparece. Cancelado nunca fica em "Próximos". */
+export function abaDoEvento(dataEvento: string, cancelado: boolean, agora: number): AbaEvento {
+  const pelaData = situacaoPelaData(dataEvento, agora);
+  if (pelaData === "ARQUIVADO") return "arquivo";
+  if (cancelado || pelaData === "ENCERRADO") return "encerrados";
+  return "proximos";
+}
+
+/** O evento ainda está aberto (agendado ou em andamento, e não cancelado)? */
+export function eventoAberto(dataEvento: string, cancelado: boolean, agora: number): boolean {
+  const situacao = situacaoDoEvento(dataEvento, cancelado, agora);
+  return situacao === "AGENDADO" || situacao === "EM_ANDAMENTO";
+}
+
+/** Cor do selo de cada situação. */
+export function varianteSituacaoEvento(situacao: SituacaoEvento): VarianteBadge {
+  if (situacao === "EM_ANDAMENTO") return "sucesso";
+  if (situacao === "CANCELADO") return "perigo";
+  return "neutro";
+}
+
+/** Valida o motivo do cancelamento: devolve a mensagem de erro ou null se estiver certo. */
+export function validarMotivoCancelamento(texto: string): string | null {
+  const tamanho = texto.trim().length;
+  if (tamanho < MOTIVO_CANCELAMENTO_MINIMO) {
+    return `Informe o motivo do cancelamento (mínimo de ${MOTIVO_CANCELAMENTO_MINIMO} caracteres).`;
+  }
+  if (tamanho > MOTIVO_CANCELAMENTO_MAXIMO) {
+    return `O motivo pode ter no máximo ${MOTIVO_CANCELAMENTO_MAXIMO} caracteres.`;
+  }
+  return null;
+}
+
+=================== src/modules/eventos/components/FormularioCancelamento.tsx
+"use client";
+
+/**
+ * SysMúsica — Cancelamento de evento (só o Administrador). O motivo é obrigatório e fica no histórico.
+ * As portarias pendentes ou aprovadas do evento são rejeitadas automaticamente pelo banco.
+ */
+import { useState, type FormEvent } from "react";
+import Button from "@/components/ui/Button";
+import { formatarDataHora } from "@/lib/datas";
+import { cancelarEvento } from "@/modules/eventos/services/eventos";
+import { MOTIVO_CANCELAMENTO_MAXIMO, validarMotivoCancelamento } from "@/modules/eventos/ciclo";
+import type { Evento } from "@/types/database";
+
+interface FormularioCancelamentoProps {
+  evento: Evento;
+  onSalvo: (mensagem: string) => void | Promise<void>;
+}
+
+export default function FormularioCancelamento({ evento, onSalvo }: FormularioCancelamentoProps) {
+  const [motivo, setMotivo] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function enviar(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const invalido = validarMotivoCancelamento(motivo);
+    if (invalido) {
+      setErro(invalido);
+      return;
+    }
+    setSalvando(true);
+    setErro(null);
+    try {
+      await cancelarEvento(evento.id, motivo.trim());
+      await onSalvo("Evento cancelado. As portarias dele foram rejeitadas e o histórico foi mantido.");
+    } catch (falha) {
+      setErro(falha instanceof Error ? falha.message : "Não foi possível cancelar o evento.");
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={(e) => void enviar(e)} className="space-y-5">
+      <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
+        <p className="font-medium text-slate-900">{formatarDataHora(evento.data_evento)}</p>
+        <p className="text-slate-600">{[evento.tipo, evento.local, evento.cidade].filter(Boolean).join(" · ")}</p>
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="motivo-cancelamento" className="text-sm font-medium text-slate-700">
+          Motivo do cancelamento
+        </label>
+        <textarea
+          id="motivo-cancelamento"
+          rows={4}
+          required
+          maxLength={MOTIVO_CANCELAMENTO_MAXIMO}
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value)}
+          disabled={salvando}
+          placeholder="Explique por que o evento foi cancelado"
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:opacity-60"
+        />
+        <p className="text-xs text-slate-500">
+          O evento sai de “Próximos” e vai para o histórico. Portarias pendentes ou aprovadas dele são rejeitadas. A
+          decisão não pode ser desfeita.
+        </p>
+      </div>
+
+      {erro && (
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erro}
+        </p>
+      )}
+
+      <Button type="submit" variante="perigo" disabled={salvando} className="w-full">
+        {salvando ? "Cancelando..." : "Cancelar evento"}
+      </Button>
+    </form>
+  );
+}
+
+=================== src/modules/eventos/dataEvento.test.ts
+import { describe, expect, it } from "vitest";
+import { MENSAGEM_DATA_PASSADA, validarDataDoEvento } from "./dataEvento";
+
+const AGORA = new Date("2026-10-19T12:00:00Z").getTime();
+
+describe("validarDataDoEvento", () => {
+  it("recusa data que já passou ao cadastrar", () => {
+    expect(validarDataDoEvento("2026-10-01T04:34:00Z", AGORA, null)).toBe(MENSAGEM_DATA_PASSADA);
+    expect(validarDataDoEvento("2026-10-19T11:00:00Z", AGORA, null)).toBe(MENSAGEM_DATA_PASSADA);
+  });
+
+  it("aceita agora, dentro da tolerância de 5 minutos, e datas futuras", () => {
+    expect(validarDataDoEvento("2026-10-19T11:56:00Z", AGORA, null)).toBeNull();
+    expect(validarDataDoEvento("2026-10-19T12:00:00Z", AGORA, null)).toBeNull();
+    expect(validarDataDoEvento("2026-12-25T20:00:00Z", AGORA, null)).toBeNull();
+  });
+
+  it("recusa 6 minutos no passado", () => {
+    expect(validarDataDoEvento("2026-10-19T11:54:00Z", AGORA, null)).toBe(MENSAGEM_DATA_PASSADA);
+  });
+
+  it("ao editar sem mudar a data, não reclama (mesmo sendo antiga)", () => {
+    expect(validarDataDoEvento("2026-10-01T04:34:00Z", AGORA, "2026-10-01T04:34:00+00:00")).toBeNull();
+    expect(validarDataDoEvento("2026-10-01T04:34:00Z", AGORA, "2026-10-01T04:34:20Z")).toBeNull();
+  });
+
+  it("ao editar mudando a data para o passado, recusa", () => {
+    expect(validarDataDoEvento("2026-09-01T04:34:00Z", AGORA, "2026-10-01T04:34:00Z")).toBe(MENSAGEM_DATA_PASSADA);
+  });
+
+  it("ao editar mudando a data para o futuro, aceita", () => {
+    expect(validarDataDoEvento("2026-11-01T04:34:00Z", AGORA, "2026-10-01T04:34:00Z")).toBeNull();
+  });
+
+  it("data inválida", () => {
+    expect(validarDataDoEvento("lixo", AGORA, null)).toBe("Informe uma data e hora válidas.");
+  });
+});
+
+=================== src/modules/eventos/dataEvento.ts
+/**
+ * SysMúsica — Regra da data do evento (pura, sem banco): não se agenda evento em data e hora que já passaram.
+ * Uma tolerância de 5 minutos evita falso alarme (o campo de data só tem precisão de minutos e o usuário leva
+ * alguns segundos para salvar). Ao EDITAR, só vale se a data/hora for alterada: um evento antigo continua
+ * podendo ter outros dados corrigidos. A mesma regra é aplicada no banco (migração 0025).
+ */
+export const TOLERANCIA_MS = 5 * 60 * 1000;
+
+export const MENSAGEM_DATA_PASSADA =
+  "Não é possível agendar um evento em uma data e hora que já passaram. Escolha uma data e hora futuras.";
+
+/**
+ * Devolve a mensagem de erro ou null se a data está correta.
+ * dataOriginal = data já gravada do evento (null ao cadastrar um evento novo).
+ */
+export function validarDataDoEvento(dataIso: string, agora: number, dataOriginal: string | null): string | null {
+  const nova = new Date(dataIso).getTime();
+  if (Number.isNaN(nova)) return "Informe uma data e hora válidas.";
+
+  // Edição sem mudar a data e a hora (no minuto): não reavalia
+  if (dataOriginal !== null) {
+    const original = new Date(dataOriginal).getTime();
+    if (!Number.isNaN(original) && Math.floor(original / 60000) === Math.floor(nova / 60000)) return null;
+  }
+
+  return nova < agora - TOLERANCIA_MS ? MENSAGEM_DATA_PASSADA : null;
+}
+
+=================== src/modules/eventos/regras.test.ts
+import { describe, expect, it } from "vitest";
+import { formatarNomeFinalidade, validarFinalidade } from "@/modules/eventos/regras";
+
+describe("formatarNomeFinalidade", () => {
+  it("remove espaços extras e põe a primeira letra em maiúscula", () => {
+    expect(formatarNomeFinalidade("  reunião   geral  ")).toBe("Reunião geral");
+  });
+});
+
+describe("validarFinalidade", () => {
+  it("aceita as finalidades de exemplo do cadastro", () => {
+    const exemplos = [
+      "Reunião Geral para Músicos e Organistas",
+      "Reunião Geral para Músicos, Organistas, Examinadoras, Instrutores (as), Encarregados Locais e Regionais",
+      "Reunião Geral para Examinadoras, Encarregados Locais e Regionais",
+      "Reunião Geral para Instrutores (as), Examinadoras, Encarregados Locais e Regionais",
+    ];
+    for (const exemplo of exemplos) expect(validarFinalidade(exemplo)).toBeNull();
+  });
+
+  it("recusa texto curto demais (ignorando espaços) e longo demais", () => {
+    expect(validarFinalidade("  ab ")).toMatch(/mínimo/);
+    expect(validarFinalidade("x".repeat(151))).toMatch(/no máximo/);
+  });
+});
+
+=================== src/modules/eventos/regras.ts
+/**
+ * SysMúsica — Regras puras de eventos (sem acesso ao banco). Testadas em regras.test.ts.
+ */
+export const FINALIDADE_MINIMO = 3;
+export const FINALIDADE_MAXIMO = 150;
+
+/** Ajusta a finalidade antes de salvar: tira espaços extras e põe a 1ª letra em maiúscula. */
+export function formatarNomeFinalidade(texto: string): string {
+  const limpo = texto.trim().replace(/\s+/g, " ");
+  return limpo.charAt(0).toUpperCase() + limpo.slice(1);
+}
+
+/** Valida o texto da finalidade; devolve a mensagem de erro ou null quando está tudo certo. */
+export function validarFinalidade(texto: string): string | null {
+  const tamanho = texto.trim().replace(/\s+/g, " ").length;
+  if (tamanho < FINALIDADE_MINIMO) {
+    return `Informe a finalidade do evento (mínimo de ${FINALIDADE_MINIMO} caracteres).`;
+  }
+  if (tamanho > FINALIDADE_MAXIMO) {
+    return `A finalidade pode ter no máximo ${FINALIDADE_MAXIMO} caracteres.`;
+  }
+  return null;
+}
+
+=================== src/modules/eventos/services/casaDoEvento.ts
+/**
+ * SysMúsica — Busca os dados de UMA Casa de Oração para o formulário de evento (nome e cidade).
+ * Usa a função do banco dados_casa_oracao (migração 0037), que respeita a abrangência do usuário:
+ * fora dela devolve nulo e a tela pede a cidade manualmente.
+ */
+import { supabase } from "@/lib/supabase";
+import { mensagemDoErro } from "@/lib/erros";
+import type { DadosDaCasa } from "../casaDoEvento";
+
+export async function buscarDadosDaCasa(casaOracaoId: string): Promise<DadosDaCasa | null> {
+  const { data, error } = await supabase.rpc("dados_casa_oracao", { p_casa_oracao: casaOracaoId });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível buscar os dados da Casa de Oração."));
+  return (data ?? null) as DadosDaCasa | null;
+}
+
+=================== src/modules/eventos/services/eventos.ts
+/**
+ * SysMúsica — Serviço de dados de eventos.
+ * Excluir é EXCLUSÃO LÓGICA: o evento some das telas e as presenças registradas são mantidas.
+ */
+import { supabase } from "@/lib/supabase";
+import { mensagemDoErro } from "@/lib/erros";
+import type { Evento, EventoInsert, FinalidadeEvento } from "@/types/database";
+
+/** Busca eventos (do mais recente para o mais antigo) e finalidades. Lança erro se a consulta falhar. */
+export async function buscarEventosEFinalidades(): Promise<{
+  eventos: Evento[];
+  finalidades: FinalidadeEvento[];
+}> {
+  const [resEventos, resFinalidades] = await Promise.all([
+    supabase.from("eventos").select("*").order("data_evento", { ascending: false }),
+    supabase.from("finalidades_evento").select("*").order("nome", { ascending: true }),
+  ]);
+
+  const erroBanco = resEventos.error ?? resFinalidades.error;
+  if (erroBanco) throw new Error(erroBanco.message);
+
+  return {
+    eventos: (resEventos.data ?? []) as Evento[],
+    finalidades: (resFinalidades.data ?? []) as FinalidadeEvento[],
+  };
+}
+
+export async function criarEvento(dados: EventoInsert): Promise<void> {
+  const { error } = await supabase.from("eventos").insert(dados);
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível cadastrar o evento."));
+}
+
+/** Campos que podem ser alterados na edição (o banco libera só estas colunas). */
+export interface DadosAtualizacaoEvento {
+  tipo: string;
+  data_evento: string;
+  local: string;
+  finalidade_id?: string | null; // opcional: a tela não envia mais (mantém o valor atual)
+  cidade: string | null;
+  casa_oracao_id?: string | null;
+}
+
+export async function atualizarEvento(id: string, dados: DadosAtualizacaoEvento): Promise<void> {
+  // .select("id") devolve as linhas alteradas: se o RLS negar, o update não dá erro, só não altera nada
+  const { data, error } = await supabase.from("eventos").update(dados).eq("id", id).select("id");
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível salvar as alterações do evento."));
+  if (!data || data.length === 0) {
+    throw new Error("Não foi possível salvar: você não tem permissão ou o evento não existe mais.");
+  }
+}
+
+/** Cancela o evento com motivo (função do banco, que confere a permissão eventos.cancelar: só o Administrador). */
+export async function cancelarEvento(id: string, motivo: string): Promise<void> {
+  const { error } = await supabase.rpc("cancelar_evento", { p_id: id, p_motivo: motivo });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível cancelar o evento."));
+}
+
+/** Exclusão lógica (função do banco, que confere a permissão eventos.excluir). */
+export async function excluirEvento(id: string): Promise<void> {
+  const { error } = await supabase.rpc("excluir_evento", { p_id: id });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível excluir o evento."));
+}
+
+=================== src/modules/eventos/services/finalidades.ts
+/**
+ * SysMúsica — Serviço do catálogo de finalidades de evento.
+ * O formulário de evento usa obterOuCriarFinalidade: se a pessoa digita uma finalidade que ainda
+ * não existe, ela é salva e fica disponível para os próximos eventos.
+ */
+import { supabase } from "@/lib/supabase";
+import { mensagemDoErro } from "@/lib/erros";
+import { normalizarTexto } from "@/lib/texto";
+import type { FinalidadeEvento, FinalidadeEventoInsert } from "@/types/database";
+import { formatarNomeFinalidade } from "../regras";
+
+export interface ResultadoFinalidade {
+  id: string;
+  nome: string;
+  criada: boolean; // true = acabou de ser criada
+}
+
+/**
+ * Devolve a finalidade digitada, criando-a se ainda não existir.
+ * A comparação ignora acento, maiúsculas e espaços repetidos.
+ */
+export async function obterOuCriarFinalidade(
+  texto: string,
+  existentes: FinalidadeEvento[]
+): Promise<ResultadoFinalidade> {
+  const chave = normalizarTexto(texto);
+
+  // 1) Já existe na lista carregada? Então só reaproveita o id
+  const existente = existentes.find((finalidade) => normalizarTexto(finalidade.nome) === chave);
+  if (existente) return { id: existente.id, nome: existente.nome, criada: false };
+
+  // 2) Não existe: salva e resgata o registro
+  const nova: FinalidadeEventoInsert = { nome: formatarNomeFinalidade(texto) };
+  const { data, error } = await supabase.from("finalidades_evento").insert(nova).select().single();
+  if (!error && data) {
+    const criada = data as FinalidadeEvento;
+    return { id: criada.id, nome: criada.nome, criada: true };
+  }
+
+  // 3) 23505 = repetida: outra pessoa criou a mesma finalidade agora há pouco. Busca de novo.
+  if (error?.code === "23505") {
+    const { data: lista, error: erroBusca } = await supabase.from("finalidades_evento").select("*");
+    if (erroBusca) throw new Error(erroBusca.message);
+    const achada = ((lista ?? []) as FinalidadeEvento[]).find(
+      (finalidade) => normalizarTexto(finalidade.nome) === chave
+    );
+    if (achada) return { id: achada.id, nome: achada.nome, criada: false };
+  }
+
+  throw new Error(
+    error
+      ? mensagemDoErro(error, "Não foi possível salvar a finalidade do evento.")
+      : "Não foi possível salvar a finalidade do evento."
+  );
+}
+
+=================== src/modules/portaria/components/FormularioEdicaoPresenca.tsx
+"use client";
+
+/**
+ * SysMúsica — Formulário de edição de uma presença da portaria (conteúdo do painel lateral).
+ * O membro e o evento são só informativos (não mudam: para outro membro ou evento, exclua e
+ * registre de novo). Editáveis: status e, quando "Presente", as horas de entrada e saída.
+ */
+import { useState, type FormEvent } from "react";
+import Button from "@/components/ui/Button";
+import { datetimeLocalParaIso, isoParaDatetimeLocal } from "@/lib/dataLocal";
+import type { Presenca } from "@/types/database";
+import { STATUS_PRESENCA, validarHorarios } from "../regras";
+import { atualizarPresenca } from "../services/portaria";
+
+interface FormularioEdicaoPresencaProps {
+  presenca: Presenca;
+  nomeMembro: string;
+  descricaoEvento: string;
+  /** Chamado após salvar com sucesso, com a mensagem para o aviso da tela. */
+  onSalvo: (mensagem: string) => void | Promise<void>;
+}
+
+// Mesma identidade visual dos demais formulários.
+// [color-scheme:light] mantém o ícone do seletor de data visível mesmo com o navegador em tema escuro.
+const classeInput =
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 " +
+  "shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 " +
+  "disabled:cursor-not-allowed disabled:opacity-60 [color-scheme:light]";
+
+export default function FormularioEdicaoPresenca({
+  presenca,
+  nomeMembro,
+  descricaoEvento,
+  onSalvo,
+}: FormularioEdicaoPresencaProps) {
+  const [status, setStatus] = useState(presenca.status);
+  const [entrada, setEntrada] = useState(isoParaDatetimeLocal(presenca.hora_entrada));
+  const [saida, setSaida] = useState(presenca.hora_saida ? isoParaDatetimeLocal(presenca.hora_saida) : "");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  // Os horários só importam para quem esteve presente
+  const mostrarHorarios = status === "Presente";
+
+  async function salvar(submissao: FormEvent<HTMLFormElement>) {
+    submissao.preventDefault();
+    if (salvando) return; // evita envio duplicado
+    setErro(null);
+
+    if (mostrarHorarios) {
+      const erroHorarios = validarHorarios(entrada, saida);
+      if (erroHorarios) return setErro(erroHorarios);
+    }
+
+    setSalvando(true);
+    try {
+      // Se não é "Presente", mantém os horários como estavam (não foram editados)
+      await atualizarPresenca(presenca.id, {
+        status,
+        hora_entrada: mostrarHorarios
+          ? (datetimeLocalParaIso(entrada) ?? presenca.hora_entrada)
+          : presenca.hora_entrada,
+        hora_saida: mostrarHorarios
+          ? saida.trim() === ""
+            ? null
+            : datetimeLocalParaIso(saida)
+          : presenca.hora_saida,
+      });
+      await onSalvo(`Presença de "${nomeMembro}" atualizada.`);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível salvar a presença.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={salvar} className="space-y-5">
+      {/* Identificação (somente leitura) */}
+      <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm">
+        <p className="font-medium text-slate-900">{nomeMembro}</p>
+        <p className="mt-0.5 text-slate-600">{descricaoEvento}</p>
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="status-presenca" className="text-sm font-medium text-slate-700">
+          Status
+        </label>
+        <select
+          id="status-presenca"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          disabled={salvando}
+          className={classeInput}
+        >
+          {STATUS_PRESENCA.map((opcao) => (
+            <option key={opcao} value={opcao}>
+              {opcao}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {mostrarHorarios && (
+        <>
+          <div className="space-y-1.5">
+            <label htmlFor="hora-entrada" className="text-sm font-medium text-slate-700">
+              Hora de entrada
+            </label>
+            <input
+              id="hora-entrada"
+              type="datetime-local"
+              required
+              value={entrada}
+              onChange={(e) => setEntrada(e.target.value)}
+              disabled={salvando}
+              className={classeInput}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="hora-saida" className="text-sm font-medium text-slate-700">
+              Hora de saída <span className="font-normal text-slate-400">(opcional)</span>
+            </label>
+            <input
+              id="hora-saida"
+              type="datetime-local"
+              value={saida}
+              onChange={(e) => setSaida(e.target.value)}
+              disabled={salvando}
+              className={classeInput}
+            />
+            <p className="text-xs text-slate-500">Deixe em branco se o membro ainda não saiu.</p>
+          </div>
+        </>
+      )}
+
+      {erro && (
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erro}
+        </p>
+      )}
+
+      <Button type="submit" disabled={salvando} className="w-full">
+        {salvando ? "Salvando..." : "Salvar alterações"}
+      </Button>
+    </form>
+  );
+}
+
+=================== src/modules/portaria/regras.test.ts
+import { describe, expect, it } from "vitest";
+import { STATUS_PRESENCA, validarHorarios } from "@/modules/portaria/regras";
+
+describe("validarHorarios", () => {
+  it("aceita entrada válida com saída em branco", () => {
+    expect(validarHorarios("2026-10-18T14:00", "")).toBeNull();
+    expect(validarHorarios("2026-10-18T14:00", "   ")).toBeNull();
+  });
+
+  it("aceita saída igual ou posterior à entrada", () => {
+    expect(validarHorarios("2026-10-18T14:00", "2026-10-18T14:00")).toBeNull();
+    expect(validarHorarios("2026-10-18T14:00", "2026-10-18T16:30")).toBeNull();
+  });
+
+  it("recusa saída anterior à entrada", () => {
+    expect(validarHorarios("2026-10-18T14:00", "2026-10-18T13:59")).toMatch(/anterior/);
+  });
+
+  it("recusa entrada vazia ou inválida e saída inválida", () => {
+    expect(validarHorarios("", "")).toMatch(/entrada/);
+    expect(validarHorarios("lixo", "")).toMatch(/entrada/);
+    expect(validarHorarios("2026-10-18T14:00", "lixo")).toMatch(/saída/);
+  });
+});
+
+describe("STATUS_PRESENCA", () => {
+  it("lista os três status usados em todo o sistema", () => {
+    expect([...STATUS_PRESENCA]).toEqual(["Presente", "Ausente", "Justificado"]);
+  });
+});
+
+=================== src/modules/portaria/regras.ts
+/**
+ * SysMúsica — Regras puras da Portaria (sem acesso ao banco). Testadas em regras.test.ts.
+ */
+import { datetimeLocalParaIso } from "@/lib/dataLocal";
+
+/** Status possíveis de uma presença. */
+export const STATUS_PRESENCA = ["Presente", "Ausente", "Justificado"] as const;
+
+/**
+ * Valida os horários do formulário de edição (valores do campo datetime-local):
+ * a entrada é obrigatória e válida; a saída é opcional, mas não pode ser anterior à entrada.
+ * Devolve a mensagem de erro ou null quando está tudo certo.
+ */
+export function validarHorarios(entradaLocal: string, saidaLocal: string): string | null {
+  const entrada = datetimeLocalParaIso(entradaLocal);
+  if (!entrada) return "Informe uma hora de entrada válida.";
+
+  if (saidaLocal.trim() === "") return null; // saída em branco = ainda não saiu
+
+  const saida = datetimeLocalParaIso(saidaLocal);
+  if (!saida) return "Informe uma hora de saída válida.";
+  if (new Date(saida).getTime() < new Date(entrada).getTime()) {
+    return "A hora de saída não pode ser anterior à hora de entrada.";
+  }
+  return null;
+}
+
+=================== src/modules/portaria/services/portaria.ts
+/**
+ * SysMúsica — Serviço de dados da Portaria (registro de entrada e histórico).
+ * Em "membros" só se lêem colunas liberadas (nunca "*": qr_secret e CPF completo são protegidos).
+ * As portarias APROVADAS que o usuário pode usar vêm de listarPortarias (o banco já filtra pela
+ * permissão e pela abrangência). Excluir é EXCLUSÃO LÓGICA. Editar altera só status e horários.
+ */
+import { supabase } from "@/lib/supabase";
+import { mensagemDoErro } from "@/lib/erros";
+import { listarPortarias } from "@/modules/portarias/services/portarias";
+import type { PortariaDetalhada } from "@/modules/portarias/tipos";
+import {
+  COLUNAS_MEMBRO_PUBLICO,
+  type Evento,
+  type Instrumento,
+  type MembroPublico,
+  type Presenca,
+} from "@/types/database";
+
+export interface DadosPortaria {
+  eventos: Evento[];
+  membros: MembroPublico[];
+  instrumentos: Instrumento[];
+  presencas: Presenca[];
+  portarias: PortariaDetalhada[]; // as que o usuário pode ver (a tela usa só as APROVADAS)
+}
+
+/** Busca eventos, membros, instrumentos, presenças e portarias em paralelo. Lança erro se algo falhar. */
+export async function buscarDadosPortaria(): Promise<DadosPortaria> {
+  const [resEventos, resMembros, resPresencas, resInstrumentos, portarias] = await Promise.all([
+    supabase.from("eventos").select("*").order("data_evento", { ascending: false }),
+    supabase.from("membros").select(COLUNAS_MEMBRO_PUBLICO).order("nome", { ascending: true }),
+    supabase.from("presencas").select("*"),
+    supabase.from("instrumentos").select("*"),
+    listarPortarias(),
+  ]);
+
+  const erroBanco = resEventos.error ?? resMembros.error ?? resPresencas.error ?? resInstrumentos.error;
+  if (erroBanco) throw new Error(erroBanco.message);
+
+  return {
+    eventos: (resEventos.data ?? []) as Evento[],
+    // Cast duplo: com lista de colunas, o cliente (sem tipagem gerada) não infere a linha
+    membros: (resMembros.data ?? []) as unknown as MembroPublico[],
+    instrumentos: (resInstrumentos.data ?? []) as Instrumento[],
+    presencas: (resPresencas.data ?? []) as Presenca[],
+    portarias,
+  };
+}
+
+/** Campos que podem ser alterados na edição de uma presença. */
+export interface DadosAtualizacaoPresenca {
+  status: string;
+  hora_entrada: string; // ISO (UTC)
+  hora_saida: string | null; // ISO (UTC) ou null = ainda não saiu
+}
+
+export async function atualizarPresenca(id: string, dados: DadosAtualizacaoPresenca): Promise<void> {
+  // .select("id") devolve as linhas alteradas: se o RLS negar, o update não dá erro, só não altera nada
+  const { data, error } = await supabase.from("presencas").update(dados).eq("id", id).select("id");
+  if (error) {
+    // 23514 = regra do banco "saída depois da entrada" (a mensagem nativa é técnica)
+    if (error.code === "23514") {
+      throw new Error("A hora de saída não pode ser anterior à hora de entrada.");
+    }
+    throw new Error(
+      mensagemDoErro(
+        error,
+        "Não foi possível salvar as alterações da presença.",
+        "Este membro já tem uma entrada em aberto neste evento."
+      )
+    );
+  }
+  if (!data || data.length === 0) {
+    throw new Error("Não foi possível salvar: você não tem permissão ou o registro não existe mais.");
+  }
+}
+
+/** Exclusão lógica (função do banco, que confere a permissão portaria.excluir). */
+export async function excluirPresenca(id: string): Promise<void> {
+  const { error } = await supabase.rpc("excluir_presenca", { p_id: id });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível excluir o registro."));
+}
+
+=================== src/modules/portarias/components/CotaPortarias.tsx
+/** SysMúsica — Indicador da cota diária de criação de portarias (âmbar quando resta uma ou nenhuma). */
+import { cn } from "@/lib/cn";
+import { descreverCota } from "../regras";
+import type { CotaPortarias } from "../tipos";
+
+export default function CotaPortariasIndicador({ cota }: { cota: CotaPortarias }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium",
+        !cota.ilimitada && cota.restantes <= 1 ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"
+      )}
+      title="Limite de portarias que você pode criar por dia (horário de Salvador)"
+    >
+      {descreverCota(cota)}
+    </span>
+  );
+}
+
+=================== src/modules/portarias/components/FormularioNovaPortaria.tsx
+"use client";
+
+/**
+ * SysMúsica — Formulário de nova portaria (painel lateral). Escolhe-se um EVENTO existente (data,
+ * hora e local vêm dele). A portaria nasce PENDENTE: criar não autoriza o uso. O banco confere
+ * permissão, cota de 4 por dia, cidade do evento e duplicidade; a mensagem dele aparece aqui.
+ */
+import { useState, type FormEvent } from "react";
+import Button from "@/components/ui/Button";
+import { formatarDataHora } from "@/lib/datas";
+import { descreverCota } from "../regras";
+import { criarPortaria } from "../services/portarias";
+import type { CotaPortarias, EventoParaPortaria } from "../tipos";
+
+interface FormularioNovaPortariaProps {
+  eventos: EventoParaPortaria[]; // já sem os que têm portaria pendente ou aprovada
+  cota: CotaPortarias | null;
+  onSalvo: (mensagem: string) => void | Promise<void>;
+}
+
+const classeInput =
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm " +
+  "focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-60";
+
+export default function FormularioNovaPortaria({ eventos, cota, onSalvo }: FormularioNovaPortariaProps) {
+  const [eventoId, setEventoId] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const evento = eventos.find((item) => item.id === eventoId);
+  const semCota = cota !== null && cota.restantes === 0;
+
+  async function salvar(submissao: FormEvent<HTMLFormElement>) {
+    submissao.preventDefault();
+    if (salvando) return; // evita envio duplicado
+    setErro(null);
+    if (!eventoId) return setErro("Escolha o evento da portaria.");
+
+    setSalvando(true);
+    try {
+      await criarPortaria(eventoId);
+      await onSalvo("Portaria criada e enviada para aprovação.");
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível criar a portaria.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={salvar} className="space-y-5">
+      {cota && (
+        <p className={"rounded-lg px-3 py-2 text-sm " + (semCota ? "bg-amber-50 text-amber-700" : "bg-slate-50 text-slate-600")}>
+          {descreverCota(cota)}. {semCota && "Novas criações estarão disponíveis no próximo dia."}
+        </p>
+      )}
+
+      <div className="space-y-1.5">
+        <label htmlFor="evento-portaria" className="text-sm font-medium text-slate-700">
+          Evento
+        </label>
+        <select
+          id="evento-portaria"
+          value={eventoId}
+          onChange={(e) => setEventoId(e.target.value)}
+          disabled={salvando || semCota}
+          className={classeInput}
+        >
+          <option value="">Selecione um evento</option>
+          {eventos.map((item) => (
+            <option key={item.id} value={item.id} disabled={!item.cidade}>
+              {formatarDataHora(item.data_evento)} · {item.tipo} · {item.local}
+              {item.cidade ? ` (${item.cidade})` : " — casa de oração sem setor"}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-slate-500">
+          Aparecem só os eventos que têm uma casa de oração escolhida (na tela de Eventos, botão Editar) dentro da sua abrangência. Os de casa de oração sem setor ficam desabilitados (peça a um administrador para vincular a casa de oração a um setor). Eventos que já têm
+          portaria pendente ou aprovada não aparecem.
+        </p>
+      </div>
+
+      {evento && (
+        <dl className="space-y-1 rounded-xl bg-slate-50 px-4 py-3 text-sm">
+          <div className="flex justify-between gap-3">
+            <dt className="text-slate-500">Data e hora</dt>
+            <dd className="text-right text-slate-900">{formatarDataHora(evento.data_evento)}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-slate-500">Local</dt>
+            <dd className="text-right text-slate-900">{evento.local}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-slate-500">Cidade</dt>
+            <dd className="text-right text-slate-900">{evento.cidade}</dd>
+          </div>
+        </dl>
+      )}
+
+      {erro && (
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erro}
+        </p>
+      )}
+
+      <Button type="submit" disabled={salvando || semCota} className="w-full">
+        {salvando ? "Criando..." : "Criar portaria"}
+      </Button>
+    </form>
+  );
+}
+
+=================== src/modules/portarias/components/FormularioRejeicao.tsx
+"use client";
+
+/**
+ * SysMúsica — Formulário de rejeição de portaria (painel lateral). O motivo é obrigatório e fica
+ * no histórico. O banco confere permissão, abrangência e que a portaria não é de quem rejeita.
+ */
+import { useState, type FormEvent } from "react";
+import Button from "@/components/ui/Button";
+import { formatarDataHora } from "@/lib/datas";
+import { MOTIVO_MAXIMO, validarMotivoRejeicao } from "../regras";
+import { decidirPortaria } from "../services/portarias";
+import type { PortariaDetalhada } from "../tipos";
+
+interface FormularioRejeicaoProps {
+  portaria: PortariaDetalhada;
+  onSalvo: (mensagem: string) => void | Promise<void>;
+}
+
+export default function FormularioRejeicao({ portaria, onSalvo }: FormularioRejeicaoProps) {
+  const [motivo, setMotivo] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function salvar(submissao: FormEvent<HTMLFormElement>) {
+    submissao.preventDefault();
+    if (salvando) return; // evita envio duplicado
+    setErro(null);
+
+    const erroMotivo = validarMotivoRejeicao(motivo);
+    if (erroMotivo) return setErro(erroMotivo);
+
+    setSalvando(true);
+    try {
+      await decidirPortaria(portaria.id, false, motivo.trim());
+      await onSalvo("Portaria rejeitada. O motivo ficou registrado no histórico.");
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível rejeitar a portaria.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={salvar} className="space-y-5">
+      <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm">
+        <p className="font-medium text-slate-900">
+          {portaria.evento_data ? formatarDataHora(portaria.evento_data) : "Evento removido"}
+        </p>
+        <p className="text-slate-600">
+          {[portaria.evento_tipo, portaria.evento_local, portaria.cidade].filter(Boolean).join(" · ")}
+        </p>
+        <p className="mt-1 text-xs text-slate-500">Criada por {portaria.criador_nome ?? "—"}</p>
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="motivo-rejeicao" className="text-sm font-medium text-slate-700">
+          Motivo da rejeição
+        </label>
+        <textarea
+          id="motivo-rejeicao"
+          rows={4}
+          required
+          maxLength={MOTIVO_MAXIMO}
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value)}
+          disabled={salvando}
+          placeholder="Explique por que a portaria não foi autorizada"
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:opacity-60"
+        />
+        <p className="text-xs text-slate-500">
+          Uma portaria rejeitada não registra presenças e a decisão não pode ser desfeita.
+        </p>
+      </div>
+
+      {erro && (
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erro}
+        </p>
+      )}
+
+      <Button type="submit" variante="perigo" disabled={salvando} className="w-full">
+        {salvando ? "Rejeitando..." : "Rejeitar portaria"}
+      </Button>
+    </form>
+  );
+}
+
+=================== src/modules/portarias/components/HistoricoPortaria.tsx
+/**
+ * SysMúsica — Histórico de uma portaria (painel lateral): criação, decisões e exclusão, com quem
+ * fez, quando e o motivo (nas rejeições). O histórico só tem acréscimos: ninguém o edita.
+ */
+import { formatarDataHora } from "@/lib/datas";
+import { ROTULO_ACAO } from "../regras";
+import type { HistoricoPortaria as Item } from "../tipos";
+
+export default function HistoricoPortaria({ itens }: { itens: Item[] }) {
+  if (itens.length === 0) return <p className="text-sm text-slate-500">Nenhum registro no histórico.</p>;
+
+  return (
+    <ol className="space-y-4">
+      {itens.map((item, indice) => (
+        <li key={`${item.ocorrido_em}-${indice}`} className="border-l-2 border-slate-200 pl-4">
+          <p className="text-sm font-medium text-slate-900">{ROTULO_ACAO[item.acao] ?? item.acao}</p>
+          <p className="text-xs text-slate-500">
+            {item.usuario_nome ?? "Sistema"} · {formatarDataHora(item.ocorrido_em)}
+          </p>
+          {item.motivo && <p className="mt-1 text-sm text-slate-700">Motivo: {item.motivo}</p>}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+=================== src/modules/portarias/components/TabelaPortarias.tsx
+"use client";
+
+/**
+ * SysMúsica — Tabela de portarias, com busca e filtro por situação.
+ * Aprovar, rejeitar e excluir só aparecem quando o BANCO informa que o usuário pode
+ * (pode_decidir / pode_excluir); o histórico está sempre disponível.
+ */
+import { useState } from "react";
+import { Check, FileText, History, Search, Trash2, X } from "lucide-react";
+import Badge from "@/components/ui/Badge";
+import BotaoIcone from "@/components/ui/BotaoIcone";
+import { formatarDataHora } from "@/lib/datas";
+import { normalizarTexto } from "@/lib/texto";
+import { ROTULO_STATUS, varianteStatus } from "../regras";
+import type { PortariaDetalhada, StatusPortaria } from "../tipos";
+
+interface TabelaPortariasProps {
+  portarias: PortariaDetalhada[];
+  onAprovar: (portaria: PortariaDetalhada) => void;
+  onRejeitar: (portaria: PortariaDetalhada) => void;
+  onHistorico: (portaria: PortariaDetalhada) => void;
+  onExcluir: (portaria: PortariaDetalhada) => void;
+  /** Relatório de presença (impressão): só aparece nas portarias em que {podeRelatorio} devolve verdadeiro. */
+  onRelatorio?: (portaria: PortariaDetalhada) => void;
+  podeRelatorio?: (portaria: PortariaDetalhada) => boolean;
+}
+
+const classeCabecalho = "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500";
+const classeCampo =
+  "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm " +
+  "focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200";
+
+export default function TabelaPortarias({
+  portarias,
+  onAprovar,
+  onRejeitar,
+  onHistorico,
+  onExcluir,
+  onRelatorio,
+  podeRelatorio,
+}: TabelaPortariasProps) {
+  const [busca, setBusca] = useState("");
+  const [situacao, setSituacao] = useState<"" | StatusPortaria>(""); // "" = todas
+
+  const termo = normalizarTexto(busca);
+  const filtradas = portarias.filter((portaria) => {
+    const texto = normalizarTexto(
+      [portaria.evento_tipo, portaria.evento_local, portaria.evento_finalidade, portaria.cidade, portaria.criador_nome]
+        .filter(Boolean)
+        .join(" ")
+    );
+    return (situacao === "" || portaria.status === situacao) && (termo === "" || texto.includes(termo));
+  });
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1">
+          <label htmlFor="busca-portaria" className="sr-only">
+            Pesquisar portarias
+          </label>
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            aria-hidden="true"
+          />
+          <input
+            id="busca-portaria"
+            type="search"
+            autoComplete="off"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Pesquisar por evento, local, cidade ou criador..."
+            className={classeCampo + " w-full pl-9 placeholder:text-slate-400"}
+          />
+        </div>
+        <div className="sm:w-56">
+          <label htmlFor="filtro-situacao" className="sr-only">
+            Filtrar por situação
+          </label>
+          <select
+            id="filtro-situacao"
+            value={situacao}
+            onChange={(e) => setSituacao(e.target.value as "" | StatusPortaria)}
+            className={classeCampo + " w-full"}
+          >
+            <option value="">Todas as situações</option>
+            <option value="PENDENTE_APROVACAO">{ROTULO_STATUS.PENDENTE_APROVACAO}</option>
+            <option value="APROVADA">{ROTULO_STATUS.APROVADA}</option>
+            <option value="REJEITADA">{ROTULO_STATUS.REJEITADA}</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-slate-50">
+            <tr>
+              <th scope="col" className={classeCabecalho}>Reunião</th>
+              <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>Local</th>
+              <th scope="col" className={classeCabecalho + " hidden lg:table-cell"}>Criada por</th>
+              <th scope="col" className={classeCabecalho}>Situação</th>
+              <th scope="col" className={classeCabecalho + " text-right"}>Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filtradas.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-500">
+                  Nenhuma portaria encontrada com os filtros atuais.
+                </td>
+              </tr>
+            ) : (
+              filtradas.map((portaria) => {
+                const nomeLocal = portaria.evento_local ?? "evento";
+                return (
+                  <tr key={portaria.id} className="align-top transition hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-slate-900">
+                        {portaria.evento_data ? formatarDataHora(portaria.evento_data) : "Evento removido"}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {[portaria.evento_tipo, portaria.evento_finalidade].filter(Boolean).join(" · ")}
+                      </p>
+                      {/* Telas pequenas: o local aparece aqui */}
+                      <p className="text-xs text-slate-500 md:hidden">
+                        {[portaria.evento_local, portaria.cidade].filter(Boolean).join(" · ")}
+                      </p>
+                    </td>
+                    <td className="hidden px-4 py-3 text-slate-700 md:table-cell">
+                      {portaria.evento_local}
+                      <span className="block text-xs text-slate-500">{portaria.cidade}</span>
+                    </td>
+                    <td className="hidden px-4 py-3 text-slate-700 lg:table-cell">
+                      {portaria.criador_nome ?? "—"}
+                      <span className="block text-xs text-slate-500">{formatarDataHora(portaria.criada_em)}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variante={varianteStatus(portaria.status)}>{ROTULO_STATUS[portaria.status]}</Badge>
+                      {portaria.decidida_em && (
+                        <p className="mt-1 text-xs text-slate-500">
+                          {portaria.decisor_nome ?? "—"} · {formatarDataHora(portaria.decidida_em)}
+                        </p>
+                      )}
+                      {portaria.status === "REJEITADA" && portaria.motivo_rejeicao && (
+                        <p className="mt-1 max-w-xs text-xs text-red-700">Motivo: {portaria.motivo_rejeicao}</p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-1">
+                        {portaria.pode_decidir && (
+                          <>
+                            <BotaoIcone
+                              icone={Check}
+                              rotulo={`Aprovar a portaria de ${nomeLocal}`}
+                              onClick={() => onAprovar(portaria)}
+                            />
+                            <BotaoIcone
+                              icone={X}
+                              variante="perigo"
+                              rotulo={`Rejeitar a portaria de ${nomeLocal}`}
+                              onClick={() => onRejeitar(portaria)}
+                            />
+                          </>
+                        )}
+                        <BotaoIcone
+                          icone={History}
+                          rotulo={`Histórico da portaria de ${nomeLocal}`}
+                          onClick={() => onHistorico(portaria)}
+                        />
+                        {onRelatorio && podeRelatorio?.(portaria) && (
+                          <BotaoIcone
+                            icone={FileText}
+                            rotulo={`Relatório de presença da portaria de ${nomeLocal}`}
+                            onClick={() => onRelatorio(portaria)}
+                          />
+                        )}
+                        {portaria.pode_excluir && (
+                          <BotaoIcone
+                            icone={Trash2}
+                              variante="perigo"
+                            rotulo={`Excluir a portaria de ${nomeLocal}`}
+                            onClick={() => onExcluir(portaria)}
+                          />
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+        Exibindo {filtradas.length} de {portarias.length} portaria(s)
+      </div>
+    </div>
+  );
+}
+
+=================== src/modules/portarias/janela.test.ts
+import { describe, expect, it } from "vitest";
+import { descreverJanela, janelaDaPortaria } from "./janela";
+
+// Evento às 14h00 de Salvador (UTC-3) = 17h00 UTC
+const EVENTO = "2026-10-19T17:00:00Z";
+const t = (iso: string) => new Date(iso).getTime();
+
+describe("janelaDaPortaria", () => {
+  it("abre 2h antes e encerra 3h depois do início (limites inclusivos)", () => {
+    expect(janelaDaPortaria(EVENTO, t("2026-10-19T14:59:59Z"))?.situacao).toBe("antes");
+    expect(janelaDaPortaria(EVENTO, t("2026-10-19T15:00:00Z"))?.situacao).toBe("aberta");
+    expect(janelaDaPortaria(EVENTO, t("2026-10-19T17:00:00Z"))?.situacao).toBe("aberta");
+    expect(janelaDaPortaria(EVENTO, t("2026-10-19T20:00:00Z"))?.situacao).toBe("aberta");
+    expect(janelaDaPortaria(EVENTO, t("2026-10-19T20:00:01Z"))?.situacao).toBe("encerrada");
+  });
+
+  it("sem data válida não há janela", () => {
+    expect(janelaDaPortaria(null, 0)).toBeNull();
+    expect(janelaDaPortaria("lixo", 0)).toBeNull();
+  });
+});
+
+describe("descreverJanela", () => {
+  it("mostra os horários de Salvador (12h às 17h para um evento das 14h)", () => {
+    const agora = t("2026-10-19T13:00:00Z"); // 10h em Salvador, mesmo dia
+    expect(descreverJanela(janelaDaPortaria(EVENTO, agora)!, agora)).toBe("Abre às 12h00");
+    const durante = t("2026-10-19T17:30:00Z");
+    expect(descreverJanela(janelaDaPortaria(EVENTO, durante)!, durante)).toBe("Aberta até 17h00");
+    const depois = t("2026-10-19T21:00:00Z");
+    expect(descreverJanela(janelaDaPortaria(EVENTO, depois)!, depois)).toBe("Encerrada às 17h00");
+  });
+
+  it("inclui a data quando o horário não é de hoje", () => {
+    const ontem = t("2026-10-18T13:00:00Z");
+    expect(descreverJanela(janelaDaPortaria(EVENTO, ontem)!, ontem)).toBe("Abre 19/10 às 12h00");
+  });
+});
+
+=================== src/modules/portarias/janela.ts
+/**
+ * SysMúsica — Janela de atendimento da portaria (regras puras, sem banco).
+ * A portaria abre 2 horas ANTES do início do evento e encerra 3 horas DEPOIS do início (horário de Salvador).
+ * Ex.: ensaio às 14h -> aberta das 12h às 17h. A regra de verdade é aplicada pelo banco (migração 0024);
+ * aqui ficam só os cálculos para a tela mostrar quando abre, até quando vale e se está liberada.
+ */
+
+export const HORAS_ANTES = 2;
+export const HORAS_DEPOIS = 3; // encerra 3 horas depois do início (igual ao banco, migração 0027)
+const MS_HORA = 60 * 60 * 1000;
+const FUSO = "America/Sao_Paulo";
+
+export type SituacaoJanela = "antes" | "aberta" | "encerrada";
+
+export interface JanelaPortaria {
+  abre: Date;
+  fecha: Date;
+  situacao: SituacaoJanela;
+}
+
+/** Janela do evento no instante "agora" (ms). Nulo se o evento não tem data válida. Os limites são inclusivos. */
+export function janelaDaPortaria(dataEvento: string | null, agora: number): JanelaPortaria | null {
+  if (!dataEvento) return null;
+  const inicio = new Date(dataEvento).getTime();
+  if (Number.isNaN(inicio)) return null;
+
+  const abre = inicio - HORAS_ANTES * MS_HORA;
+  const fecha = inicio + HORAS_DEPOIS * MS_HORA;
+  const situacao: SituacaoJanela = agora < abre ? "antes" : agora > fecha ? "encerrada" : "aberta";
+  return { abre: new Date(abre), fecha: new Date(fecha), situacao };
+}
+
+// Dia (AAAA-MM-DD) e hora no fuso de Salvador
+function diaSalvador(data: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: FUSO, year: "numeric", month: "2-digit", day: "2-digit" }).format(data);
+}
+
+function horaSalvador(data: Date): string {
+  const [h, m] = new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO, hour: "2-digit", minute: "2-digit", hour12: false })
+    .format(data)
+    .split(":");
+  return `${h}h${m}`;
+}
+
+/** "12h00" quando é hoje; "19/10 às 12h00" quando é em outro dia. */
+export function rotuloDoHorario(data: Date, agora: number): string {
+  if (diaSalvador(data) === diaSalvador(new Date(agora))) return horaSalvador(data);
+  const [, mes, dia] = diaSalvador(data).split("-");
+  return `${dia}/${mes} às ${horaSalvador(data)}`;
+}
+
+/** Texto curto para a tela: "Abre às 12h00", "Aberta até 16h00" ou "Encerrada às 16h00" (com a data se não for hoje). */
+export function descreverJanela(janela: JanelaPortaria, agora: number): string {
+  if (janela.situacao === "antes") return `Abre ${comPreposicao(janela.abre, agora)}`;
+  if (janela.situacao === "aberta") return `Aberta até ${rotuloDoHorario(janela.fecha, agora)}`;
+  return `Encerrada ${comPreposicao(janela.fecha, agora)}`;
+}
+
+// "às 12h00" (hoje) ou "19/10 às 12h00" (outro dia)
+function comPreposicao(data: Date, agora: number): string {
+  const rotulo = rotuloDoHorario(data, agora);
+  return rotulo.includes("às") ? rotulo : `às ${rotulo}`;
+}
+
+=================== src/modules/portarias/regras.test.ts
+import { describe, expect, it } from "vitest";
+import {
+  cidadeNaAbrangencia,
+  descreverCota,
+  ROTULO_STATUS,
+  validarMotivoRejeicao,
+  varianteStatus,
+} from "@/modules/portarias/regras";
+
+describe("validarMotivoRejeicao", () => {
+  it("aceita um motivo com tamanho adequado", () => {
+    expect(validarMotivoRejeicao("Horário em conflito")).toBeNull();
+  });
+
+  it("recusa motivo curto (ignorando espaços) ou longo demais", () => {
+    expect(validarMotivoRejeicao("  ab  ")).toMatch(/mínimo/);
+    expect(validarMotivoRejeicao("x".repeat(301))).toMatch(/no máximo/);
+  });
+});
+
+describe("descreverCota", () => {
+  it("descreve quantas portarias restam", () => {
+    expect(descreverCota({ usadas: 2, limite: 4, restantes: 2 })).toBe(
+      "Hoje: 2 de 4 portarias criadas · restam 2"
+    );
+    expect(descreverCota({ usadas: 3, limite: 4, restantes: 1 })).toContain("resta 1");
+  });
+
+  it("avisa quando o limite foi atingido", () => {
+    expect(descreverCota({ usadas: 4, limite: 4, restantes: 0 })).toContain("limite atingido");
+  });
+});
+
+describe("descreverCota com controle total", () => {
+  it("mostra que não há limite diário", () => {
+    const texto = descreverCota({ usadas: 7, limite: 4, restantes: 4, ilimitada: true });
+    expect(texto).toBe("Hoje: 7 portarias criadas · sem limite (controle total)");
+  });
+});
+
+describe("cidadeNaAbrangencia", () => {
+  it("compara ignorando acento e maiúsculas", () => {
+    expect(cidadeNaAbrangencia("lauro de freitas", ["Lauro de Freitas", "Salvador"])).toBe(true);
+    expect(cidadeNaAbrangencia("São Paulo", ["Sao Paulo"])).toBe(true);
+  });
+
+  it("recusa cidade fora da lista, vazia ou nula", () => {
+    expect(cidadeNaAbrangencia("Camaçari", ["Salvador"])).toBe(false);
+    expect(cidadeNaAbrangencia("Salvador", [])).toBe(false);
+    expect(cidadeNaAbrangencia(null, ["Salvador"])).toBe(false);
+  });
+});
+
+describe("situações da portaria", () => {
+  it("tem texto e cor para cada situação", () => {
+    expect(ROTULO_STATUS.PENDENTE_APROVACAO).toBe("Pendente de aprovação");
+    expect(varianteStatus("APROVADA")).toBe("sucesso");
+    expect(varianteStatus("REJEITADA")).toBe("perigo");
+    expect(varianteStatus("PENDENTE_APROVACAO")).toBe("alerta");
+  });
+});
+
+=================== src/modules/portarias/regras.ts
+/**
+ * SysMúsica — Regras puras da Gestão de portarias (sem banco). As regras de verdade (cota,
+ * aprovação, abrangência) ficam no banco; aqui só há textos e conferências auxiliares da tela.
+ */
+import type { VarianteBadge } from "@/components/ui/Badge";
+import { normalizarTexto } from "@/lib/texto";
+import type { CotaPortarias, StatusPortaria } from "./tipos";
+
+export const ROTULO_STATUS: Record<StatusPortaria, string> = {
+  PENDENTE_APROVACAO: "Pendente de aprovação",
+  APROVADA: "Aprovada",
+  REJEITADA: "Rejeitada",
+};
+
+export const ROTULO_ACAO: Record<string, string> = {
+  CRIADA: "Criada",
+  APROVADA: "Aprovada",
+  REJEITADA: "Rejeitada",
+  EXCLUIDA: "Excluída",
+};
+
+/** Cor do selo de cada situação. */
+export function varianteStatus(status: StatusPortaria): VarianteBadge {
+  if (status === "APROVADA") return "sucesso";
+  if (status === "REJEITADA") return "perigo";
+  return "alerta";
+}
+
+export const MOTIVO_MINIMO = 5;
+export const MOTIVO_MAXIMO = 300;
+
+/** Valida o motivo da rejeição: devolve a mensagem de erro ou null se estiver certo. */
+export function validarMotivoRejeicao(texto: string): string | null {
+  const tamanho = texto.trim().length;
+  if (tamanho < MOTIVO_MINIMO) return `Informe o motivo da rejeição (mínimo de ${MOTIVO_MINIMO} caracteres).`;
+  if (tamanho > MOTIVO_MAXIMO) return `O motivo pode ter no máximo ${MOTIVO_MAXIMO} caracteres.`;
+  return null;
+}
+
+/** Texto da cota do dia: "Hoje: 2 de 4 portarias criadas · restam 2". */
+export function descreverCota(cota: CotaPortarias): string {
+  // Controle total: não há limite diário
+  if (cota.ilimitada) return `Hoje: ${cota.usadas} portarias criadas · sem limite (controle total)`;
+  const sobra =
+    cota.restantes === 0 ? "limite atingido" : cota.restantes === 1 ? "resta 1" : `restam ${cota.restantes}`;
+  return `Hoje: ${cota.usadas} de ${cota.limite} portarias criadas · ${sobra}`;
+}
+
+/** A cidade está na lista? (ignora acento e maiúsculas, como o banco) */
+export function cidadeNaAbrangencia(cidade: string | null, cidades: string[]): boolean {
+  if (!cidade) return false;
+  const chave = normalizarTexto(cidade);
+  return cidades.some((item) => normalizarTexto(item) === chave);
+}
+
+=================== src/modules/portarias/services/portarias.ts
+/**
+ * SysMúsica — Serviço de dados da Gestão de portarias.
+ * Todas as regras (permissão, cota de 4 por dia, abrangência, nunca decidir a própria portaria,
+ * motivo da rejeição) são aplicadas pelas funções do banco; a tela só chama e mostra o resultado.
+ */
+import { supabase } from "@/lib/supabase";
+import { mensagemDoErro } from "@/lib/erros";
+import type { CotaPortarias, EventoParaPortaria, HistoricoPortaria, PortariaDetalhada } from "../tipos";
+
+/** Portarias que o usuário pode ver, da mais recente para a mais antiga. */
+export async function listarPortarias(): Promise<PortariaDetalhada[]> {
+  const { data, error } = await supabase.rpc("listar_portarias");
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar as portarias."));
+  return (data ?? []) as PortariaDetalhada[];
+}
+
+/** Eventos para escolher ao criar uma portaria (os mais recentes primeiro). */
+export async function buscarEventosParaPortaria(): Promise<EventoParaPortaria[]> {
+  // O banco já devolve só os eventos das casas de oração da abrangência do usuário ("cidade" = Região › Setor)
+  const { data, error } = await supabase.rpc("listar_eventos_para_portaria");
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar os eventos."));
+  return (data ?? []) as EventoParaPortaria[];
+}
+
+/** (antiga) Eventos direto da tabela, sem filtro por setor. A tela não usa mais. */
+export async function buscarEventosParaPortariaSemSetor(): Promise<EventoParaPortaria[]> {
+  const { data, error } = await supabase
+    .from("eventos")
+    .select("id, tipo, data_evento, local, cidade")
+    .order("data_evento", { ascending: false })
+    .limit(300);
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar os eventos."));
+  return (data ?? []) as EventoParaPortaria[];
+}
+
+/** Cota do dia de quem está logado (exige a permissão de criar). */
+export async function minhaCota(): Promise<CotaPortarias> {
+  const { data, error } = await supabase.rpc("minha_cota_portarias");
+  const linha = ((data ?? []) as CotaPortarias[])[0];
+  if (error || !linha) {
+    throw new Error(error ? mensagemDoErro(error, "Não foi possível consultar a cota do dia.") : "Cota indisponível.");
+  }
+  return linha;
+}
+
+/** Cidades da abrangência de quem está logado. */
+export async function minhasCidades(): Promise<string[]> {
+  const { data, error } = await supabase.rpc("minhas_cidades");
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível consultar a sua abrangência."));
+  return (data ?? []) as string[];
+}
+
+/** Cria uma portaria PENDENTE para o evento (o banco confere permissão, cota e duplicidade). */
+export async function criarPortaria(eventoId: string): Promise<void> {
+  const { error } = await supabase.rpc("criar_portaria", { p_evento_id: eventoId });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível criar a portaria."));
+}
+
+/** Aprova ou rejeita (a rejeição exige motivo). O banco confere permissão, abrangência e autoria. */
+export async function decidirPortaria(id: string, aprovar: boolean, motivo: string | null): Promise<void> {
+  const { error } = await supabase.rpc("decidir_portaria", { p_id: id, p_aprovar: aprovar, p_motivo: motivo });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível registrar a decisão."));
+}
+
+/** Exclusão lógica (a cota do dia NÃO é devolvida). */
+export async function excluirPortaria(id: string): Promise<void> {
+  const { error } = await supabase.rpc("excluir_portaria", { p_id: id });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível excluir a portaria."));
+}
+
+/** Histórico de uma portaria (criação, decisões e exclusão). */
+export async function historicoDaPortaria(id: string): Promise<HistoricoPortaria[]> {
+  const { data, error } = await supabase.rpc("historico_portaria", { p_id: id });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar o histórico."));
+  return (data ?? []) as HistoricoPortaria[];
+}
+
+=================== src/modules/portarias/tipos.ts
+/** SysMúsica — Tipos da Gestão de portarias (campos = colunas devolvidas pelas funções do banco, migração 0007). */
+
+export type StatusPortaria = "PENDENTE_APROVACAO" | "APROVADA" | "REJEITADA";
+
+/** Portaria com dados do evento, de quem criou e de quem decidiu (já filtrada pelo que o usuário pode ver). */
+export interface PortariaDetalhada {
+  id: string;
+  evento_id: string;
+  status: StatusPortaria;
+  cidade: string;
+  criada_em: string;
+  criada_por: string;
+  criador_nome: string | null;
+  decidida_em: string | null;
+  decisor_nome: string | null;
+  motivo_rejeicao: string | null;
+  evento_tipo: string | null;
+  evento_data: string | null;
+  evento_local: string | null;
+  evento_finalidade: string | null;
+  /** Calculado pelo banco: tem a permissão, está na abrangência, não é o criador e está pendente. */
+  pode_decidir: boolean;
+  /** Calculado pelo banco: tem permissão (ou é o criador de uma pendente) e não há presenças. */
+  pode_excluir: boolean;
+}
+
+/** Evento que pode receber uma portaria. */
+export interface EventoParaPortaria {
+  id: string;
+  tipo: string;
+  data_evento: string;
+  local: string;
+  cidade: string | null;
+}
+
+/** Cota diária de criação de portarias de quem está logado. */
+export interface CotaPortarias {
+  usadas: number;
+  limite: number;
+  restantes: number;
+  /** Controle total: sem limite diário (o "restantes" não limita). */
+  ilimitada?: boolean;
+}
+
+/** Uma linha do histórico de uma portaria. */
+export interface HistoricoPortaria {
+  acao: string; // CRIADA, APROVADA, REJEITADA ou EXCLUIDA
+  status_anterior: string | null;
+  status_novo: string | null;
+  usuario_nome: string | null;
+  ocorrido_em: string;
+  motivo: string | null;
+}
+
+##### MENU LATERAL E PERMISSOES (onde aparecem)
+src/app/(painel)/portaria/registros/page.tsx
+src/components/layout/abasEventos.test.ts
+src/components/layout/navegacao.test.ts
+src/lib/permissoes.ts
+src/modules/relatorios/catalogo.ts
+src/app/(painel)/portarias/layout.tsx:5:/** Protege a Gestão de portarias: quem cria, aprova ou visualiza portarias entra. */
+src/app/(painel)/portarias/page.tsx:4: * SysMúsica — Página /portarias (Gestão de portarias): criar, aprovar, rejeitar, histórico, excluir.
+src/app/(painel)/eventos/layout.tsx:9:      {/* Abas Eventos | Gestão de portarias | Portaria (só aparecem para quem tem acesso a mais de uma) */}
+src/app/(painel)/painel-ao-vivo/layout.tsx:4:/** Protege a tela do Painel ao vivo: só entra quem tem a permissão de visualizar o painel. */
+src/app/(painel)/painel-ao-vivo/page.tsx:16:          titulo="Painel ao vivo"
+src/lib/permissoes.ts:31:  { codigo: "portarias.visualizar", modulo: "Gestão de portarias", acao: "Visualizar" },
+src/lib/permissoes.ts:32:  { codigo: "portarias.criar", modulo: "Gestão de portarias", acao: "Criar" },
+src/lib/permissoes.ts:33:  { codigo: "portarias.aprovar", modulo: "Gestão de portarias", acao: "Aprovar" },
+src/lib/permissoes.ts:34:  { codigo: "portarias.excluir", modulo: "Gestão de portarias", acao: "Excluir" },
+src/lib/permissoes.ts:35:  { codigo: "portarias.controle_total", modulo: "Gestão de portarias", acao: "Controle total" },
+src/lib/permissoes.ts:39:  { codigo: "painel.visualizar", modulo: "Painel ao vivo", acao: "Visualizar" },
+src/modules/portarias/regras.ts:2: * SysMúsica — Regras puras da Gestão de portarias (sem banco). As regras de verdade (cota,
+src/modules/portarias/tipos.ts:1:/** SysMúsica — Tipos da Gestão de portarias (campos = colunas devolvidas pelas funções do banco, migração 0007). */
+src/modules/portarias/services/portarias.ts:2: * SysMúsica — Serviço de dados da Gestão de portarias.
+src/modules/painel/services/painel.ts:4: * nunca as linhas de presença. O banco confere a permissão "Painel ao vivo" e a abrangência (região e setor)
+src/modules/painel/components/PainelAoVivo.tsx:4: * SysMúsica — Painel ao vivo: acompanha, em tempo real, quantos já entraram no evento e a contagem por
+src/modules/relatorios/presencaPortaria.ts:5: * pelas mesmas linhas do Painel ao vivo (com subtotal), linhas de assinatura e rodapé com paginação.
+src/components/layout/abasEventos.ts:2: * SysMúsica — Abas da tela de Eventos (regra pura): Eventos | Gestão de portarias | Portaria.
+src/components/layout/abasEventos.ts:20:    abas.push({ href: "/portarias", rotulo: "Gestão de portarias" });
+src/components/layout/navegacao.ts:58:        // Gestão de portarias e Portaria são ABAS dentro de Eventos: o item continua marcado nessas telas
+
+##### TIPO DE EVENTO NO CODIGO

@@ -1,0 +1,74 @@
+/**
+ * SysMúsica — Regras puras dos Tipos de evento (sem banco). Testadas em regras.test.ts.
+ *
+ * O tipo do evento (Ensaio Regional, Ensaio Local, Culto Oficial...) é um cadastro. Cada tipo diz se usa a tela
+ * "Dados do Ensaio" e em qual modelo: LOCAL, REGIONAL ou nenhum. As mesmas regras valem no banco (migração 0041).
+ */
+import { normalizarTexto } from "@/lib/texto";
+
+export type ModeloEnsaio = "LOCAL" | "REGIONAL";
+
+/** Um tipo como a função listar_tipos_evento devolve. */
+export interface TipoEvento {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  modelo_ensaio: ModeloEnsaio | null; // nulo = o tipo não usa a tela Dados do Ensaio
+  ativo: boolean;
+  em_uso: number; // quantos eventos usam o tipo (tipo usado não pode ser excluído, só desativado)
+}
+
+export const NOME_MINIMO = 3;
+export const NOME_MAXIMO = 60;
+export const DESCRICAO_MAXIMA = 200;
+
+export const ROTULO_MODELO: Record<ModeloEnsaio, string> = {
+  LOCAL: "Ensaio Local",
+  REGIONAL: "Ensaio Regional",
+};
+
+/** Texto para a coluna "Dados do Ensaio" da tabela. */
+export function rotuloDoModelo(modelo: ModeloEnsaio | null): string {
+  return modelo ? ROTULO_MODELO[modelo] : "Não usa";
+}
+
+/** Tira espaços das pontas e os repetidos. */
+export function formatarNomeTipo(texto: string): string {
+  return texto.trim().replace(/\s+/g, " ");
+}
+
+/** Confere o formulário; devolve a mensagem de erro ou null quando está tudo certo. */
+export function validarTipoEvento(
+  dados: { nome: string; descricao: string },
+  existentes: Pick<TipoEvento, "id" | "nome">[],
+  idEmEdicao?: string
+): string | null {
+  const nome = formatarNomeTipo(dados.nome);
+  if (nome.length < NOME_MINIMO) return `Informe o nome do tipo de evento (mínimo de ${NOME_MINIMO} caracteres).`;
+  if (nome.length > NOME_MAXIMO) return `O nome pode ter no máximo ${NOME_MAXIMO} caracteres.`;
+  if (dados.descricao.trim().length > DESCRICAO_MAXIMA) {
+    return `A descrição pode ter no máximo ${DESCRICAO_MAXIMA} caracteres.`;
+  }
+  const chave = normalizarTexto(nome);
+  if (existentes.some((tipo) => tipo.id !== idEmEdicao && normalizarTexto(tipo.nome) === chave)) {
+    return "Já existe um tipo de evento com este nome.";
+  }
+  return null;
+}
+
+/** Filtra a tabela pela busca no nome ou na descrição (sem acento, sem diferenciar maiúsculas). */
+export function filtrarTipos<T extends Pick<TipoEvento, "nome" | "descricao">>(lista: T[], busca: string): T[] {
+  const termo = normalizarTexto(busca);
+  if (termo === "") return lista;
+  return lista.filter(
+    (tipo) => normalizarTexto(tipo.nome).includes(termo) || normalizarTexto(tipo.descricao ?? "").includes(termo)
+  );
+}
+
+/**
+ * Tipos que podem ser escolhidos no formulário de evento: os ativos e, ao editar, também o tipo atual do evento
+ * (mesmo que já tenha sido desativado), para a tela não "perder" a escolha.
+ */
+export function tiposParaEscolher<T extends Pick<TipoEvento, "id" | "ativo">>(lista: T[], idAtual: string | null): T[] {
+  return lista.filter((tipo) => tipo.ativo || tipo.id === idAtual);
+}

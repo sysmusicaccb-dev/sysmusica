@@ -16,7 +16,7 @@ describe("camposFaltando", () => {
   it("aponta o campo vazio e respeita a ordem do formulário", () => {
     expect(camposFaltando({ ...completo, cidade: "" })).toEqual(["Cidade"]);
     expect(camposFaltando({ tipo: "", dataEvento: "", cidade: "", casaOracaoId: "" })).toEqual([
-      "Descrição do evento",
+      "Tipo do evento",
       "Data e hora",
       "Casa de Oração",
       "Cidade",
@@ -24,7 +24,7 @@ describe("camposFaltando", () => {
   });
 
   it("espaços em branco contam como vazio", () => {
-    expect(camposFaltando({ ...completo, cidade: "   ", tipo: " " })).toEqual(["Descrição do evento", "Cidade"]);
+    expect(camposFaltando({ ...completo, cidade: "   ", tipo: " " })).toEqual(["Tipo do evento", "Cidade"]);
   });
 
   it("a casa de oração escolhida é obrigatória ('Nenhuma' = vazio)", () => {

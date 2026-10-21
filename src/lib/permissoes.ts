@@ -56,6 +56,16 @@ export const CATALOGO_PERMISSOES = [
   { codigo: "grupos.criar", modulo: "Grupos e permissões", acao: "Criar" },
   { codigo: "grupos.editar", modulo: "Grupos e permissões", acao: "Editar" },
   { codigo: "grupos.excluir", modulo: "Grupos e permissões", acao: "Excluir" },
+  { codigo: "tipoevento.visualizar", modulo: "Tipos de evento", acao: "Visualizar" },
+  { codigo: "tipoevento.criar", modulo: "Tipos de evento", acao: "Criar" },
+  { codigo: "tipoevento.editar", modulo: "Tipos de evento", acao: "Editar" },
+  { codigo: "tipoevento.excluir", modulo: "Tipos de evento", acao: "Excluir" },
+  { codigo: "hinos.visualizar", modulo: "Hinos", acao: "Visualizar" },
+  { codigo: "hinos.criar", modulo: "Hinos", acao: "Criar" },
+  { codigo: "hinos.editar", modulo: "Hinos", acao: "Editar" },
+  { codigo: "hinos.excluir", modulo: "Hinos", acao: "Excluir" },
+  { codigo: "ensaio.visualizar", modulo: "Dados do Ensaio", acao: "Visualizar" },
+  { codigo: "ensaio.registrar", modulo: "Dados do Ensaio", acao: "Preencher" },
 ] as const;
 
 export type CodigoPermissao = (typeof CATALOGO_PERMISSOES)[number]["codigo"];

@@ -13,12 +13,15 @@ import {
   DatabaseBackup,
   FileText,
   ScrollText,
+  ClipboardCheck,
   ClipboardList,
   DoorOpen,
   Guitar,
   KeyRound,
   LayoutDashboard,
+  Music2,
   ShieldCheck,
+  Tag,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -64,6 +67,8 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         icone: Guitar,
         permissao: "instrumentos.visualizar",
       },
+      { href: "/tipos-evento", rotulo: "Tipo do Evento", icone: Tag, permissao: "tipoevento.visualizar" },
+      { href: "/hinos", rotulo: "Hinos", icone: Music2, permissao: "hinos.visualizar" },
     ],
   },
   {
@@ -83,6 +88,13 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         icone: DoorOpen,
         permissao: "portaria.visualizar",
         ocultoSe: "eventos.visualizar", // quem vê Eventos acessa por aba; quem só tem Portaria continua vendo só este item
+      },
+      {
+        href: "/ensaio",
+        rotulo: "Dados do Ensaio",
+        icone: ClipboardCheck,
+        permissao: "ensaio.visualizar",
+        qualquer: ["ensaio.registrar"], // quem só preenche (sem ver) também acessa
       },
       { href: "/painel-ao-vivo", rotulo: "Painel ao vivo", icone: Activity, permissao: "painel.visualizar" },
       { href: "/relatorios", rotulo: "Relatórios", icone: FileText, permissao: "relatorios.visualizar" },

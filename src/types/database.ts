@@ -103,7 +103,8 @@ export type MembroInsert = Pick<Membro, "nome" | "congregacao" | "cargo_id"> &
 // ---------------------------------------------------------------------
 export interface Evento {
   id: string;
-  tipo: string; // ex: "Ensaio", "Culto"
+  tipo: string; // ex: "Ensaio", "Culto" (nome do tipo; o banco o mantém igual ao nome do tipo escolhido)
+  tipo_evento_id?: string | null; // FK -> tipos_evento.id (nula em eventos antigos até alguém editar o evento)
   data_evento: string; // timestamptz (ISO 8601)
   local: string;
   finalidade_id: string | null; // FK -> finalidades_evento.id (nula em eventos antigos)

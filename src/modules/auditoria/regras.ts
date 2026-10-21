@@ -50,6 +50,9 @@ const ROTULO_ACAO: Record<string, string> = {
   presenca_fora_da_janela: "Registrou entrada fora do horário da portaria (controle total)",
   entrada_avulsa_registrada: "Registrou entrada sem cadastro",
   entrada_avulsa_desfeita: "Desfez entrada sem cadastro",
+  ensaio_registrado: "Registrou os dados do ensaio",
+  ensaio_alterado: "Alterou os dados do ensaio",
+  hinos_importados: "Importou lista de hinos",
 };
 
 const ROTULO_ENTIDADE: Record<string, string> = {
@@ -76,6 +79,9 @@ const ROTULO_ENTIDADE: Record<string, string> = {
   portaria: "Portaria",
   relatorio: "Relatório",
   backup: "Backup",
+  tipos_evento: "Tipo de evento",
+  hinos: "Hino",
+  ensaio: "Dados do ensaio",
 };
 
 const ROTULO_CAMPO: Record<string, string> = {
@@ -137,6 +143,16 @@ const ROTULO_CAMPO: Record<string, string> = {
   toca: "Vai tocar",
   localidade: "Localidade de origem",
   sem_cadastro: "Sem cadastro",
+  tipo_evento_id: "Tipo do evento",
+  modelo_ensaio: "Dados do Ensaio",
+  ordem: "Ordem",
+  categoria: "Categoria",
+  numero: "Número",
+  atende: "Quem atende",
+  palavra: "Palavra",
+  hino_abertura: "Hino de abertura",
+  encarregados: "Encarregados",
+  hinos: "Hinos executados",
 };
 
 /** "registro_criado" -> "Registro criado" (para códigos que não têm texto próprio). */

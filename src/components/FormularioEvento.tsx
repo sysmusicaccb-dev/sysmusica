@@ -6,13 +6,15 @@ import SeletorCasaOracao from "@/modules/organizacao/components/SeletorCasaOraca
  * SysMúsica — Formulário de evento (cadastro e edição) — conteúdo do painel lateral.
  * evento = null -> cadastrar; preenchido -> editar.
  *
- * Campos: Descrição do evento, Data e hora, Casa de Oração e Cidade.
+ * Campos: Tipo do evento (lista do cadastro Tipo do Evento), Data e hora, Casa de Oração e Cidade.
+ *  - O tipo vem da lista cadastrada em "Tipo do Evento"; o banco grava o nome do tipo em eventos.tipo.
+ *    Eventos antigos sem tipo escolhido pedem para escolher um ao serem editados.
  *  - A Finalidade saiu da tela (a coluna continua no banco; eventos antigos mantêm o valor).
  *  - O "Local" também saiu: o banco exige o campo, então gravamos nele o NOME da Casa de Oração escolhida.
  *  - A Cidade vem do cadastro da Casa de Oração (função dados_casa_oracao). Se a casa não tiver cidade
  *    cadastrada, o campo fica livre para digitar e um aviso orienta a completar o cadastro dela.
  */
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { datetimeLocalParaIso, isoParaDatetimeLocal } from "@/lib/dataLocal";
 import type { Evento, FinalidadeEvento } from "@/types/database";
@@ -28,6 +30,8 @@ import {
 import { cidadeDaCasa } from "@/modules/eventos/casaDoEvento";
 import { buscarDadosDaCasa } from "@/modules/eventos/services/casaDoEvento";
 import { atualizarEvento, criarEvento } from "@/modules/eventos/services/eventos";
+import { tiposParaEscolher, type TipoEvento } from "@/modules/tiposEvento/regras";
+import { listarTiposEvento } from "@/modules/tiposEvento/services/tiposEvento";
 
 interface FormularioEventoProps {
   evento: Evento | null;
@@ -53,7 +57,26 @@ export default function FormularioEvento({
 }: FormularioEventoProps) {
   const editando = evento !== null;
 
-  const [tipo, setTipo] = useState(evento?.tipo ?? "");
+  // Tipo do evento: escolhido na lista cadastrada (eventos antigos podem não ter tipo ligado ainda)
+  const [tipoEventoId, setTipoEventoId] = useState(evento?.tipo_evento_id ?? "");
+  const [tipos, setTipos] = useState<TipoEvento[]>([]);
+  const [erroTipos, setErroTipos] = useState<string | null>(null);
+  const tipoEscolhido = tipos.find((item) => item.id === tipoEventoId);
+
+  // Carrega a lista de tipos ao abrir o formulário (os inativos só aparecem se já forem o tipo deste evento)
+  useEffect(() => {
+    let ativo = true;
+    listarTiposEvento()
+      .then((lista) => {
+        if (ativo) setTipos(lista);
+      })
+      .catch(() => {
+        if (ativo) setErroTipos("Não foi possível carregar os tipos de evento. Feche e abra o formulário novamente.");
+      });
+    return () => {
+      ativo = false;
+    };
+  }, []);
   const [dataEvento, setDataEvento] = useState(evento ? isoParaDatetimeLocal(evento.data_evento) : "");
   // "local" não aparece mais na tela: guarda o NOME da Casa de Oração (o banco exige o campo).
   const [local, setLocal] = useState(evento?.local ?? "");
@@ -100,7 +123,7 @@ export default function FormularioEvento({
     setErro(null);
 
     // Todos os campos são obrigatórios: o alerta lista os que faltam e eles ficam com borda vermelha
-    const vazios = camposFaltando({ tipo, dataEvento, cidade, casaOracaoId });
+    const vazios = camposFaltando({ tipo: tipoEscolhido?.nome ?? "", dataEvento, cidade, casaOracaoId });
     setFaltando(vazios);
     if (vazios.length > 0) return setErro(mensagemCamposFaltando(vazios));
 
@@ -120,7 +143,8 @@ export default function FormularioEvento({
     try {
       // Grava o evento. A finalidade não é mais enviada: eventos antigos mantêm a que já tinham.
       const dados = {
-        tipo: tipo.trim(),
+        tipo: tipoEscolhido?.nome ?? "", // o banco mantém eventos.tipo igual ao nome do tipo escolhido
+        tipo_evento_id: tipoEventoId,
         data_evento: dataIso,
         local: local.trim(),
         cidade: cidade.trim() || null,
@@ -143,24 +167,34 @@ export default function FormularioEvento({
 
       <div className="space-y-1.5">
         <label htmlFor="tipo" className="text-sm font-medium text-slate-700">
-          Descrição do evento <span className="text-red-600"> *</span>
+          Tipo do evento <span className="text-red-600"> *</span>
         </label>
-        {/* Campo livre com sugestões (datalist): aceita Ensaio, Culto ou qualquer outro tipo */}
-        <input
+        {/* Lista dos tipos cadastrados em "Tipo do Evento" (só os ativos, mais o tipo atual do evento) */}
+        <select
           id="tipo"
-          type="text"
-          list="sugestoes-tipo-evento"
           required
-          value={tipo}
-          onChange={(e) => setTipo(e.target.value)}
+          value={tipoEventoId}
+          onChange={(e) => setTipoEventoId(e.target.value)}
           disabled={salvando}
-          placeholder="Ex: Ensaio Regional, Culto Oficial"
           className={classeCampo(ROTULO_TIPO)}
-        />
-        <datalist id="sugestoes-tipo-evento">
-          <option value="Ensaio" />
-          <option value="Culto" />
-        </datalist>
+        >
+          <option value="">Selecione o tipo...</option>
+          {tiposParaEscolher(tipos, tipoEventoId || null).map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.nome}
+            </option>
+          ))}
+        </select>
+        {evento && !evento.tipo_evento_id && (
+          <p role="status" className="text-xs text-amber-700">
+            Tipo antigo: “{evento.tipo}”. Escolha o tipo na lista para ligar este evento ao cadastro.
+          </p>
+        )}
+        {erroTipos && (
+          <p role="alert" className="text-xs text-red-700">
+            {erroTipos}
+          </p>
+        )}
       </div>
 
       <div className="space-y-1.5">

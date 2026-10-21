@@ -26,6 +26,8 @@ export type NomeTabela =
   | "cargos"
   | "finalidades_evento"
   | "instrumentos"
+  | "tipos_evento"
+  | "hinos"
   | "grupos"
   | "grupo_permissoes"
   | "usuarios"
@@ -33,6 +35,9 @@ export type NomeTabela =
   | "usuario_vinculos"
   | "membros"
   | "eventos"
+  | "dados_ensaio"
+  | "dados_ensaio_encarregados"
+  | "dados_ensaio_hinos"
   | "portarias"
   | "portarias_historico"
   | "presencas"
@@ -99,6 +104,8 @@ export const TABELAS: DefinicaoTabela[] = [
   tabela("instrumentos", "Instrumentos", "cadastros", {
     referencias: [{ coluna: "familia_id", tabela: "familias" }],
   }),
+  tabela("tipos_evento", "Tipos de evento", "cadastros"),
+  tabela("hinos", "Hinos e coros", "cadastros"),
   tabela("grupos", "Grupos de acesso", "grupos"),
   tabela("grupo_permissoes", "Permissões dos grupos", "grupos", {
     pk: ["grupo_id", "permissao_codigo"],
@@ -131,6 +138,23 @@ export const TABELAS: DefinicaoTabela[] = [
     referencias: [
       { coluna: "finalidade_id", tabela: "finalidades_evento" },
       { coluna: "casa_oracao_id", tabela: "casas_oracao" },
+      { coluna: "tipo_evento_id", tabela: "tipos_evento" },
+    ],
+  }),
+  // Dados do Ensaio: um registro por evento, com os encarregados e os hinos executados (filhos)
+  tabela("dados_ensaio", "Dados do ensaio", "eventos", {
+    referencias: [
+      { coluna: "evento_id", tabela: "eventos" },
+      { coluna: "hino_abertura_id", tabela: "hinos" },
+    ],
+  }),
+  tabela("dados_ensaio_encarregados", "Encarregados do ensaio", "eventos", {
+    referencias: [{ coluna: "dados_ensaio_id", tabela: "dados_ensaio" }],
+  }),
+  tabela("dados_ensaio_hinos", "Hinos executados no ensaio", "eventos", {
+    referencias: [
+      { coluna: "dados_ensaio_id", tabela: "dados_ensaio" },
+      { coluna: "hino_id", tabela: "hinos" },
     ],
   }),
   tabela("portarias", "Portarias", "portarias", {
@@ -178,8 +202,8 @@ export const GRUPOS_DADOS: DefinicaoGrupo[] = [
   {
     id: "cadastros",
     rotulo: "Cargos, instrumentos e famílias",
-    descricao: "Cargos, famílias, instrumentos e finalidades de evento",
-    tabelas: ["familias", "cargos", "finalidades_evento", "instrumentos"],
+    descricao: "Cargos, famílias, instrumentos, finalidades e tipos de evento e hinos",
+    tabelas: ["familias", "cargos", "finalidades_evento", "instrumentos", "tipos_evento", "hinos"],
   },
   {
     id: "grupos",
@@ -202,8 +226,8 @@ export const GRUPOS_DADOS: DefinicaoGrupo[] = [
   {
     id: "eventos",
     rotulo: "Eventos",
-    descricao: "Eventos cadastrados",
-    tabelas: ["eventos"],
+    descricao: "Eventos cadastrados e os dados dos ensaios",
+    tabelas: ["eventos", "dados_ensaio", "dados_ensaio_encarregados", "dados_ensaio_hinos"],
   },
   {
     id: "portarias",
