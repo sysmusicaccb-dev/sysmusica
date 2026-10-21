@@ -17,6 +17,7 @@ import {
 } from "@/modules/dashboard/services/indicadores";
 import { buscarDadosGraficos, type DadosGraficos } from "@/modules/dashboard/services/graficos";
 import AtalhosRapidos from "@/modules/dashboard/components/AtalhosRapidos";
+import CartoesAVencerCard from "@/modules/cartoes/components/CartoesAVencerCard";
 import PainelGraficos from "@/modules/dashboard/components/PainelGraficos";
 import ProximosEventos from "@/modules/dashboard/components/ProximosEventos";
 import ErrorState from "@/components/ui/ErrorState";
@@ -129,6 +130,9 @@ export default function DashboardConteudo() {
                 href="/instrumentos"
               />
             </section>
+
+            {/* Alerta de cartões de identificação (só aparece para quem tem a permissão cartoes.visualizar) */}
+            <CartoesAVencerCard />
 
             <PainelGraficos dados={graficos} />
 
