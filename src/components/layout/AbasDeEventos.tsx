@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * SysMúsica — Barra de abas da tela de Eventos: Eventos | Gestão de portarias | Portaria.
+ * SysMúsica — Barra de abas da tela de Eventos: Eventos | Tipo do Evento | Gestão de portarias | Portaria.
  * Cada aba leva para a tela que já existe (mesma rota e mesma permissão). A barra é exibida pelos layouts
- * dessas três telas e só aparece para quem vê mais de uma aba (regra em ./abasEventos.ts).
+ * dessas telas e só aparece para quem vê mais de uma aba (regra em ./abasEventos.ts).
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";

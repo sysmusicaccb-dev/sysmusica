@@ -194,10 +194,15 @@ describe("Gestão de portarias e Portaria como abas de Eventos", () => {
     const eventos = GRUPOS_MENU.flatMap((grupo) => grupo.itens).find((item) => item.href === "/eventos");
     expect(eventos).toBeDefined();
     if (!eventos) return;
-    for (const caminho of ["/eventos", "/portarias", "/portaria", "/portaria/registros"]) {
+    for (const caminho of ["/eventos", "/tipos-evento", "/portarias", "/portaria", "/portaria/registros"]) {
       expect(itemMenuAtivo(eventos, caminho), caminho).toBe(true);
     }
     expect(itemMenuAtivo(eventos, "/membros")).toBe(false);
+  });
+
+  it("Tipo do Evento é aba de Eventos: sai do menu para quem vê Eventos e fica para quem não vê", () => {
+    expect(hrefsDe(criarPode(["eventos.visualizar", "tipoevento.visualizar"]))).toEqual(["/eventos"]);
+    expect(hrefsDe(criarPode(["tipoevento.visualizar"]))).toEqual(["/tipos-evento"]);
   });
 
   it("a primeira tela de quem vê Eventos e Portaria continua sendo Eventos", () => {

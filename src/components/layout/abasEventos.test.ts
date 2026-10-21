@@ -27,6 +27,18 @@ describe("abasDeEventos", () => {
     expect(rotulos(["eventos.visualizar"])).toEqual([]);
   });
 
+  it("Tipo do Evento é a segunda aba, logo depois de Eventos", () => {
+    expect(rotulos(["eventos.visualizar", "tipoevento.visualizar"])).toEqual(["Eventos", "Tipo do Evento"]);
+    expect(
+      rotulos(["eventos.visualizar", "tipoevento.visualizar", "portarias.visualizar", "portaria.visualizar"])
+    ).toEqual(["Eventos", "Tipo do Evento", "Gestão de portarias", "Portaria"]);
+  });
+
+  it("sem a permissão de Tipo do Evento a aba não aparece; sem Eventos não há barra", () => {
+    expect(rotulos(["eventos.visualizar", "portaria.visualizar"])).not.toContain("Tipo do Evento");
+    expect(rotulos(["tipoevento.visualizar"])).toEqual([]);
+  });
+
   it("quem não tem Eventos não vê barra (o grupo Portaria continua só com o item Portaria)", () => {
     expect(rotulos(["portaria.visualizar", "portaria.registrar"])).toEqual([]);
     expect(rotulos(["portarias.visualizar", "portaria.visualizar"])).toEqual([]);
