@@ -13,7 +13,7 @@ export default function PainelAoVivoPage() {
     <main className="text-slate-900">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <PageHeader
-          titulo="Painel ao vivo"
+          titulo="Painel ao Vivo"
           descricao="Acompanhe a presença do evento em tempo real, enquanto a Portaria registra as entradas."
         />
         <PainelAoVivo />

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Administração > Grupos e permissões: lista de grupos com criar, editar (inclusive a
+ * SysMúsica — Administração > Grupos e Permissões: lista de grupos com criar, editar (inclusive a
  * grade de permissões) e excluir. Cada botão só aparece para quem tem a permissão; o banco
  * confere a permissão de novo em toda operação.
  */
@@ -98,7 +98,7 @@ export default function GruposPage() {
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <PageHeader
-          titulo="Grupos e permissões"
+          titulo="Grupos e Permissões"
           descricao={`Cada grupo define o que seus usuários podem ver e fazer.${
             !carregando && !erro ? ` ${grupos.length} grupo(s).` : ""
           }`}

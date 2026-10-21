@@ -107,6 +107,19 @@ describe("menu de Administração", () => {
   });
 });
 
+describe("Grupos e Permissões como aba de Usuários", () => {
+  it("quem vê os dois tem um único item (Usuários) no menu de Administração", () => {
+    const menu = filtrarMenu(GRUPOS_MENU, criarPode(["usuarios.visualizar", "grupos.visualizar"]));
+    const administracao = menu.find((grupo) => grupo.titulo === "Administração");
+    expect(administracao?.itens.map((item) => item.rotulo)).toEqual(["Usuários"]);
+  });
+
+  it("quem só tem Grupos vê o item Grupos e Permissões", () => {
+    const menu = filtrarMenu(GRUPOS_MENU, criarPode(["grupos.visualizar"]));
+    expect(menu.flatMap((grupo) => grupo.itens.map((item) => item.rotulo))).toEqual(["Grupos e Permissões"]);
+  });
+});
+
 describe("migalhasVisiveis", () => {
   const caminho = montarMigalhas("/portaria");
 

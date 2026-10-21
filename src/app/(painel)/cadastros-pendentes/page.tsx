@@ -127,7 +127,7 @@ export default function CadastrosPendentesPage() {
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <PageHeader
-          titulo="Cadastros pendentes"
+          titulo="Cadastros Pendentes"
           descricao="Cadastros enviados pelo link público. Nada entra no sistema sem a sua aprovação."
         />
 

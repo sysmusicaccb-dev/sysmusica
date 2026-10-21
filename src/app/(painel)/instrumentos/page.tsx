@@ -97,7 +97,7 @@ export default function InstrumentosPage() {
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <PageHeader
-          titulo="Instrumentos e famílias"
+          titulo="Instrumentos e Famílias"
           descricao={`A família de cada instrumento é definida automaticamente pelo nome.${
             !carregando && !erro ? ` ${instrumentos.length} instrumento(s).` : ""
           }`}
