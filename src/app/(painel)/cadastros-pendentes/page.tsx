@@ -47,6 +47,7 @@ export default function CadastrosPendentesPage() {
   const [erroDecisao, setErroDecisao] = useState<string | null>(null);
   const [processando, setProcessando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [casaEscolhida, setCasaEscolhida] = useState(""); // casa escolhida ao aprovar um pedido com casa digitada
 
   const carregar = useCallback(async (status: FiltroStatus) => {
     try {
@@ -86,6 +87,7 @@ export default function CadastrosPendentesPage() {
 
   function fecharDecisao() {
     setConfirmando(null);
+    setCasaEscolhida("");
     setMotivo("");
     setErroDecisao(null);
   }
@@ -100,7 +102,7 @@ export default function CadastrosPendentesPage() {
     setErroDecisao(null);
     try {
       if (confirmando === "aprovar") {
-        await aprovarCadastro(aberto.id);
+        await aprovarCadastro(aberto.id, casaEscolhida || undefined);
         setAviso(
           aberto.tipo === "NOVO"
             ? `Cadastro de "${aberto.nome}" aprovado: o membro foi criado.`
@@ -184,8 +186,9 @@ export default function CadastrosPendentesPage() {
             detalhe={aberto}
             podeAprovar={pode("cadastros.aprovar")}
             ocupado={processando}
-            onAprovar={() => {
+            onAprovar={(casaId) => {
               setErroDecisao(null);
+              setCasaEscolhida(casaId ?? "");
               setConfirmando("aprovar");
             }}
             onRecusar={() => {

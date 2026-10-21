@@ -41,7 +41,14 @@ export default function TabelaCadastros({ itens, onAbrir }: { itens: ResumoCadas
                   </div>
                 </td>
                 <td className="px-4 py-3 text-slate-800">{item.cargo_nome ?? "—"}</td>
-                <td className="px-4 py-3 text-slate-800">{item.casa_nome ?? "—"}</td>
+                <td className="px-4 py-3 text-slate-800">
+                  {item.casa_nome ?? "—"}
+                  {item.casa_nao_cadastrada && (
+                    <div className="mt-1">
+                      <Badge variante="alerta">Casa não cadastrada</Badge>
+                    </div>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-slate-800">{ROTULO_TIPO[item.tipo]}</td>
                 <td className="whitespace-nowrap px-4 py-3 tabular-nums text-slate-700">
                   {formatarDataHora(item.criado_em)}

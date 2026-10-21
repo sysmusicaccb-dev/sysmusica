@@ -41,11 +41,16 @@ export async function recusarCadastro(id: string, motivo: string): Promise<void>
 }
 
 /** Chama uma rota do servidor levando o token do login. */
-async function chamar<T>(caminho: string, metodo: "GET" | "POST"): Promise<T> {
+async function chamar<T>(caminho: string, metodo: "GET" | "POST", corpo?: unknown): Promise<T> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error("Sua sessão expirou. Entre de novo.");
-  const resposta = await fetch(caminho, { method: metodo, headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+  const resposta = await fetch(caminho, {
+    method: metodo,
+    headers: { Authorization: `Bearer ${token}`, ...(corpo === undefined ? {} : { "Content-Type": "application/json" }) },
+    body: corpo === undefined ? undefined : JSON.stringify(corpo),
+    cache: "no-store",
+  });
   const json = (await resposta.json().catch(() => null)) as { erro?: string } | null;
   if (!resposta.ok) throw new Error(json?.erro ?? "Não foi possível concluir a operação.");
   return json as T;
@@ -55,8 +60,9 @@ export function arquivosDoCadastro(id: string): Promise<ArquivosDoCadastro> {
   return chamar<ArquivosDoCadastro>(`/api/cadastros/${id}/arquivos`, "GET");
 }
 
-export async function aprovarCadastro(id: string): Promise<{ membro_id: string }> {
-  const r = await chamar<{ membro_id: string }>(`/api/cadastros/${id}/aprovar`, "POST");
+/** `casaId`: obrigatório quando o pedido veio com uma Casa de Oração digitada (que não estava cadastrada). */
+export async function aprovarCadastro(id: string, casaId?: string): Promise<{ membro_id: string }> {
+  const r = await chamar<{ membro_id: string }>(`/api/cadastros/${id}/aprovar`, "POST", casaId ? { casa_id: casaId } : {});
   avisarQueFilaMudou();
   return r;
 }

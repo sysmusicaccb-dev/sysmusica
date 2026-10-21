@@ -65,7 +65,8 @@ export interface OpcoesCadastroPublico {
 /** Tudo o que a pessoa preenche (textos, para ligar direto nos campos). */
 export interface DadosFormularioPublico {
   nome: string;
-  casaOracaoId: string;
+  casaOracaoId: string; // id da casa escolhida na lista ("" se a pessoa digitou uma casa que não está na lista)
+  casaNome: string; // nome digitado (usado só quando casaOracaoId está vazio)
   cargoId: string;
   instrumentoId: string;
   categoria: string;
@@ -81,6 +82,10 @@ export interface DadosFormularioPublico {
   /** Campo-armadilha: invisível para pessoas; robôs costumam preencher. Deve ficar vazio. */
   site: string;
 }
+
+/** Tamanho do nome de uma Casa de Oração digitada (mesmos limites do banco). */
+export const CASA_NOME_MINIMO = 3;
+export const CASA_NOME_MAXIMO = 120;
 
 export interface ContextoValidacao {
   cargo: CargoPublico | undefined;
@@ -123,6 +128,7 @@ export function formularioVazio(cadastroVazio: CadastroMusical): DadosFormulario
   return {
     nome: "",
     casaOracaoId: "",
+    casaNome: "",
     cargoId: "",
     instrumentoId: "",
     categoria: "",
@@ -175,7 +181,12 @@ export function validarEnvioPublico(dados: DadosFormularioPublico, ctx: Contexto
   if (dados.dataNascimento > ctx.hoje) return "A data de nascimento não pode estar no futuro.";
   if (dados.dataNascimento < "1900-01-01") return "Data de nascimento inválida.";
 
-  if (!dados.casaOracaoId) return "Escolha a sua Casa de Oração.";
+  // Casa de Oração: escolhida na lista OU digitada (quando não existe na lista; a secretaria confere depois)
+  if (!dados.casaOracaoId) {
+    const casa = limparNome(dados.casaNome);
+    if (casa.length < CASA_NOME_MINIMO) return "Escolha a sua Casa de Oração na lista ou digite o nome dela.";
+    if (casa.length > CASA_NOME_MAXIMO) return `O nome da Casa de Oração pode ter no máximo ${CASA_NOME_MAXIMO} caracteres.`;
+  }
 
   const cargo = ctx.cargo;
   if (!dados.cargoId || !cargo) return "Escolha o cargo.";
@@ -221,7 +232,8 @@ export function validarEnvioPublico(dados: DadosFormularioPublico, ctx: Contexto
 /** JSON que vai para a rota de envio (e dali para registrar_cadastro_publico). Chaves iguais às do banco. */
 export interface CargaCadastroPublico {
   nome: string;
-  casa_oracao_id: string;
+  casa_oracao_id: string; // "" quando a casa foi digitada
+  casa_nome: string | null; // nome digitado (só quando não escolheu da lista)
   cargo_id: string;
   instrumento_id: string | null;
   categoria: string | null;
@@ -256,6 +268,7 @@ export function montarCargaPublica(dados: DadosFormularioPublico, ctx: Pick<Cont
   return {
     nome: limparNome(dados.nome),
     casa_oracao_id: dados.casaOracaoId,
+    casa_nome: dados.casaOracaoId ? null : limparNome(dados.casaNome),
     cargo_id: dados.cargoId,
     instrumento_id: permiteInstrumento && dados.instrumentoId ? dados.instrumentoId : null,
     categoria: cargoUsaCategoria(ctx.cargo?.nome) && dados.categoria ? dados.categoria : null,

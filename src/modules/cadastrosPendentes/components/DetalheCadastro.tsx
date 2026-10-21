@@ -10,6 +10,7 @@ import { AlertTriangle, Check, ExternalLink, X } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
+import { listarOrganizacaoParaSelecao } from "@/modules/organizacao/services/organizacao";
 import { arquivosDoCadastro } from "../services/cadastrosPendentes";
 import {
   ROTULO_STATUS,
@@ -45,13 +46,38 @@ interface Props {
   detalhe: DetalheCadastro;
   podeAprovar: boolean;
   ocupado: boolean;
-  onAprovar: () => void;
+  /** `casaId`: preenchido quando o pedido veio com uma Casa de Oração digitada e quem aprova escolheu a correta. */
+  onAprovar: (casaId?: string) => void;
   onRecusar: () => void;
 }
 
 export default function DetalheDoCadastro({ detalhe, podeAprovar, ocupado, onAprovar, onRecusar }: Props) {
   const [arquivos, setArquivos] = useState<ArquivosDoCadastro | null>(null);
   const [erroArquivos, setErroArquivos] = useState<string | null>(null);
+
+  // Pedido com Casa de Oração DIGITADA (não estava na lista): quem aprova escolhe a casa cadastrada correta
+  const semCasa = detalhe.casa_oracao_id === null;
+  const [casas, setCasas] = useState<{ id: string; nome: string }[] | null>(null);
+  const [erroCasas, setErroCasas] = useState<string | null>(null);
+  const [casaId, setCasaId] = useState("");
+  useEffect(() => {
+    let ativo = true;
+    if (!semCasa || detalhe.status !== "PENDENTE") return;
+    // Só as casas que quem aprova enxerga (o banco aplica a abrangência)
+    listarOrganizacaoParaSelecao()
+      .then((nos) => {
+        if (!ativo) return;
+        const lista = nos
+          .filter((no) => String(no.nivel) === "CASA_ORACAO")
+          .map((no) => ({ id: no.id, nome: no.nome }))
+          .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+        setCasas(lista);
+      })
+      .catch(() => ativo && setErroCasas("Não foi possível carregar a lista de Casas de Oração."));
+    return () => {
+      ativo = false;
+    };
+  }, [semCasa, detalhe.status]);
 
   // Busca os endereços temporários das imagens quando o detalhe abre
   useEffect(() => {
@@ -84,6 +110,32 @@ export default function DetalheDoCadastro({ detalhe, podeAprovar, ocupado, onApr
           Já existe um membro com este CPF, mas com outra data de nascimento. Confira com a pessoa antes de decidir: este
           pedido não pode ser aprovado como novo cadastro enquanto o CPF existir.
         </p>
+      )}
+      {semCasa && detalhe.status === "PENDENTE" && (
+        <section className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-950">
+          <p role="alert">
+            <strong>Casa de Oração não cadastrada.</strong> A pessoa digitou: “{detalhe.casa_nome_informada ?? detalhe.casa_nome ?? "—"}”.
+            Escolha abaixo a casa correta. Se ela ainda não existe, cadastre-a antes em <strong>Organização</strong> e volte aqui.
+          </p>
+          {erroCasas ? (
+            <p className="text-red-700">{erroCasas}</p>
+          ) : !casas ? (
+            <Skeleton className="h-9" />
+          ) : (
+            <select
+              aria-label="Casa de Oração correta"
+              value={casaId}
+              onChange={(e) => setCasaId(e.target.value)}
+              disabled={ocupado}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 [color-scheme:light]"
+            >
+              <option value="">Selecione a Casa de Oração</option>
+              {casas.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          )}
+        </section>
       )}
       {detalhe.outros_pendentes > 0 && (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -181,7 +233,7 @@ export default function DetalheDoCadastro({ detalhe, podeAprovar, ocupado, onApr
 
       {pendente && podeAprovar && (
         <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
-          <Button icone={Check} onClick={onAprovar} disabled={ocupado || (detalhe.cpf_conflito && !atualizacao)}>
+          <Button icone={Check} onClick={() => onAprovar(semCasa ? casaId : undefined)} disabled={ocupado || (detalhe.cpf_conflito && !atualizacao) || (semCasa && casaId === "")}>
             Aprovar
           </Button>
           <Button variante="perigo" icone={X} onClick={onRecusar} disabled={ocupado}>

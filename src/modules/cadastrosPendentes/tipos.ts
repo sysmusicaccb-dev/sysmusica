@@ -13,6 +13,8 @@ export interface ResumoCadastro {
   cpf_mascarado: string | null;
   cargo_nome: string | null;
   casa_nome: string | null;
+  /** A pessoa digitou uma Casa de Oração que não estava na lista (migração 0043). */
+  casa_nao_cadastrada?: boolean;
   menor: boolean;
   cpf_conflito: boolean;
   outros_pendentes: number;
@@ -71,8 +73,9 @@ export interface DetalheCadastro {
   bairro: string | null;
   cpf: string | null;
   cpf_completo_visivel: boolean;
-  casa_oracao_id: string;
+  casa_oracao_id: string | null; // nulo quando a casa foi digitada (veja casa_nome_informada)
   casa_nome: string | null;
+  casa_nome_informada?: string | null;
   cargo_id: string | null;
   cargo_nome: string | null;
   instrumento_id: string | null;

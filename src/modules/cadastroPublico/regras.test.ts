@@ -28,7 +28,7 @@ const cadastroOk: CadastroMusical = {
 function base(extra: Partial<DadosFormularioPublico> = {}): DadosFormularioPublico {
   return {
     ...formularioVazio(CADASTRO_VAZIO),
-    nome: "João da Silva", casaOracaoId: "casa1", cargoId: "c1", instrumentoId: "i1", categoria: "OFICIALIZADO",
+    nome: "João da Silva", casaOracaoId: "casa1", casaNome: "", cargoId: "c1", instrumentoId: "i1", categoria: "OFICIALIZADO",
     cpf: "529.982.247-25", dataNascimento: "1990-05-10", cidade: "São Paulo", bairro: "Sé",
     cadastro: cadastroOk, aceitePrivacidade: true, ...extra,
   };
@@ -78,6 +78,11 @@ describe("validarEnvioPublico", () => {
     expect(validarEnvioPublico(base({ cpf: "111.111.111-11" }), ctx())).toMatch(/inválido/);
     expect(validarEnvioPublico(base({ dataNascimento: "2030-01-01" }), ctx())).toMatch(/futuro/);
     expect(validarEnvioPublico(base({ casaOracaoId: "" }), ctx())).toMatch(/Casa de Oração/);
+    // Casa digitada: aceita quando tem nome razoável; recusa vazio/curto/longo
+    expect(validarEnvioPublico(base({ casaOracaoId: "", casaNome: "Casa Nova" }), ctx())).toBeNull();
+    expect(validarEnvioPublico(base({ casaOracaoId: "", casaNome: "  " }), ctx())).toMatch(/na lista ou digite/);
+    expect(validarEnvioPublico(base({ casaOracaoId: "", casaNome: "ab" }), ctx())).toMatch(/na lista ou digite/);
+    expect(validarEnvioPublico(base({ casaOracaoId: "", casaNome: "x".repeat(121) }), ctx())).toMatch(/no máximo 120/);
     expect(validarEnvioPublico(base({ cargoId: "" }), ctx(undefined))).toMatch(/cargo/);
   });
   it("recusa cargo sem cadastro musical", () =>
@@ -101,6 +106,15 @@ describe("validarEnvioPublico", () => {
 });
 
 describe("montarCargaPublica", () => {
+  it("casa da lista envia o id; casa digitada envia só o nome (sem espaços repetidos)", () => {
+    const da_lista = montarCargaPublica(base({ casaOracaoId: "casa1", casaNome: "ignorado" }), ctx());
+    expect(da_lista.casa_oracao_id).toBe("casa1");
+    expect(da_lista.casa_nome).toBeNull();
+    const digitada = montarCargaPublica(base({ casaOracaoId: "", casaNome: "  Casa   Nova " }), ctx());
+    expect(digitada.casa_oracao_id).toBe("");
+    expect(digitada.casa_nome).toBe("Casa Nova");
+  });
+
   it("normaliza e não leva campos internos", () => {
     const c = montarCargaPublica(base({ nome: "  João   da Silva ", cadastro: { ...cadastroOk, observacao: "x", apresentado_por: "y" } }), ctx());
     expect(c.nome).toBe("João da Silva");

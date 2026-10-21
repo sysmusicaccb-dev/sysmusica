@@ -273,8 +273,8 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
       )}
 
       <Secao titulo="Casa de Oração e cargo">
-        <Campo id="casa" rotulo="Casa de Oração" obrigatorio dica="Se a sua Casa de Oração não aparecer, procure a secretaria.">
-          <SeletorCasaPublico id="casa" valor={dados.casaOracaoId} onChange={(v) => mudar("casaOracaoId", v)} casas={opcoes.casas} disabled={bloqueado} />
+        <Campo id="casa" rotulo="Casa de Oração" obrigatorio dica="Digite e escolha na lista. Se a sua casa não existir na lista, digite o nome dela mesmo assim.">
+          <SeletorCasaPublico id="casa" valor={dados.casaOracaoId} onChange={(casaId, nome) => setDados((d) => ({ ...d, casaOracaoId: casaId, casaNome: nome }))} casas={opcoes.casas} disabled={bloqueado} />
         </Campo>
         <Campo id="cargo" rotulo="Cargo" obrigatorio>
           <select
@@ -332,12 +332,13 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
 
       <Secao titulo="Contato">
         <div className="grid grid-cols-3 gap-3">
+          {/* Telefone e WhatsApp: o estado guarda SÓ OS NÚMEROS (a validação exige isso); o traço/parênteses são só a exibição. */}
           <Campo id="ddd" rotulo="DDD" obrigatorio>
             <input id="ddd" type="tel" inputMode="numeric" maxLength={2} value={cad.ddd} onChange={(e) => mudarCad("ddd", somenteDigitos(e.target.value, 2))} disabled={bloqueado} className={classeInput} />
           </Campo>
           <div className="col-span-2">
             <Campo id="telefone" rotulo="Telefone" obrigatorio>
-              <input id="telefone" type="tel" inputMode="numeric" value={cad.telefone} onChange={(e) => mudarCad("telefone", formatarTelefone(e.target.value))} disabled={bloqueado} className={classeInput} />
+              <input id="telefone" type="tel" inputMode="numeric" value={formatarTelefone(cad.telefone)} onChange={(e) => mudarCad("telefone", somenteDigitos(e.target.value, 9))} disabled={bloqueado} className={classeInput} />
             </Campo>
           </div>
         </div>
@@ -348,11 +349,8 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
             <option value="nao">Não</option>
           </select>
         </Campo>
-        {cad.tem_whatsapp === "sim" && (
-          <Campo id="whatsapp" rotulo="WhatsApp (com DDD)" dica="Deixe vazio se for o mesmo número do telefone.">
-            <input id="whatsapp" type="tel" inputMode="numeric" value={cad.whatsapp} onChange={(e) => mudarCad("whatsapp", formatarWhatsapp(e.target.value))} disabled={bloqueado} className={classeInput} />
-          </Campo>
-        )}
+        {/* Não há campo de número do WhatsApp aqui: "Sim" significa que o telefone acima é o WhatsApp
+            (o número é copiado do telefone ao montar o envio — veja paraEnvioAoBanco). */}
         <Campo id="email" rotulo="E-mail">
           <input id="email" type="email" autoComplete="email" maxLength={120} value={cad.email} onChange={(e) => mudarCad("email", e.target.value)} disabled={bloqueado} className={classeInput} />
         </Campo>
