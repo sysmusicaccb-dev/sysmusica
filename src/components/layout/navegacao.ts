@@ -78,7 +78,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
       },
       { href: "/hinos", rotulo: "Hinos", icone: Music2, permissao: "hinos.visualizar" },
       // Fila de cadastros enviados pelo link público (/cadastro); o número pendente aparece no menu (Sidebar)
-      { href: "/cadastros-pendentes", rotulo: "Cadastros Pendentes", icone: Inbox, permissao: "cadastros.visualizar" },
+      { href: "/cadastros-pendentes", rotulo: "Cadastros", icone: Inbox, permissao: "cadastros.visualizar" },
       // Cartões de identificação vencidos / a vencer (card do Dashboard + esta lista)
       { href: "/cartoes", rotulo: "Cartões a Vencer", icone: CreditCard, permissao: "cartoes.visualizar" },
     ],
