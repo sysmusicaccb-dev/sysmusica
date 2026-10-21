@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { Pencil, Search, Trash2 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
+import IlustracaoInstrumento from "./IlustracaoInstrumento";
 import BotaoIcone from "@/components/ui/BotaoIcone";
 import { normalizarTexto } from "@/lib/texto";
 import type { Familia, Instrumento } from "@/types/database";
@@ -94,7 +95,13 @@ export default function TabelaInstrumentos({
 
                 return (
                   <tr key={instrumento.id} className="transition hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-900">{instrumento.nome}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">
+                      <div className="flex items-center gap-3">
+                        {/* Ilustração pelo nome do instrumento (genérica da família quando não há desenho próprio) */}
+                        <IlustracaoInstrumento nome={instrumento.nome} familia={familia?.nome} />
+                        {instrumento.nome}
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       {familia ? (
                         <Badge variante="marca">{familia.nome}</Badge>

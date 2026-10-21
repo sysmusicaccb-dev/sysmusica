@@ -9,7 +9,9 @@
  * (instrumento -> familia_id), então corrigir a família de um instrumento atualiza todos os membros.
  *
  * Responsividade:
- *  - telas >= 768px: colunas Nome, Cargo, Instrumento, Família, Casa de Oração e Status;
+ *  - telas >= 768px: colunas Nome, Cargo, Instrumento, Família, Casa de Oração e Status (nível do cargo:
+ *    Oficializado, Culto Oficial ou RJM; "Inativo" aparece ao lado quando a situação cadastral é Inativa);
+ *  - filtro de fotografia (sem/com) e miniatura da foto no lugar da inicial do nome;
  *  - telas menores: apenas Nome (com os demais dados em uma linha abaixo) e Status.
  *
  * Trata quatro cenários: carregando, erro, nenhum membro cadastrado e tabela com dados.
@@ -18,6 +20,8 @@ import { useState } from "react";
 import { Pencil, QrCode, Trash2 } from "lucide-react";
 import BotaoIcone from "@/components/ui/BotaoIcone";
 import { normalizarTexto } from "@/lib/texto";
+import IlustracaoInstrumento from "@/modules/instrumentos/components/IlustracaoInstrumento";
+import { cargoUsaCategoria, rotuloDaCategoria } from "@/modules/painel/regras";
 import type { Cargo, Familia, Instrumento, MembroPublico } from "@/types/database";
 
 interface ListaMembrosProps {
@@ -34,6 +38,7 @@ interface ListaMembrosProps {
   onExcluir: (membro: MembroPublico) => void;
   podeQr: boolean; // mostra o botão QR Code em cada linha
   onQr: (membro: MembroPublico) => void;
+  urlsFotos?: Record<string, string>; // caminho da foto -> URL temporária (miniaturas da lista)
 }
 
 // Valor especial do filtro de família: membros sem instrumento ou com instrumento não classificado
@@ -61,10 +66,12 @@ export default function ListaMembros({
   onExcluir,
   podeQr,
   onQr,
+  urlsFotos = {},
 }: ListaMembrosProps) {
   const [busca, setBusca] = useState("");
   const [cargoFiltroId, setCargoFiltroId] = useState(""); // "" = todos os cargos
   const [familiaFiltroId, setFamiliaFiltroId] = useState(""); // "" = todas as famílias
+  const [fotoFiltro, setFotoFiltro] = useState<"" | "sem" | "com">(""); // "" = com ou sem fotografia
   const mostrarAcoes = podeEditar || podeExcluir || podeQr; // a coluna Ações só existe para quem pode algo
 
   // 1) Carregando: skeleton (barra de ferramentas + linhas)
@@ -139,14 +146,17 @@ export default function ListaMembros({
     const passaFamilia =
       familiaFiltroId === "" ||
       (familiaFiltroId === FILTRO_SEM_FAMILIA ? familiaId === null : familiaId === familiaFiltroId);
-    return passaNome && passaCargo && passaFamilia;
+    const passaFoto = fotoFiltro === "" || (fotoFiltro === "sem" ? !membro.foto_path : !!membro.foto_path);
+    return passaNome && passaCargo && passaFamilia && passaFoto;
   });
-  const filtrosAtivos = termo !== "" || cargoFiltroId !== "" || familiaFiltroId !== "";
+  const filtrosAtivos = termo !== "" || cargoFiltroId !== "" || familiaFiltroId !== "" || fotoFiltro !== "";
+  const semFoto = membros.filter((membro) => !membro.foto_path).length;
 
   function limparFiltros() {
     setBusca("");
     setCargoFiltroId("");
     setFamiliaFiltroId("");
+    setFotoFiltro("");
   }
 
   // 4) Tabela com barra de ferramentas
@@ -219,6 +229,22 @@ export default function ListaMembros({
             <option value={FILTRO_SEM_FAMILIA}>Sem família</option>
           </select>
         </div>
+
+        <div className="sm:w-44">
+          <label htmlFor="filtro-foto" className="sr-only">
+            Filtrar por fotografia
+          </label>
+          <select
+            id="filtro-foto"
+            value={fotoFiltro}
+            onChange={(e) => setFotoFiltro(e.target.value as "" | "sem" | "com")}
+            className={classeSelect}
+          >
+            <option value="">Todas as fotos</option>
+            <option value="sem">Sem fotografia ({semFoto})</option>
+            <option value="com">Com fotografia</option>
+          </select>
+        </div>
       </div>
 
       {/* Tabela de dados (rola na horizontal só se faltar espaço) */}
@@ -268,17 +294,33 @@ export default function ListaMembros({
                   : null;
                 const familiaId = familiaIdDoMembro(membro);
                 const nomeFamilia = familiaId ? (familiaPorId.get(familiaId)?.nome ?? null) : null;
+                const urlFoto = membro.foto_path ? urlsFotos[membro.foto_path] : undefined;
+                // Status = nível do cargo: Músico e Organista informam (Oficializado, Culto Oficial, RJM);
+                // os demais cargos são Oficializado automaticamente
+                const tipoCategoria = cargoUsaCategoria(nomeCargo);
+                const nivel = tipoCategoria
+                  ? { rotulo: rotuloDaCategoria(membro.categoria, tipoCategoria), definido: !!membro.categoria }
+                  : { rotulo: "Oficializado", definido: true };
 
                 return (
                   <tr key={membro.id} className="transition hover:bg-slate-50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        {/* Avatar com a inicial do nome */}
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
-                          {membro.nome.charAt(0).toUpperCase()}
+                        {/* Miniatura da fotografia; sem foto, a inicial do nome */}
+                        <div
+                          role="img"
+                          aria-label={urlFoto ? `Fotografia de ${membro.nome}` : `${membro.nome}: sem fotografia`}
+                          style={urlFoto ? { backgroundImage: `url(${urlFoto})` } : undefined}
+                          className={
+                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cover bg-center text-sm font-bold " +
+                            (urlFoto ? "bg-slate-100" : "bg-indigo-100 text-indigo-700")
+                          }
+                        >
+                          {!urlFoto && membro.nome.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
                           <p className="truncate font-medium text-slate-900">{membro.nome}</p>
+                          {!membro.foto_path && <p className="text-xs text-amber-700">Sem fotografia</p>}
                           {/* Telas pequenas: os dados das colunas ocultas aparecem aqui */}
                           <p className="truncate text-xs text-slate-500 md:hidden">
                             {[nomeCargo, nomeInstrumento, nomeFamilia, membro.congregacao]
@@ -290,7 +332,14 @@ export default function ListaMembros({
                     </td>
                     <td className="hidden px-4 py-3 text-slate-700 md:table-cell">{nomeCargo}</td>
                     <td className="hidden px-4 py-3 text-slate-700 md:table-cell">
-                      {nomeInstrumento ?? "—"}
+                      {nomeInstrumento ? (
+                        <div className="flex items-center gap-2">
+                          <IlustracaoInstrumento nome={nomeInstrumento} familia={nomeFamilia} />
+                          {nomeInstrumento}
+                        </div>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="hidden px-4 py-3 md:table-cell">
                       {nomeFamilia ? (
@@ -310,16 +359,21 @@ export default function ListaMembros({
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={
-                          "rounded-full px-2 py-0.5 text-xs font-medium " +
-                          (membro.status === "Ativo"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-slate-100 text-slate-600")
-                        }
-                      >
-                        {membro.status}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span
+                          className={
+                            "rounded-full px-2 py-0.5 text-xs font-medium " +
+                            (nivel.definido ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800")
+                          }
+                        >
+                          {nivel.rotulo}
+                        </span>
+                        {membro.status !== "Ativo" && (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                            {membro.status}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     {mostrarAcoes && (
                       <td className="px-4 py-3">
@@ -360,7 +414,7 @@ export default function ListaMembros({
       {/* Rodapé: contagem e atalho para limpar os filtros */}
       <div className="flex items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
         <span>
-          Exibindo {membrosFiltrados.length} de {membros.length} membro(s)
+          Exibindo {membrosFiltrados.length} de {membros.length} membro(s) · {semFoto} sem fotografia
         </span>
         {filtrosAtivos && (
           <button

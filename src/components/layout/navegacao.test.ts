@@ -155,8 +155,8 @@ describe("Gestão de portarias no menu", () => {
     expect(hrefs(["portarias.criar"])).toEqual(["/portarias"]);
   });
 
-  it("quem só tem a permissão de fotografia vê apenas Fotografias", () => {
-    expect(hrefs(["membros.foto"])).toEqual(["/fotografias"]);
+  it("a tela Fotografias saiu do menu: a foto agora é cadastrada em Músicos / Organistas", () => {
+    expect(hrefs(["membros.foto"])).toEqual([]);
   });
 
   it("quem só tem a permissão de organização vê apenas Organização", () => {

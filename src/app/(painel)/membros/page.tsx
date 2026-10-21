@@ -17,6 +17,9 @@ import {
   regenerarQrMembro,
 } from "@/modules/membros/services/membros";
 import QrMembro from "@/modules/membros/components/QrMembro";
+import type { CadastroMusical } from "@/modules/membros/cadastroMusical";
+import { obterCadastroMusical } from "@/modules/membros/services/cadastroMusical";
+import { urlsDasFotos } from "@/modules/membros/services/fotos";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -33,7 +36,7 @@ import type { Cargo, Familia, Instrumento, MembroPublico } from "@/types/databas
 // Qual painel lateral está aberto: novo membro, edição ou QR Code de um membro
 type PainelMembro =
   | { tipo: "novo" }
-  | { tipo: "editar"; membro: MembroPublico; cpfInicial: string | null }
+  | { tipo: "editar"; membro: MembroPublico; cpfInicial: string | null; cadastro: CadastroMusical | null }
   | { tipo: "qr"; membro: MembroPublico; imagem: string; conteudo: string };
 
 export default function MembrosPage() {
@@ -42,6 +45,7 @@ export default function MembrosPage() {
   const [instrumentos, setInstrumentos] = useState<Instrumento[]>([]);
   const [familias, setFamilias] = useState<Familia[]>([]);
   const [membros, setMembros] = useState<MembroPublico[]>([]);
+  const [urlsFotos, setUrlsFotos] = useState<Record<string, string>>({}); // miniaturas da lista
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
   const [painel, setPainel] = useState<PainelMembro | null>(null);
@@ -60,6 +64,8 @@ export default function MembrosPage() {
       setInstrumentos(dados.instrumentos);
       setFamilias(dados.familias);
       setMembros(dados.membros);
+      // Miniaturas: um único pedido de URLs temporárias para todas as fotos (se falhar, a lista fica sem miniaturas)
+      setUrlsFotos(await urlsDasFotos(dados.membros.flatMap((m) => (m.foto_path ? [m.foto_path] : []))));
       setErro(null);
     } catch (e) {
       // O detalhe técnico vai só para o console; a tela mostra uma mensagem simples
@@ -97,8 +103,11 @@ export default function MembrosPage() {
     setErroAcao(null);
     setAbrindo(true);
     try {
-      const cpfInicial = pode("membros.cpf") ? await obterCpfMembro(membro.id) : null;
-      setPainel({ tipo: "editar", membro, cpfInicial });
+      const [cpfInicial, cadastro] = await Promise.all([
+        pode("membros.cpf") ? obterCpfMembro(membro.id) : Promise.resolve(null),
+        obterCadastroMusical(membro.id), // dados pessoais do Cadastro Musical (null = membro antigo, sem cadastro)
+      ]);
+      setPainel({ tipo: "editar", membro, cpfInicial, cadastro });
     } catch (e) {
       setErroAcao(e instanceof Error ? e.message : "Não foi possível abrir a edição.");
     } finally {
@@ -158,7 +167,11 @@ export default function MembrosPage() {
   };
 
   const tituloPainel =
-    painel?.tipo === "editar" ? "Editar membro" : painel?.tipo === "qr" ? "QR Code do membro" : "Novo membro";
+    painel?.tipo === "editar"
+      ? "Editar cadastro musical"
+      : painel?.tipo === "qr"
+        ? "QR Code do membro"
+        : "Cadastro Musical";
 
   return (
     <main className="text-slate-900">
@@ -190,6 +203,7 @@ export default function MembrosPage() {
           familias={familias}
           carregando={carregando}
           erro={erro}
+          urlsFotos={urlsFotos}
           onTentarNovamente={tentarNovamente}
           podeEditar={pode("membros.editar")}
           podeExcluir={pode("membros.excluir")}
@@ -209,13 +223,16 @@ export default function MembrosPage() {
         onFechar={() => setPainel(null)}
         titulo={tituloPainel}
         descricao={
-          painel?.tipo === "qr" ? "Identificação individual e permanente do membro." : "Preencha os dados do membro."
+          painel?.tipo === "qr"
+            ? "Identificação individual e permanente do membro."
+            : "Campos com * são obrigatórios. A fotografia identifica a pessoa na portaria."
         }
       >
         {(painel?.tipo === "novo" || painel?.tipo === "editar") && (
           <FormularioMembro
             membro={painel.tipo === "editar" ? painel.membro : null}
             cpfInicial={painel.tipo === "editar" ? painel.cpfInicial : null}
+            cadastroInicial={painel.tipo === "editar" ? painel.cadastro : null}
             podeCpf={pode("membros.cpf")}
             podeFoto={pode("membros.foto")}
             cargos={cargos}

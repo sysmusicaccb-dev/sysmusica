@@ -10,7 +10,6 @@ import {
   Activity,
   CalendarDays,
   Building2,
-  Camera,
   DatabaseBackup,
   FileText,
   ScrollText,
@@ -87,7 +86,6 @@ export const GRUPOS_MENU: GrupoMenu[] = [
       },
       { href: "/painel-ao-vivo", rotulo: "Painel ao vivo", icone: Activity, permissao: "painel.visualizar" },
       { href: "/relatorios", rotulo: "Relatórios", icone: FileText, permissao: "relatorios.visualizar" },
-      { href: "/fotografias", rotulo: "Fotografias", icone: Camera, permissao: "membros.foto" },
     ],
   },
   {

@@ -14,6 +14,7 @@ import { inferirFamilia } from "@/lib/familias";
 import type { Familia, Instrumento } from "@/types/database";
 import { NOME_INSTRUMENTO_MAXIMO, validarNomeInstrumento } from "../regras";
 import { atualizarInstrumento, criarInstrumento } from "../services/instrumentos";
+import IlustracaoInstrumento from "./IlustracaoInstrumento";
 
 interface FormularioInstrumentoProps {
   instrumento: Instrumento | null;
@@ -94,6 +95,16 @@ export default function FormularioInstrumento({
           className={classeInput}
         />
       </div>
+
+      {/* Prévia da ilustração: muda conforme o nome e a família (instrumento sem desenho usa o da família) */}
+      {nome.trim() !== "" && (
+        <div className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2">
+          <IlustracaoInstrumento nome={nome} familia={familiaAtual?.nome} tamanho="grande" />
+          <p className="text-xs text-slate-600">
+            Ilustração que aparece nas listas. Se o instrumento não tiver desenho próprio, aparece o da família.
+          </p>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <label htmlFor="familia-instrumento" className="text-sm font-medium text-slate-700">
