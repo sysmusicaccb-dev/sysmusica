@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de um item da organização (estado, região, setor ou casa de oração), novo ou em edição.
- * Em item novo, o "pai" (estado, região ou setor) vem de onde o botão + foi clicado. Para mudar uma
+ * SysMúsica — Formulário de um item da organização (estado, RRM, RA, ADM, setor ou casa de oração), novo ou em edição.
+ * Em item novo, o "pai" (estado, RRM, RA, ADM ou setor) vem de onde o botão + foi clicado. Para mudar uma
  * casa de oração de setor use a transferência (fica registrada). O banco confere permissão e nomes repetidos.
  */
 import { useState, type FormEvent } from "react";
@@ -87,7 +87,16 @@ export default function FormularioNo({ modo, onSalvo }: FormularioNoProps) {
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           disabled={salvando}
-          placeholder={nivel === "SETOR" ? "Ex: Setor 6" : nivel === "CASA_ORACAO" ? "Ex: Central Itinga" : "Nome"}
+          placeholder={
+            {
+              ESTADO: "Ex: Bahia",
+              RRM: "Ex: Vitória da Conquista",
+              RA: "Ex: Jequié",
+              ADM: "Ex: Ipiaú",
+              SETOR: "Ex: Setor 1",
+              CASA_ORACAO: "Ex: Central Itinga",
+            }[nivel]
+          }
           className={classeInput}
         />
       </div>

@@ -4,7 +4,7 @@
  * SysMúsica — Cadastro rápido de visitante na portaria (painel lateral).
  * Para o irmão de outra região (ou sem cadastro) que vem congregar: nome completo, cargo ou ministério,
  * instrumento e a IGREJA DE ORIGEM, escolhida em listas encadeadas que vêm do banco
- * (Estado > Região > Setor > Casa de Oração, cadastrados em Organização): nada de origem digitada à mão.
+ * (Estado › RRM › RA › ADM › Setor (opcional) › Casa de Oração, cadastrados em Organização): nada de origem digitada à mão.
  *
  * Instrumento: o MESMO seletor do cadastro de membro (lista por família), obrigatório nos cargos que
  * exigem (o Músico), com a família preenchida automaticamente.
@@ -40,7 +40,9 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
   const [cargoId, setCargoId] = useState("");
   const [instrumentoId, setInstrumentoId] = useState("");
   const [estadoId, setEstadoId] = useState("");
-  const [regiaoId, setRegiaoId] = useState("");
+  const [rrmId, setRrmId] = useState("");
+  const [raId, setRaId] = useState("");
+  const [admId, setAdmId] = useState("");
   const [setorId, setSetorId] = useState("");
   const [casaOracaoId, setCasaOracaoId] = useState("");
   const [foto, setFoto] = useState<Blob | null>(null); // fotografia obrigatória do visitante
@@ -75,19 +77,37 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
 
   // Listas encadeadas: cada nível só mostra o que pertence à escolha anterior
   const estados = filhosDe(origens, null, "ESTADO");
-  const regioes = estadoId ? filhosDe(origens, estadoId, "REGIAO") : [];
-  const setores = regiaoId ? filhosDe(origens, regiaoId, "SETOR") : [];
-  const casasOracao = setorId ? filhosDe(origens, setorId, "CASA_ORACAO") : [];
+  const rrms = estadoId ? filhosDe(origens, estadoId, "RRM") : [];
+  const ras = rrmId ? filhosDe(origens, rrmId, "RA") : [];
+  const adms = raId ? filhosDe(origens, raId, "ADM") : [];
+  const setores = admId ? filhosDe(origens, admId, "SETOR") : [];
+  // Com setor escolhido: as casas do setor; sem setor: as casas ligadas direto à ADM
+  const casasOracao = admId ? filhosDe(origens, setorId || admId, "CASA_ORACAO") : [];
 
   // Ao trocar um nível, limpa os de baixo
   function trocarEstado(id: string) {
     setEstadoId(id);
-    setRegiaoId("");
+    setRrmId("");
+    setRaId("");
+    setAdmId("");
     setSetorId("");
     setCasaOracaoId("");
   }
-  function trocarRegiao(id: string) {
-    setRegiaoId(id);
+  function trocarRrm(id: string) {
+    setRrmId(id);
+    setRaId("");
+    setAdmId("");
+    setSetorId("");
+    setCasaOracaoId("");
+  }
+  function trocarRa(id: string) {
+    setRaId(id);
+    setAdmId("");
+    setSetorId("");
+    setCasaOracaoId("");
+  }
+  function trocarAdm(id: string) {
+    setAdmId(id);
     setSetorId("");
     setCasaOracaoId("");
   }
@@ -95,7 +115,6 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
     setSetorId(id);
     setCasaOracaoId("");
   }
-
   // Ao trocar o cargo, limpa o instrumento se o novo cargo não usar instrumento
   function trocarCargo(novoId: string) {
     setCargoId(novoId);
@@ -254,18 +273,58 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="regiao-visitante" className="text-xs font-medium text-slate-600">
-            Região
+          <label htmlFor="rrm-visitante" className="text-xs font-medium text-slate-600">
+            RRM (Reunião Regional Ministerial)
           </label>
           <select
-            id="regiao-visitante"
-            value={regiaoId}
-            onChange={(e) => trocarRegiao(e.target.value)}
+            id="rrm-visitante"
+            value={rrmId}
+            onChange={(e) => trocarRrm(e.target.value)}
             disabled={salvando || !estadoId}
             className={classeInput}
           >
-            <option value="">Selecione a região</option>
-            {regioes.map((item) => (
+            <option value="">Selecione a RRM</option>
+            {rrms.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="ra-visitante" className="text-xs font-medium text-slate-600">
+            RA (Regional Administrativa)
+          </label>
+          <select
+            id="ra-visitante"
+            value={raId}
+            onChange={(e) => trocarRa(e.target.value)}
+            disabled={salvando || !rrmId}
+            className={classeInput}
+          >
+            <option value="">Selecione a RA</option>
+            {ras.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="adm-visitante" className="text-xs font-medium text-slate-600">
+            ADM (Administração)
+          </label>
+          <select
+            id="adm-visitante"
+            value={admId}
+            onChange={(e) => trocarAdm(e.target.value)}
+            disabled={salvando || !raId}
+            className={classeInput}
+          >
+            <option value="">Selecione a ADM</option>
+            {adms.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.nome}
               </option>
@@ -275,16 +334,16 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
 
         <div className="space-y-1.5">
           <label htmlFor="setor-visitante" className="text-xs font-medium text-slate-600">
-            Setor
+            Setor (opcional)
           </label>
           <select
             id="setor-visitante"
             value={setorId}
             onChange={(e) => trocarSetor(e.target.value)}
-            disabled={salvando || !regiaoId}
+            disabled={salvando || !admId}
             className={classeInput}
           >
-            <option value="">Selecione o setor</option>
+            <option value="">Sem setor (casas ligadas direto à ADM)</option>
             {setores.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.nome}
@@ -301,7 +360,7 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
             id="casa-oracao-visitante"
             value={casaOracaoId}
             onChange={(e) => setCasaOracaoId(e.target.value)}
-            disabled={salvando || !setorId}
+            disabled={salvando || !admId}
             className={classeInput}
           >
             <option value="">Selecione a casa de oração</option>
@@ -314,7 +373,7 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
         </div>
 
         <p className="text-xs text-slate-500">
-          A cidade e a igreja de origem são preenchidas por esta escolha. Se a origem não aparecer na lista,
+          A cidade e a igreja de origem são preenchidas por esta escolha. Sem setor escolhido, aparecem as casas ligadas direto à ADM. Se a origem não aparecer na lista,
           peça a um administrador para cadastrá-la em Administração &gt; Organização.
         </p>
       </fieldset>

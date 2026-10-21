@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço de dados da organização (Estado > Região > Setor > Casa de Oração) e dos vínculos dos usuários.
+ * SysMúsica — Serviço de dados da organização (Estado › RRM › RA › ADM › Setor › Casa de Oração) e dos vínculos dos usuários.
  * Todas as regras (permissão, nomes repetidos, abrangência) são aplicadas pelo banco (migração 0012);
  * a tela só chama e mostra o resultado, com as mensagens do banco já escritas para o usuário.
  */
@@ -60,11 +60,11 @@ export async function excluirNo(nivel: NivelOrganizacao, id: string): Promise<vo
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível excluir."));
 }
 
-/** Muda uma casa de oração de setor (fica no histórico e na auditoria). */
-export async function transferirCasaOracao(casaOracaoId: string, setorId: string, justificativa: string): Promise<void> {
+/** Muda uma casa de oração de local: o destino é uma ADM (fica sem setor) ou um setor (fica no histórico e na auditoria). */
+export async function transferirCasaOracao(casaOracaoId: string, destinoId: string, justificativa: string): Promise<void> {
   const { error } = await supabase.rpc("transferir_casa_oracao", {
     p_casa_oracao: casaOracaoId,
-    p_setor: setorId,
+    p_destino: destinoId,
     p_justificativa: justificativa,
   });
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível transferir a casa de oração."));

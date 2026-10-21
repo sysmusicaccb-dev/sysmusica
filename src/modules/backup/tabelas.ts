@@ -17,7 +17,9 @@ export type GrupoDados =
 
 export type NomeTabela =
   | "estados"
-  | "regioes"
+  | "rrms"
+  | "ras"
+  | "adms"
   | "setores"
   | "casas_oracao"
   | "familias"
@@ -81,9 +83,16 @@ function tabela(
 /** Todas as tabelas do backup, em ordem de dependência (pais primeiro). */
 export const TABELAS: DefinicaoTabela[] = [
   tabela("estados", "Estados", "organizacao"),
-  tabela("regioes", "Regiões", "organizacao", { referencias: [{ coluna: "estado_id", tabela: "estados" }] }),
-  tabela("setores", "Setores", "organizacao", { referencias: [{ coluna: "regiao_id", tabela: "regioes" }] }),
-  tabela("casas_oracao", "Casas de Oração", "organizacao", { referencias: [{ coluna: "setor_id", tabela: "setores" }] }),
+  tabela("rrms", "RRMs (Reunião Regional Ministerial)", "organizacao", { referencias: [{ coluna: "estado_id", tabela: "estados" }] }),
+  tabela("ras", "RAs (Regional Administrativa)", "organizacao", { referencias: [{ coluna: "rrm_id", tabela: "rrms" }] }),
+  tabela("adms", "ADMs (Administração)", "organizacao", { referencias: [{ coluna: "ra_id", tabela: "ras" }] }),
+  tabela("setores", "Setores", "organizacao", { referencias: [{ coluna: "adm_id", tabela: "adms" }] }),
+  tabela("casas_oracao", "Casas de Oração", "organizacao", {
+    referencias: [
+      { coluna: "adm_id", tabela: "adms" },
+      { coluna: "setor_id", tabela: "setores" },
+    ],
+  }),
   tabela("familias", "Famílias de instrumentos", "cadastros"),
   tabela("cargos", "Cargos", "cadastros"),
   tabela("finalidades_evento", "Finalidades de evento", "cadastros"),
@@ -163,8 +172,8 @@ export const GRUPOS_DADOS: DefinicaoGrupo[] = [
   {
     id: "organizacao",
     rotulo: "Organização",
-    descricao: "Estados, regiões, setores e casas de oração",
-    tabelas: ["estados", "regioes", "setores", "casas_oracao"],
+    descricao: "Estados, RRMs, RAs, ADMs, setores e casas de oração",
+    tabelas: ["estados", "rrms", "ras", "adms", "setores", "casas_oracao"],
   },
   {
     id: "cadastros",

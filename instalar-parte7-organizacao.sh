@@ -119,7 +119,17 @@ export async function transferirCasaOracao(casaOracaoId: string, destinoId: stri
     setRegiaoId("");
     setSetorId("");
     setCasaOracaoId("");
-  }''',
+  }
+  function trocarRegiao(id: string) {
+    setRegiaoId(id);
+    setSetorId("");
+    setCasaOracaoId("");
+  }
+  function trocarSetor(id: string) {
+    setSetorId(id);
+    setCasaOracaoId("");
+  }
+''',
      r'''  const rrms = estadoId ? filhosDe(origens, estadoId, "RRM") : [];
   const ras = rrmId ? filhosDe(origens, rrmId, "RA") : [];
   const adms = raId ? filhosDe(origens, raId, "ADM") : [];

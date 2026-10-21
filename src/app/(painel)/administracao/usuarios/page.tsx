@@ -126,7 +126,7 @@ export default function UsuariosPage() {
     senha: { titulo: "Redefinir senha", descricao: "Defina uma nova senha para este usuário." },
     abrangencia: {
       titulo: "Vínculos organizacionais",
-      descricao: "Estado, região, setor ou casa de oração que o usuário pode ver e usar.",
+      descricao: "Estado, RRM, RA, ADM, setor ou casa de oração que o usuário pode ver e usar.",
     },
   } as const;
 

@@ -1,15 +1,17 @@
 "use client";
 
 /**
- * SysMúsica — Árvore da organização: Estado > Região > Setor > Casa de Oração, com abrir/fechar e as ações de cada item.
+ * SysMúsica — Árvore da organização: Estado › RRM › RA › ADM › Setor (opcional) › Casa de Oração,
+ * com abrir/fechar e as ações de cada item.
+ * RRM = Reunião Regional Ministerial · RA = Regional Administrativa · ADM = Administração.
+ * Uma casa de oração pode ficar dentro de um setor OU ligada direto à ADM (o setor é opcional).
  * Os botões só aparecem para quem tem a permissão (a tela repassa); o banco confere de novo em cada operação.
- * Casas de Oração que ainda não têm setor ficam numa seção própria, no fim, com o botão de transferir.
  */
 import { useState, type ReactNode } from "react";
 import { ArrowRightLeft, ChevronDown, ChevronRight, Pencil, Plus, Power, Trash2 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import BotaoIcone from "@/components/ui/BotaoIcone";
-import { FILHO_DE, ROTULO_NIVEL, filhosDe } from "../regras";
+import { FILHOS_DE, NOME_COMPLETO_NIVEL, ROTULO_NIVEL, filhosDe, filhosDoNo } from "../regras";
 import type { NivelOrganizacao, NoOrganizacao } from "../tipos";
 
 interface ArvoreOrganizacaoProps {
@@ -25,15 +27,10 @@ interface ArvoreOrganizacaoProps {
   onExcluir: (no: NoOrganizacao) => void;
 }
 
-// Texto de contagem de cada item (ex.: "5 setores")
-function contagem(no: NoOrganizacao): string {
-  const n = no.qtd_filhos ?? 0;
-  if (no.nivel === "ESTADO") return `${n} ${n === 1 ? "região" : "regiões"}`;
-  if (no.nivel === "REGIAO") return `${n} ${n === 1 ? "setor" : "setores"}`;
-  if (no.nivel === "SETOR") return `${n} ${n === 1 ? "casa de oração" : "casas de oração"}`;
-  const m = no.qtd_membros ?? 0;
-  return `${m} ${m === 1 ? "membro" : "membros"}`;
-}
+const plural = (n: number, singular: string, plurais: string) => `${n} ${n === 1 ? singular : plurais}`;
+
+// Níveis que começam abertos (da raiz até a RA); ADM e setor começam fechados
+const ABERTOS_NO_INICIO: NivelOrganizacao[] = ["ESTADO", "RRM", "RA"];
 
 export default function ArvoreOrganizacao({
   nos,
@@ -47,9 +44,8 @@ export default function ArvoreOrganizacao({
   onTransferir,
   onExcluir,
 }: ArvoreOrganizacaoProps) {
-  // Começa com estados e regiões abertos
   const [abertos, setAbertos] = useState<Set<string>>(
-    () => new Set(nos.filter((no) => no.nivel === "ESTADO" || no.nivel === "REGIAO").map((no) => no.id))
+    () => new Set(nos.filter((no) => ABERTOS_NO_INICIO.includes(no.nivel)).map((no) => no.id))
   );
 
   function alternarAberto(id: string) {
@@ -61,10 +57,23 @@ export default function ArvoreOrganizacao({
     });
   }
 
+  // Texto de contagem de cada item (ex.: "2 setores · 3 casas de oração")
+  function contagem(no: NoOrganizacao): string {
+    if (no.nivel === "ESTADO") return plural(no.qtd_filhos ?? 0, "RRM", "RRMs");
+    if (no.nivel === "RRM") return plural(no.qtd_filhos ?? 0, "RA", "RAs");
+    if (no.nivel === "RA") return plural(no.qtd_filhos ?? 0, "ADM", "ADMs");
+    if (no.nivel === "ADM") {
+      const setores = filhosDe(nos, no.id, "SETOR").length;
+      const casas = filhosDe(nos, no.id, "CASA_ORACAO").length;
+      return `${plural(setores, "setor", "setores")} · ${plural(casas, "casa de oração sem setor", "casas de oração sem setor")}`;
+    }
+    if (no.nivel === "SETOR") return plural(no.qtd_filhos ?? 0, "casa de oração", "casas de oração");
+    return plural(no.qtd_membros ?? 0, "membro", "membros");
+  }
+
   // Linha de um item e, se estiver aberto, os filhos dele (função comum e não componente: é recursiva)
   function renderLinha(no: NoOrganizacao, profundidade: number): ReactNode {
-    const nivelFilho = FILHO_DE[no.nivel];
-    const filhos = nivelFilho ? filhosDe(nos, no.id, nivelFilho) : [];
+    const filhos = filhosDoNo(nos, no);
     const aberto = abertos.has(no.id);
     const inativo = no.ativo === false;
 
@@ -89,7 +98,10 @@ export default function ArvoreOrganizacao({
           )}
 
           <span className="min-w-0 flex-1">
-            <span className="mr-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <span
+              className="mr-2 text-xs font-semibold uppercase tracking-wide text-slate-400"
+              title={NOME_COMPLETO_NIVEL[no.nivel]}
+            >
               {ROTULO_NIVEL[no.nivel]}
             </span>
             <span className={inativo ? "font-medium text-slate-400" : "font-medium text-slate-900"}>{no.nome}</span>
@@ -104,15 +116,18 @@ export default function ArvoreOrganizacao({
           <Badge variante={inativo ? "perigo" : "sucesso"}>{inativo ? "Inativo" : "Ativo"}</Badge>
 
           <div className="flex shrink-0 gap-1">
-            {podeCriar && nivelFilho && (
-              <BotaoIcone
-                icone={Plus}
-                rotulo={`Adicionar ${ROTULO_NIVEL[nivelFilho].toLowerCase()} em ${no.nome}`}
-                onClick={() => onNovo(nivelFilho, no)}
-              />
-            )}
+            {/* Um botão + para cada tipo de filho (a ADM tem dois: setor e casa de oração) */}
+            {podeCriar &&
+              FILHOS_DE[no.nivel].map((nivelFilho) => (
+                <BotaoIcone
+                  key={nivelFilho}
+                  icone={Plus}
+                  rotulo={`Adicionar ${ROTULO_NIVEL[nivelFilho]} em ${no.nome}`}
+                  onClick={() => onNovo(nivelFilho, no)}
+                />
+              ))}
             {podeTransferir && no.nivel === "CASA_ORACAO" && (
-              <BotaoIcone icone={ArrowRightLeft} rotulo={`Transferir ${no.nome} para outro setor`} onClick={() => onTransferir(no)} />
+              <BotaoIcone icone={ArrowRightLeft} rotulo={`Transferir ${no.nome} para outra ADM ou setor`} onClick={() => onTransferir(no)} />
             )}
             {podeEditar && (
               <>
@@ -125,14 +140,7 @@ export default function ArvoreOrganizacao({
               </>
             )}
             {podeExcluir && (
-              <>
-                <BotaoIcone
-                  icone={Trash2}
-                  variante="perigo"
-                  rotulo={`Excluir ${no.nome}`}
-                  onClick={() => onExcluir(no)}
-                />
-              </>
+              <BotaoIcone icone={Trash2} variante="perigo" rotulo={`Excluir ${no.nome}`} onClick={() => onExcluir(no)} />
             )}
           </div>
         </div>
@@ -143,7 +151,6 @@ export default function ArvoreOrganizacao({
   }
 
   const estados = filhosDe(nos, null, "ESTADO");
-  const semSetor = filhosDe(nos, null, "CASA_ORACAO");
 
   return (
     <div className="space-y-6">
@@ -154,17 +161,10 @@ export default function ArvoreOrganizacao({
           <ul>{estados.map((estado) => renderLinha(estado, 0))}</ul>
         )}
       </div>
-
-      {semSetor.length > 0 && (
-        <section className="rounded-2xl border border-amber-200 bg-amber-50/50 p-3 shadow-sm">
-          <h2 className="px-2 pt-1 text-sm font-semibold text-slate-900">Casas de Oração sem setor ({semSetor.length})</h2>
-          <p className="px-2 pb-2 text-xs text-slate-600">
-            Enquanto uma casa de oração estiver sem setor, quem tem acesso restrito não vê nada dela (membros, eventos e
-            portarias). Use o botão de transferir para vinculá-la a um setor.
-          </p>
-          <ul>{semSetor.map((casaOracao) => renderLinha(casaOracao, 0))}</ul>
-        </section>
-      )}
+      <p className="px-1 text-xs text-slate-500">
+        RRM = Reunião Regional Ministerial · RA = Regional Administrativa · ADM = Administração. O setor é opcional: uma
+        casa de oração pode ficar ligada direto à ADM.
+      </p>
     </div>
   );
 }

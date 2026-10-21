@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Filtros do relatório. Mostra só os filtros do tipo escolhido. Região, setor e casa de oração são
+ * SysMúsica — Filtros do relatório. Mostra só os filtros do tipo escolhido. RA, setor e casa de oração são
  * listas encadeadas que vêm do banco (Organização): cada uma só mostra o que pertence à escolha anterior.
  */
 import type { ReactNode } from "react";
@@ -92,7 +92,7 @@ export default function FiltrosDoRelatorio({ campos, valores, onChange, opcoes, 
       )}
 
       {tem("regiao") && (
-        <Campo id="rel-regiao" rotulo="Região">
+        <Campo id="rel-regiao" rotulo="RA (Regional Administrativa)">
           <select
             id="rel-regiao"
             value={valores.regiaoId}
@@ -100,7 +100,7 @@ export default function FiltrosDoRelatorio({ campos, valores, onChange, opcoes, 
             disabled={desabilitado}
             className={classeCampo}
           >
-            <option value="">Todas as regiões</option>
+            <option value="">Todas as RAs</option>
             {opcoesRegiao(organizacao).map((opcao) => (
               <option key={opcao.id} value={opcao.id}>
                 {opcao.rotulo}
@@ -119,7 +119,7 @@ export default function FiltrosDoRelatorio({ campos, valores, onChange, opcoes, 
             disabled={desabilitado || !valores.regiaoId}
             className={classeCampo}
           >
-            <option value="">{valores.regiaoId ? "Todos os setores" : "Escolha a região primeiro"}</option>
+            <option value="">{valores.regiaoId ? "Todos os setores" : "Escolha a RA primeiro"}</option>
             {opcoesSetor(organizacao, valores.regiaoId).map((opcao) => (
               <option key={opcao.id} value={opcao.id}>
                 {opcao.rotulo}
@@ -135,11 +135,11 @@ export default function FiltrosDoRelatorio({ campos, valores, onChange, opcoes, 
             id="rel-casa-oracao"
             value={valores.casaOracaoId}
             onChange={(e) => mudar({ casaOracaoId: e.target.value })}
-            disabled={desabilitado || !valores.setorId}
+            disabled={desabilitado || !valores.regiaoId}
             className={classeCampo}
           >
-            <option value="">{valores.setorId ? "Todas as casas de oração" : "Escolha o setor primeiro"}</option>
-            {opcoesCasaOracao(organizacao, valores.setorId).map((opcao) => (
+            <option value="">{valores.regiaoId ? "Todas as casas de oração" : "Escolha a RA primeiro"}</option>
+            {opcoesCasaOracao(organizacao, valores.regiaoId, valores.setorId).map((opcao) => (
               <option key={opcao.id} value={opcao.id}>
                 {opcao.rotulo}
               </option>

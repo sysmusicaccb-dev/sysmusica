@@ -1,13 +1,14 @@
 "use client";
 
 /**
- * SysMúsica — Transferência de uma casa de oração para outro setor (painel lateral).
- * Exige a permissão de transferir; fica no histórico da casa de oração e na auditoria. As portarias da casa de oração
- * passam a valer para o setor novo (elas seguem a casa de oração do evento).
+ * SysMúsica — Transferência de uma casa de oração para outro local (painel lateral).
+ * O destino é uma ADM (a casa fica sem setor) ou um setor de uma ADM. Exige a permissão de transferir; fica no
+ * histórico da casa de oração e na auditoria. As portarias da casa de oração passam a valer para o destino novo
+ * (elas seguem a casa de oração do evento).
  */
 import { useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
-import { agruparSetoresParaSelecao } from "../regras";
+import { agruparDestinosTransferencia, ancestraisDe } from "../regras";
 import { transferirCasaOracao } from "../services/organizacao";
 import type { NoOrganizacao } from "../tipos";
 
@@ -22,23 +23,27 @@ const classeInput =
   "shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:opacity-60";
 
 export default function FormularioTransferencia({ casaOracao, nos, onSalvo }: FormularioTransferenciaProps) {
-  const [setorId, setSetorId] = useState("");
+  const [destinoId, setDestinoId] = useState("");
   const [justificativa, setJustificativa] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const grupos = agruparSetoresParaSelecao(nos);
-  const setorAtual = casaOracao.parent_id ? nos.find((no) => no.nivel === "SETOR" && no.id === casaOracao.parent_id) : undefined;
+  const grupos = agruparDestinosTransferencia(nos);
+  // Onde a casa está agora (ADM e, se tiver, setor): "Ipiaú › Setor 1" ou só "Ipiaú"
+  const localAtual = ancestraisDe(nos, casaOracao)
+    .filter((no) => no.nivel === "ADM" || no.nivel === "SETOR")
+    .map((no) => no.nome)
+    .join(" › ");
 
   async function salvar(submissao: FormEvent<HTMLFormElement>) {
     submissao.preventDefault();
     if (salvando) return; // evita envio duplicado
     setErro(null);
-    if (!setorId) return setErro("Escolha o setor de destino.");
+    if (!destinoId) return setErro("Escolha o destino (ADM ou setor).");
 
     setSalvando(true);
     try {
-      await transferirCasaOracao(casaOracao.id, setorId, justificativa);
+      await transferirCasaOracao(casaOracao.id, destinoId, justificativa);
       await onSalvo(`Casa de Oração "${casaOracao.nome}" transferida.`);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível transferir a casa de oração.");
@@ -51,31 +56,34 @@ export default function FormularioTransferencia({ casaOracao, nos, onSalvo }: Fo
     <form onSubmit={salvar} className="space-y-5">
       <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
         <strong className="text-slate-900">{casaOracao.nome}</strong>
-        {setorAtual ? <> está no {setorAtual.nome}.</> : <> ainda não tem setor.</>}
+        {localAtual ? <> está em {localAtual}.</> : <> ainda não tem local definido.</>}
       </p>
 
       <div className="space-y-1.5">
-        <label htmlFor="setor-destino" className="text-sm font-medium text-slate-700">
-          Setor de destino
+        <label htmlFor="destino-transferencia" className="text-sm font-medium text-slate-700">
+          Destino
         </label>
         <select
-          id="setor-destino"
-          value={setorId}
-          onChange={(e) => setSetorId(e.target.value)}
+          id="destino-transferencia"
+          value={destinoId}
+          onChange={(e) => setDestinoId(e.target.value)}
           disabled={salvando}
           className={classeInput}
         >
-          <option value="">Selecione o setor</option>
+          <option value="">Selecione a ADM ou o setor</option>
           {grupos.map((grupo) => (
             <optgroup key={grupo.rotulo} label={grupo.rotulo}>
-              {grupo.setores.map((setor) => (
-                <option key={setor.id} value={setor.id} disabled={setor.id === casaOracao.parent_id}>
-                  {setor.nome}
+              {grupo.opcoes.map((opcao) => (
+                <option key={opcao.id} value={opcao.id}>
+                  {opcao.nome}
                 </option>
               ))}
             </optgroup>
           ))}
         </select>
+        <p className="text-xs text-slate-500">
+          “Sem setor” deixa a casa ligada direto à ADM. O setor é opcional.
+        </p>
       </div>
 
       <div className="space-y-1.5">

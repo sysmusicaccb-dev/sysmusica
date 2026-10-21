@@ -276,7 +276,7 @@ describe("resumoFiltros", () => {
   it("resume os filtros usados, só os que o tipo tem", () => {
     const filtros = { ...FILTROS_VAZIOS, inicio: "2026-10-01", fim: "2026-10-18", regiaoId: "r1", statusPresenca: "Presente" };
     expect(resumoFiltros(definicao("presenca"), filtros, { regiao: "Salvador" })).toBe(
-      "Período: 01/10/2026 a 18/10/2026 · Região: Salvador · Presença: Presente"
+      "Período: 01/10/2026 a 18/10/2026 · RA: Salvador · Presença: Presente"
     );
     // O tipo "Cargos" não tem filtros: nada aparece
     expect(resumoFiltros(definicao("cargos"), filtros, { regiao: "Salvador" })).toBe("");
@@ -288,63 +288,91 @@ describe("resumoFiltros", () => {
   });
 });
 
-// Bahia > Salvador (Setor 1, Setor 2) e Jequié (Setor 1); casas de oração: Itinga e Caique em Salvador/Setor 1, Central em Jequié/Setor 1, Solta sem setor
+// Bahia > RRM Salvador > RA Salvador > ADM Centro (Setor 1: Itinga e Caique · Setor 2)
+//       > RRM Vitória da Conquista > RA Jequié > ADM Ipiaú (Setor 1: Central · casa "Solta" ligada direto à ADM, sem setor)
 const nos: NoOrganizacao[] = [
   { nivel: "ESTADO", id: "e1", parent_id: null, nome: "Bahia", ativo: true, qtd_filhos: 2 },
-  { nivel: "REGIAO", id: "r1", parent_id: "e1", nome: "Salvador", ativo: true, qtd_filhos: 2 },
-  { nivel: "REGIAO", id: "r2", parent_id: "e1", nome: "Jequié", ativo: true, qtd_filhos: 1 },
-  { nivel: "SETOR", id: "s1", parent_id: "r1", nome: "Setor 1", ativo: true, qtd_filhos: 2 },
-  { nivel: "SETOR", id: "s2", parent_id: "r1", nome: "Setor 2", ativo: true, qtd_filhos: 0 },
-  { nivel: "SETOR", id: "s3", parent_id: "r2", nome: "Setor 1", ativo: true, qtd_filhos: 1 },
+  { nivel: "RRM", id: "m1", parent_id: "e1", nome: "Salvador", ativo: true, qtd_filhos: 1 },
+  { nivel: "RRM", id: "m2", parent_id: "e1", nome: "Vitória da Conquista", ativo: true, qtd_filhos: 1 },
+  { nivel: "RA", id: "r1", parent_id: "m1", nome: "Salvador", ativo: true, qtd_filhos: 1 },
+  { nivel: "RA", id: "r2", parent_id: "m2", nome: "Jequié", ativo: true, qtd_filhos: 1 },
+  { nivel: "ADM", id: "a1", parent_id: "r1", nome: "Centro", ativo: true, qtd_filhos: 2 },
+  { nivel: "ADM", id: "a2", parent_id: "r2", nome: "Ipiaú", ativo: true, qtd_filhos: 2 },
+  { nivel: "SETOR", id: "s1", parent_id: "a1", nome: "Setor 1", ativo: true, qtd_filhos: 2 },
+  { nivel: "SETOR", id: "s2", parent_id: "a1", nome: "Setor 2", ativo: true, qtd_filhos: 0 },
+  { nivel: "SETOR", id: "s3", parent_id: "a2", nome: "Setor 1", ativo: true, qtd_filhos: 1 },
   { nivel: "CASA_ORACAO", id: "c1", parent_id: "s1", nome: "Itinga", ativo: true, qtd_membros: 7, cidade: "Lauro de Freitas" },
   { nivel: "CASA_ORACAO", id: "c2", parent_id: "s1", nome: "Caique", ativo: false, qtd_membros: 2 },
   { nivel: "CASA_ORACAO", id: "c3", parent_id: "s3", nome: "Central", ativo: true, qtd_membros: 4 },
-  { nivel: "CASA_ORACAO", id: "c4", parent_id: null, nome: "Solta", ativo: true, qtd_membros: 0 },
+  { nivel: "CASA_ORACAO", id: "c4", parent_id: "a2", nome: "Solta", ativo: true, qtd_membros: 0 },
 ];
 
 describe("opções dos filtros de organização", () => {
-  it("lista regiões, setores da região e casas de oração do setor", () => {
+  it("lista RAs, setores da RA (com a ADM na frente) e casas de oração", () => {
     expect(opcoesRegiao(nos).map((o) => o.rotulo)).toEqual(["Jequié", "Salvador"]);
-    expect(opcoesSetor(nos, "r1").map((o) => o.rotulo)).toEqual(["Setor 1", "Setor 2"]);
+    expect(opcoesSetor(nos, "r1").map((o) => o.rotulo)).toEqual(["Centro › Setor 1", "Centro › Setor 2"]);
     expect(opcoesSetor(nos, "")).toEqual([]);
-    expect(opcoesCasaOracao(nos, "s1").map((o) => o.rotulo)).toEqual(["Caique", "Itinga"]);
-    expect(opcoesCasaOracao(nos, "")).toEqual([]);
+    expect(opcoesCasaOracao(nos, "r1", "s1").map((o) => o.rotulo)).toEqual(["Caique", "Itinga"]);
+    expect(opcoesCasaOracao(nos, "", "")).toEqual([]);
   });
 
-  it("coloca o estado na frente da região quando há mais de um estado", () => {
+  it("sem setor escolhido, as casas são todas as da RA (inclusive as ligadas direto à ADM)", () => {
+    expect(opcoesCasaOracao(nos, "r2", "").map((o) => o.rotulo)).toEqual(["Central", "Solta"]);
+    expect(opcoesCasaOracao(nos, "r1", "").map((o) => o.rotulo)).toEqual(["Caique", "Itinga"]);
+  });
+
+  it("coloca o estado na frente da RA quando há mais de um estado", () => {
     const maisUmEstado: NoOrganizacao[] = [...nos, { nivel: "ESTADO", id: "e2", parent_id: null, nome: "Sergipe" }];
     expect(opcoesRegiao(maisUmEstado).map((o) => o.rotulo)).toContain("Bahia › Salvador");
   });
 });
 
 describe("linhasOrganizacao", () => {
-  it("traz a estrutura inteira, na ordem, com as casas de oração sem setor no fim", () => {
+  const nomeDaLinha = (l: Record<string, string>) =>
+    `${l.nivel}:${l.casa_oracao || l.setor || l.adm || l.regiao || l.rrm || l.estado}`;
+
+  it("traz a estrutura inteira, na ordem, com as casas de oração sem setor no fim de cada ADM", () => {
     const linhas = linhasOrganizacao(nos, { regiaoId: "", setorId: "" });
-    expect(linhas.map((l) => `${l.nivel}:${l.casa_oracao || l.setor || l.regiao || l.estado}`)).toEqual([
+    expect(linhas.map(nomeDaLinha)).toEqual([
       "Estado:Bahia",
-      "Região:Jequié",
-      "Setor:Setor 1",
-      "Casa de Oração:Central",
-      "Região:Salvador",
+      "RRM:Salvador",
+      "RA:Salvador",
+      "ADM:Centro",
       "Setor:Setor 1",
       "Casa de Oração:Caique",
       "Casa de Oração:Itinga",
       "Setor:Setor 2",
+      "RRM:Vitória da Conquista",
+      "RA:Jequié",
+      "ADM:Ipiaú",
+      "Setor:Setor 1",
+      "Casa de Oração:Central",
       "Casa de Oração:Solta",
     ]);
   });
 
-  it("preenche situação, membros e cidade da casa de oração", () => {
+  it("preenche o caminho, a situação, os membros e a cidade da casa de oração", () => {
     const linhas = linhasOrganizacao(nos, { regiaoId: "", setorId: "" });
     const itinga = linhas.find((l) => l.casa_oracao === "Itinga");
-    expect(itinga).toMatchObject({ situacao: "Ativo", membros: "7", cidade: "Lauro de Freitas", regiao: "Salvador" });
+    expect(itinga).toMatchObject({
+      situacao: "Ativo",
+      membros: "7",
+      cidade: "Lauro de Freitas",
+      rrm: "Salvador",
+      regiao: "Salvador",
+      adm: "Centro",
+      setor: "Setor 1",
+    });
     expect(linhas.find((l) => l.casa_oracao === "Caique")?.situacao).toBe("Inativo");
+    // casa ligada direto à ADM: sem setor no caminho
+    expect(linhas.find((l) => l.casa_oracao === "Solta")).toMatchObject({ adm: "Ipiaú", setor: "" });
   });
 
-  it("filtra por região e por setor (separando o Setor 1 de cada região)", () => {
-    const daRegiao = linhasOrganizacao(nos, { regiaoId: "r1", setorId: "" });
-    expect(daRegiao.some((l) => l.regiao === "Jequié")).toBe(false);
-    expect(daRegiao.some((l) => l.nivel === "Estado")).toBe(false);
+  it("filtra por RA e por setor (separando o Setor 1 de cada ADM)", () => {
+    const daRa = linhasOrganizacao(nos, { regiaoId: "r1", setorId: "" });
+    expect(daRa.some((l) => l.regiao === "Jequié")).toBe(false);
+    expect(daRa.some((l) => l.nivel === "Estado" || l.nivel === "RRM")).toBe(false);
+    expect(linhasOrganizacao(nos, { regiaoId: "r2", setorId: "" }).some((l) => l.casa_oracao === "Solta")).toBe(true);
 
     const doSetor = linhasOrganizacao(nos, { regiaoId: "", setorId: "s3" });
     expect(doSetor.map((l) => l.nivel)).toEqual(["Setor", "Casa de Oração"]);

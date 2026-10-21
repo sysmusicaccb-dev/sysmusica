@@ -2,13 +2,13 @@
 
 /**
  * SysMúsica — Vínculos organizacionais de um usuário (painel lateral).
- * O usuário pode ser ligado a um estado, região, setor ou casa de oração: o acesso desce em cascata (um setor
+ * O usuário pode ser ligado a um estado, RRM, RA, ADM, setor ou casa de oração: o acesso desce em cascata (uma ADM
  * inclui todas as casas de oração dele). Sem nenhum vínculo, ele não vê nenhum dado (membros, eventos,
  * presenças e portarias). Quem tem acesso total não precisa de vínculo. Fica na auditoria.
  */
 import { useState, type FormEvent, type ReactNode } from "react";
 import Button from "@/components/ui/Button";
-import { chaveVinculo, FILHO_DE, filhosDe, lerChaveVinculo, ROTULO_NIVEL } from "@/modules/organizacao/regras";
+import { chaveVinculo, filhosDe, filhosDoNo, lerChaveVinculo, ROTULO_NIVEL } from "@/modules/organizacao/regras";
 import { definirVinculos } from "@/modules/organizacao/services/organizacao";
 import type { NoOrganizacao, VinculoRotulado, VinculoUsuario } from "@/modules/organizacao/tipos";
 import type { UsuarioSistema } from "../tipos";
@@ -40,8 +40,7 @@ export default function FormularioVinculos({ usuario, arvore, vinculosIniciais, 
   function renderNo(no: NoOrganizacao, profundidade: number): ReactNode {
     const chave = chaveVinculo(no.nivel, no.id);
     if (no.ativo === false && !marcados.has(chave)) return null;
-    const nivelFilho = FILHO_DE[no.nivel];
-    const filhos = nivelFilho ? filhosDe(arvore, no.id, nivelFilho) : [];
+    const filhos = filhosDoNo(arvore, no); // na ADM: setores e casas de oração sem setor
 
     return (
       <li key={chave}>
@@ -93,8 +92,8 @@ export default function FormularioVinculos({ usuario, arvore, vinculosIniciais, 
     <form onSubmit={salvar} className="space-y-5">
       <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
         <strong className="text-slate-900">{usuario.nome}</strong> só vê e usa os dados das áreas marcadas.
-        Marcar um setor inclui todas as casas de oração dele; marcar uma região inclui todos os setores. Sem nenhuma
-        marcação, não vê nada.
+        Marcar um nível inclui tudo que está abaixo dele: a ADM inclui os setores e as casas de oração dela; a RA inclui
+        as ADMs; a RRM inclui as RAs; o estado inclui tudo. Sem nenhuma marcação, não vê nada.
       </p>
 
       {arvore.length === 0 ? (

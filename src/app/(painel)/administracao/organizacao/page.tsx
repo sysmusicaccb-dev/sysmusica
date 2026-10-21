@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * SysMúsica — Página /administracao/organizacao: estados, regiões, setores e casas de oração.
- * Cadastro pelo sistema (sem código fixo), com ativar/inativar e transferência de casa de oração entre setores.
+ * SysMúsica — Página /administracao/organizacao: Estado › RRM › RA › ADM › Setor (opcional) › Casa de Oração.
+ * Cadastro pelo sistema (sem código fixo), com ativar/inativar e transferência de casa de oração entre ADMs e setores.
  * Cada botão só aparece para quem tem a permissão; o banco confere de novo em toda operação.
  */
 import { useCallback, useEffect, useState } from "react";
@@ -149,7 +149,7 @@ export default function OrganizacaoPage() {
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
         <PageHeader
           titulo="Organização"
-          descricao="Estados, regiões, setores e casas de oração. O acesso dos usuários aos dados segue esta estrutura."
+          descricao="Estado › RRM › RA › ADM › Setor (opcional) › Casa de Oração. O acesso dos usuários aos dados segue esta estrutura."
           acoes={
             podeCriar ? (
               <Button icone={Plus} onClick={() => abrirNovo("ESTADO", null)} disabled={carregando || !!erro}>
@@ -204,7 +204,7 @@ export default function OrganizacaoPage() {
         titulo={tituloDoPainel(painel)}
         descricao={
           painel?.tipo === "transferir"
-            ? "A casa de oração e as portarias dela passam a valer para o setor escolhido."
+            ? "A casa de oração e as portarias dela passam a valer para o destino escolhido (ADM ou setor)."
             : "Os nomes não podem se repetir dentro do mesmo item pai."
         }
       >

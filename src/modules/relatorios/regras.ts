@@ -147,7 +147,7 @@ export function rotulosDosFiltros(filtros: FiltrosRelatorio, opcoes: OpcoesFiltr
 
   return {
     evento: evento ? `${formatarDataHora(evento.data_evento)} · ${evento.tipo} · ${evento.local}` : undefined,
-    regiao: nomeDe("REGIAO", filtros.regiaoId),
+    regiao: nomeDe("RA", filtros.regiaoId), // o filtro "regiao" dos relatórios é a RA
     setor: nomeDe("SETOR", filtros.setorId),
     casa_oracao: nomeDe("CASA_ORACAO", filtros.casaOracaoId),
     cargo: filtros.cargoId ? opcoes?.cargos.find((item) => item.id === filtros.cargoId)?.nome : undefined,
@@ -174,7 +174,7 @@ export function resumoFiltros(
     );
   }
   if (tem("evento") && filtros.eventoId && rotulos.evento) partes.push(`Evento: ${rotulos.evento}`);
-  if (tem("regiao") && filtros.regiaoId && rotulos.regiao) partes.push(`Região: ${rotulos.regiao}`);
+  if (tem("regiao") && filtros.regiaoId && rotulos.regiao) partes.push(`RA: ${rotulos.regiao}`);
   if (tem("setor") && filtros.setorId && rotulos.setor) partes.push(`Setor: ${rotulos.setor}`);
   if (tem("casa_oracao") && filtros.casaOracaoId && rotulos.casa_oracao) partes.push(`Casa de Oração: ${rotulos.casa_oracao}`);
   if (tem("cargo") && filtros.cargoId && rotulos.cargo) partes.push(`Cargo: ${rotulos.cargo}`);
@@ -200,27 +200,43 @@ export interface OpcaoSelecao {
 
 const porRotulo = (a: OpcaoSelecao, b: OpcaoSelecao) => a.rotulo.localeCompare(b.rotulo, "pt-BR", { numeric: true });
 
-/** Regiões para escolher (com o estado na frente se houver mais de um estado). */
+/** RAs para escolher (com o estado na frente se houver mais de um estado). */
 export function opcoesRegiao(nos: NoOrganizacao[]): OpcaoSelecao[] {
   const estados = nos.filter((no) => no.nivel === "ESTADO");
-  const nomeDoEstado = new Map(estados.map((estado) => [estado.id, estado.nome] as const));
+  const porId = new Map(nos.map((no) => [no.id, no] as const));
   return nos
-    .filter((no) => no.nivel === "REGIAO")
-    .map((regiao) => {
-      const estado = regiao.parent_id ? nomeDoEstado.get(regiao.parent_id) : undefined;
-      return { id: regiao.id, rotulo: estados.length > 1 && estado ? `${estado} › ${regiao.nome}` : regiao.nome };
+    .filter((no) => no.nivel === "RA")
+    .map((ra) => {
+      const rrm = ra.parent_id ? porId.get(ra.parent_id) : undefined;
+      const estado = rrm?.parent_id ? porId.get(rrm.parent_id) : undefined;
+      return { id: ra.id, rotulo: estados.length > 1 && estado ? `${estado.nome} › ${ra.nome}` : ra.nome };
     })
     .sort(porRotulo);
 }
 
-/** Setores da região escolhida (vazio sem região). */
+/** Setores da RA escolhida, com o nome da ADM na frente ("Setor 1" existe em várias ADMs). Vazio sem RA. */
 export function opcoesSetor(nos: NoOrganizacao[], regiaoId: string): OpcaoSelecao[] {
-  return regiaoId ? filhosDe(nos, regiaoId, "SETOR").map((no) => ({ id: no.id, rotulo: no.nome })) : [];
+  if (!regiaoId) return [];
+  return filhosDe(nos, regiaoId, "ADM")
+    .flatMap((adm) => filhosDe(nos, adm.id, "SETOR").map((setor) => ({ id: setor.id, rotulo: `${adm.nome} › ${setor.nome}` })))
+    .sort(porRotulo);
 }
 
-/** Casas de Oração do setor escolhido (vazio sem setor). */
-export function opcoesCasaOracao(nos: NoOrganizacao[], setorId: string): OpcaoSelecao[] {
-  return setorId ? filhosDe(nos, setorId, "CASA_ORACAO").map((no) => ({ id: no.id, rotulo: no.nome })) : [];
+/**
+ * Casas de Oração para escolher: as do setor escolhido; sem setor, todas as da RA (as ligadas direto à ADM
+ * e as que estão dentro de setores). Vazio sem RA.
+ */
+export function opcoesCasaOracao(nos: NoOrganizacao[], regiaoId: string, setorId: string): OpcaoSelecao[] {
+  const comoOpcao = (no: NoOrganizacao) => ({ id: no.id, rotulo: no.nome });
+  if (setorId) return filhosDe(nos, setorId, "CASA_ORACAO").map(comoOpcao);
+  if (!regiaoId) return [];
+  return filhosDe(nos, regiaoId, "ADM")
+    .flatMap((adm) => [
+      ...filhosDe(nos, adm.id, "CASA_ORACAO"),
+      ...filhosDe(nos, adm.id, "SETOR").flatMap((setor) => filhosDe(nos, setor.id, "CASA_ORACAO")),
+    ])
+    .map(comoOpcao)
+    .sort(porRotulo);
 }
 
 // ---------- Cabeçalho, rodapé e margens do relatório impresso ----------
@@ -232,7 +248,7 @@ export const ITENS_CABECALHO: { id: ItemCabecalho; rotulo: string }[] = [
   { id: "marca", rotulo: "Marca do sistema (logomarca ou nome)" },
   { id: "evento", rotulo: "Evento escolhido (nome, data, hora e local)" },
   { id: "periodo", rotulo: "Período" },
-  { id: "localizacao", rotulo: "Região, setor e casa de oração" },
+  { id: "localizacao", rotulo: "RA, setor e casa de oração" },
   { id: "filtros", rotulo: "Outros filtros usados" },
   { id: "total", rotulo: "Total de registros" },
   { id: "resumo", rotulo: "Resumo dos totais (presentes, ausentes...)" },
@@ -550,7 +566,7 @@ export function linhasPortarias(
     }));
 }
 
-/** A estrutura Estado > Região > Setor > Casa de Oração em linhas (com os filtros de região e setor). */
+/** A estrutura Estado › RRM › RA › ADM › Setor › Casa de Oração em linhas (com os filtros de RA e de setor). */
 export function linhasOrganizacao(
   nos: NoOrganizacao[],
   filtro: { regiaoId: string; setorId: string }
@@ -559,13 +575,14 @@ export function linhasOrganizacao(
   const filtrando = filtro.regiaoId !== "" || filtro.setorId !== "";
   const situacao = (no: NoOrganizacao) => (no.ativo === false ? "Inativo" : "Ativo");
 
-  const montar = (
-    no: NoOrganizacao,
-    caminho: { estado?: string; regiao?: string; setor?: string; casa_oracao?: string }
-  ): LinhaRelatorio => ({
+  // "regiao" é a RA (o nome da coluna é mantido para os relatórios e as exportações já salvas)
+  type Caminho = { estado?: string; rrm?: string; regiao?: string; adm?: string; setor?: string; casa_oracao?: string };
+  const montar = (no: NoOrganizacao, caminho: Caminho): LinhaRelatorio => ({
     nivel: ROTULO_NIVEL[no.nivel],
     estado: caminho.estado ?? "",
+    rrm: caminho.rrm ?? "",
     regiao: caminho.regiao ?? "",
+    adm: caminho.adm ?? "",
     setor: caminho.setor ?? "",
     casa_oracao: caminho.casa_oracao ?? "",
     situacao: situacao(no),
@@ -578,26 +595,35 @@ export function linhasOrganizacao(
   for (const estado of filhosDe(nos, null, "ESTADO")) {
     if (!filtrando) linhas.push(montar(estado, { estado: estado.nome }));
 
-    for (const regiao of filhosDe(nos, estado.id, "REGIAO")) {
-      if (filtro.regiaoId && regiao.id !== filtro.regiaoId) continue;
-      if (!filtro.setorId) linhas.push(montar(regiao, { estado: estado.nome, regiao: regiao.nome }));
+    for (const rrm of filhosDe(nos, estado.id, "RRM")) {
+      if (!filtrando) linhas.push(montar(rrm, { estado: estado.nome, rrm: rrm.nome }));
 
-      for (const setor of filhosDe(nos, regiao.id, "SETOR")) {
-        if (filtro.setorId && setor.id !== filtro.setorId) continue;
-        const caminho = { estado: estado.nome, regiao: regiao.nome, setor: setor.nome };
-        linhas.push(montar(setor, caminho));
+      for (const ra of filhosDe(nos, rrm.id, "RA")) {
+        if (filtro.regiaoId && ra.id !== filtro.regiaoId) continue;
+        const caminhoRa = { estado: estado.nome, rrm: rrm.nome, regiao: ra.nome };
+        if (!filtro.setorId) linhas.push(montar(ra, caminhoRa));
 
-        for (const casaOracao of filhosDe(nos, setor.id, "CASA_ORACAO")) {
-          linhas.push(montar(casaOracao, { ...caminho, casa_oracao: casaOracao.nome }));
+        for (const adm of filhosDe(nos, ra.id, "ADM")) {
+          const caminhoAdm = { ...caminhoRa, adm: adm.nome };
+          if (!filtro.setorId) linhas.push(montar(adm, caminhoAdm));
+
+          for (const setor of filhosDe(nos, adm.id, "SETOR")) {
+            if (filtro.setorId && setor.id !== filtro.setorId) continue;
+            const caminhoSetor = { ...caminhoAdm, setor: setor.nome };
+            linhas.push(montar(setor, caminhoSetor));
+            for (const casaOracao of filhosDe(nos, setor.id, "CASA_ORACAO")) {
+              linhas.push(montar(casaOracao, { ...caminhoSetor, casa_oracao: casaOracao.nome }));
+            }
+          }
+
+          // Casas de Oração ligadas direto à ADM (sem setor): não aparecem quando se filtra por um setor
+          if (!filtro.setorId) {
+            for (const casaOracao of filhosDe(nos, adm.id, "CASA_ORACAO")) {
+              linhas.push(montar(casaOracao, { ...caminhoAdm, casa_oracao: casaOracao.nome }));
+            }
+          }
         }
       }
-    }
-  }
-
-  // Casas de Oração que ainda não têm setor
-  if (!filtrando) {
-    for (const casaOracao of filhosDe(nos, null, "CASA_ORACAO")) {
-      linhas.push(montar(casaOracao, { casa_oracao: casaOracao.nome }));
     }
   }
   return linhas;
