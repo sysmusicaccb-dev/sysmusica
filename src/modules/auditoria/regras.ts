@@ -53,6 +53,8 @@ const ROTULO_ACAO: Record<string, string> = {
   ensaio_registrado: "Registrou os dados do ensaio",
   ensaio_alterado: "Alterou os dados do ensaio",
   hinos_importados: "Importou lista de hinos",
+  cadastro_aprovado: "Aprovou cadastro pendente",
+  cadastro_rejeitado: "Recusou cadastro pendente",
 };
 
 const ROTULO_ENTIDADE: Record<string, string> = {
@@ -82,6 +84,7 @@ const ROTULO_ENTIDADE: Record<string, string> = {
   tipos_evento: "Tipo de evento",
   hinos: "Hino",
   ensaio: "Dados do ensaio",
+  cadastro_pendente: "Cadastro pendente",
 };
 
 const ROTULO_CAMPO: Record<string, string> = {

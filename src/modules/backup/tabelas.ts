@@ -34,6 +34,8 @@ export type NomeTabela =
   | "usuario_grupos"
   | "usuario_vinculos"
   | "membros"
+  | "membros_cadastro"
+  | "cadastros_pendentes"
   | "eventos"
   | "dados_ensaio"
   | "dados_ensaio_encarregados"
@@ -133,6 +135,33 @@ export const TABELAS: DefinicaoTabela[] = [
       { coluna: "origem_casa_oracao_id", tabela: "casas_oracao" },
     ],
   }),
+  // Cadastro Musical (dados complementares do membro) e fila do cadastro público. Só entram no backup com os
+  // campos pessoais marcados como protegidos (nunca vão para o navegador).
+  tabela("membros_cadastro", "Cadastro musical dos membros", "membros", {
+    pk: ["membro_id"],
+    referencias: [{ coluna: "membro_id", tabela: "membros" }],
+    sensiveis: [
+      "documento_frente_path",
+      "documento_verso_path",
+      "cartao_numero",
+      "email",
+      "telefone",
+      "whatsapp",
+      "cep",
+      "endereco",
+      "numero",
+      "complemento",
+    ],
+  }),
+  tabela("cadastros_pendentes", "Cadastros pendentes (link público)", "membros", {
+    referencias: [
+      { coluna: "membro_id", tabela: "membros" },
+      { coluna: "casa_oracao_id", tabela: "casas_oracao" },
+      { coluna: "cargo_id", tabela: "cargos" },
+      { coluna: "instrumento_id", tabela: "instrumentos" },
+    ],
+    sensiveis: ["cpf", "dados", "responsavel_nome", "responsavel_telefone", "ip_hash"],
+  }),
   tabela("eventos", "Eventos", "eventos", {
     exclusaoLogica: true,
     referencias: [
@@ -220,8 +249,8 @@ export const GRUPOS_DADOS: DefinicaoGrupo[] = [
   {
     id: "membros",
     rotulo: "Membros",
-    descricao: "Cadastro de membros (a fotografia entra em uma etapa posterior)",
-    tabelas: ["membros"],
+    descricao: "Cadastro de membros, cadastro musical e cadastros pendentes do link público (as fotos e documentos não entram)",
+    tabelas: ["membros", "membros_cadastro", "cadastros_pendentes"],
   },
   {
     id: "eventos",

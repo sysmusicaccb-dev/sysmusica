@@ -59,10 +59,10 @@ EDITS = [
     ],
   },'''),
     ("src/components/layout/Sidebar.tsx",
-     r'''import { GRUPOS_MENU, filtrarMenu, itemAtivo } from "./navegacao";
+     r'''import { GRUPOS_MENU, filtrarMenu, itemMenuAtivo } from "./navegacao";
 ''',
      r'''import { useContadorCadastros } from "@/modules/cadastrosPendentes/useContador";
-import { GRUPOS_MENU, filtrarMenu, itemAtivo } from "./navegacao";
+import { GRUPOS_MENU, filtrarMenu, itemMenuAtivo } from "./navegacao";
 '''),
     ("src/components/layout/Sidebar.tsx",
      r'''  const gruposVisiveis = filtrarMenu(GRUPOS_MENU, pode); // só o que o grupo do usuário pode ver
@@ -2905,7 +2905,8 @@ export async function listarCadastros(status: FiltroStatus): Promise<ResumoCadas
 
 export async function obterCadastro(id: string): Promise<DetalheCadastro> {
   const { data, error } = await supabase.rpc("obter_cadastro_pendente", { p_id: id });
-  if (error || !data) throw new Error(mensagemDoErro(error, "Não foi possível abrir o cadastro."));
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível abrir o cadastro."));
+  if (!data) throw new Error("Não foi possível abrir o cadastro."); // sem erro, mas sem dados (ex.: fora da sua abrangência)
   const d = data as DetalheCadastro;
   return { ...d, outros_pendentes: Number(d.outros_pendentes ?? 0) };
 }

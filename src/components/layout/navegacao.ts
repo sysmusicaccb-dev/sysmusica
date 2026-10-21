@@ -17,6 +17,7 @@ import {
   ClipboardList,
   DoorOpen,
   Guitar,
+  Inbox,
   KeyRound,
   LayoutDashboard,
   Music2,
@@ -69,6 +70,8 @@ export const GRUPOS_MENU: GrupoMenu[] = [
       },
       { href: "/tipos-evento", rotulo: "Tipo do Evento", icone: Tag, permissao: "tipoevento.visualizar" },
       { href: "/hinos", rotulo: "Hinos", icone: Music2, permissao: "hinos.visualizar" },
+      // Fila de cadastros enviados pelo link público (/cadastro); o número pendente aparece no menu (Sidebar)
+      { href: "/cadastros-pendentes", rotulo: "Cadastros pendentes", icone: Inbox, permissao: "cadastros.visualizar" },
     ],
   },
   {

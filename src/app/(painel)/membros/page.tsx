@@ -26,6 +26,7 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Drawer from "@/components/ui/Drawer";
 import Notificacao from "@/components/ui/Notificacao";
 import PageHeader from "@/components/ui/PageHeader";
+import BotaoCopiarLinkCadastro from "@/modules/cadastroPublico/components/BotaoCopiarLink";
 import FormularioMembro from "@/components/FormularioMembro";
 import ListaMembros from "@/components/ListaMembros";
 import { valoresDistintos } from "@/lib/listas";
@@ -183,9 +184,13 @@ export default function MembrosPage() {
           }`}
           acoes={
             pode("membros.criar") ? (
-              <Button icone={Plus} onClick={() => setPainel({ tipo: "novo" })} disabled={carregando || !!erro}>
-                Adicionar
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                {/* Copia o link público /cadastro para enviar aos membros (o "+ Adicionar" continua interno) */}
+                <BotaoCopiarLinkCadastro />
+                <Button icone={Plus} onClick={() => setPainel({ tipo: "novo" })} disabled={carregando || !!erro}>
+                  Adicionar
+                </Button>
+              </div>
             ) : undefined
           }
         />

@@ -14,6 +14,7 @@ import { Music, X } from "lucide-react";
 import LogoMarca from "@/components/ui/LogoMarca";
 import { cn } from "@/lib/cn";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
+import { useContadorCadastros } from "@/modules/cadastrosPendentes/useContador";
 import { GRUPOS_MENU, filtrarMenu, itemMenuAtivo } from "./navegacao";
 
 interface SidebarProps {
@@ -26,6 +27,8 @@ export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
   const caminho = usePathname() ?? "";
   const { pode } = useSessao();
   const gruposVisiveis = filtrarMenu(GRUPOS_MENU, pode); // só o que o grupo do usuário pode ver
+  // Quantos cadastros públicos aguardam análise (0 para quem não tem a permissão); vira um selo no menu
+  const pendentes = useContadorCadastros();
 
   return (
     <>
@@ -126,6 +129,17 @@ export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
                         <span className={cn("truncate", recolhida && "lg:sr-only")}>
                           {item.rotulo}
                         </span>
+                        {item.href === "/cadastros-pendentes" && pendentes > 0 && (
+                          <span
+                            className={cn(
+                              "ml-auto rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white",
+                              recolhida && "lg:hidden"
+                            )}
+                            aria-label={`${pendentes} aguardando análise`}
+                          >
+                            {pendentes > 99 ? "99+" : pendentes}
+                          </span>
+                        )}
                       </Link>
                     </li>
                   );

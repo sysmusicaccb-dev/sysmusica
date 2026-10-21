@@ -1,0 +1,375 @@
+"use client";
+
+/**
+ * SysMúsica — Formulário PÚBLICO do Cadastro Musical (sem login). Página: /cadastro.
+ * Mesmos campos do cadastro interno, mais: aviso de privacidade (LGPD), responsável (menores de 18 anos) e
+ * verificação anti-robô. O envio NÃO cria o membro: gera um pedido que a secretaria aprova em "Cadastros pendentes".
+ * Depois de enviar, a tela é sempre a mesma, exista ou não um cadastro anterior com o mesmo CPF.
+ */
+import { useCallback, useMemo, useState, type FormEvent } from "react";
+import { CheckCircle2, Send } from "lucide-react";
+import CampoFoto from "@/modules/membros/components/CampoFoto";
+import CampoDocumento from "@/modules/membros/components/CampoDocumento";
+import SeletorInstrumento, { FamiliaAutomatica } from "@/modules/instrumentos/components/SeletorInstrumento";
+import { buscarEnderecoPorCep } from "@/modules/membros/services/cep";
+import {
+  ESTADOS_CIVIS,
+  SEXOS,
+  UFS,
+  CADASTRO_VAZIO,
+  cargoExigeCartao,
+  formatarCep,
+  formatarTelefone,
+  formatarWhatsapp,
+  somenteDigitos,
+  type CadastroMusical,
+  type SimNao,
+} from "@/modules/membros/cadastroMusical";
+import { CATEGORIAS, cargoUsaCategoria } from "@/modules/painel/regras";
+import { formatarCpfParcial } from "../cpf";
+import { itensDoAviso } from "../aviso";
+import { enviarCadastroPublico } from "../services/envio";
+import {
+  MENSAGEM_ENVIO_RECEBIDO,
+  cargosDoFormularioPublico,
+  ehMenorDeIdade,
+  formularioVazio,
+  instrumentosDoFormularioPublico,
+  montarCargaPublica,
+  validarEnvioPublico,
+  type DadosFormularioPublico,
+  type OpcoesCadastroPublico,
+} from "../regras";
+import { Campo, Secao, classeInput } from "./Campos";
+import SeletorCasaPublico from "./SeletorCasaPublico";
+import Turnstile from "./Turnstile";
+
+/** Data de hoje (AAAA-MM-DD) no fuso do navegador. */
+function hojeIso(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPublico }) {
+  const [dados, setDados] = useState<DadosFormularioPublico>(() => formularioVazio(CADASTRO_VAZIO));
+  const [foto, setFoto] = useState<Blob | null>(null);
+  const [frente, setFrente] = useState<Blob | null>(null);
+  const [verso, setVerso] = useState<Blob | null>(null);
+  const [token, setToken] = useState("");
+  const [reiniciarTurnstile, setReiniciarTurnstile] = useState(0);
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [enviado, setEnviado] = useState(false);
+  const [avisoCep, setAvisoCep] = useState<string | null>(null);
+  const [buscandoCep, setBuscandoCep] = useState(false);
+
+  const cargos = useMemo(() => cargosDoFormularioPublico(opcoes.cargos), [opcoes.cargos]);
+  const cargo = cargos.find((c) => c.id === dados.cargoId);
+  const tipoCategoria = cargoUsaCategoria(cargo?.nome);
+  const instrumentos = instrumentosDoFormularioPublico(opcoes.instrumentos, cargo);
+  const menor = ehMenorDeIdade(dados.dataNascimento, hojeIso());
+  const itens = useMemo(() => itensDoAviso(process.env.NEXT_PUBLIC_CONTATO_PRIVACIDADE), []);
+
+  const mudar = <K extends keyof DadosFormularioPublico>(campo: K, valor: DadosFormularioPublico[K]) =>
+    setDados((d) => ({ ...d, [campo]: valor }));
+  const mudarCad = <K extends keyof CadastroMusical>(campo: K, valor: CadastroMusical[K]) =>
+    setDados((d) => ({ ...d, cadastro: { ...d.cadastro, [campo]: valor } }));
+
+  const aoToken = useCallback((t: string) => setToken(t), []);
+
+  // Preenche o endereço pelo CEP (ViaCEP); se falhar, a pessoa digita
+  async function aoSairDoCep() {
+    const cep = dados.cadastro.cep;
+    setAvisoCep(null);
+    if (!/^\d{8}$/.test(cep)) return;
+    setBuscandoCep(true);
+    const r = await buscarEnderecoPorCep(cep);
+    setBuscandoCep(false);
+    if (r.tipo === "ok") {
+      setDados((d) => ({
+        ...d,
+        cidade: r.endereco.cidade || d.cidade,
+        bairro: r.endereco.bairro || d.bairro,
+        cadastro: {
+          ...d.cadastro,
+          endereco: r.endereco.endereco || d.cadastro.endereco,
+          complemento: d.cadastro.complemento || r.endereco.complemento,
+          uf: r.endereco.uf || d.cadastro.uf,
+        },
+      }));
+    } else {
+      setAvisoCep(r.tipo === "nao_encontrado" ? "CEP não encontrado. Digite o endereço." : "Não consegui consultar o CEP agora. Digite o endereço.");
+    }
+  }
+
+  async function aoEnviar(e: FormEvent) {
+    e.preventDefault();
+    if (enviando) return;
+    const hoje = hojeIso();
+    const problema = validarEnvioPublico(dados, {
+      cargo,
+      temFoto: foto !== null,
+      temDocumentoFrente: frente !== null,
+      temDocumentoVerso: verso !== null,
+      hoje,
+    });
+    if (problema) return setErro(problema);
+    if (token === "") return setErro("Aguarde a verificação de segurança e tente de novo.");
+    if (!foto || !frente || !verso) return;
+
+    setErro(null);
+    setEnviando(true);
+    try {
+      await enviarCadastroPublico(montarCargaPublica(dados, { cargo, hoje }), { foto, frente, verso }, token);
+      setEnviado(true);
+    } catch (ex) {
+      setErro(ex instanceof Error ? ex.message : "Não foi possível enviar o cadastro.");
+      setToken(""); // o token vale uma só vez: pede uma nova verificação
+      setReiniciarTurnstile((n) => n + 1);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  if (enviado) {
+    return (
+      <div role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
+        <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600" aria-hidden="true" />
+        <p className="mt-3 text-base font-medium text-emerald-900">{MENSAGEM_ENVIO_RECEBIDO}</p>
+      </div>
+    );
+  }
+
+  const cad = dados.cadastro;
+  const exigeCartao = cargoExigeCartao(cargo);
+  const bloqueado = enviando;
+
+  return (
+    <form onSubmit={(ev) => void aoEnviar(ev)} className="space-y-8" noValidate>
+      {/* Campo-armadilha: invisível para pessoas; robôs costumam preencher. Não remova. */}
+      <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+        <label htmlFor="site">Site</label>
+        <input id="site" type="text" tabIndex={-1} autoComplete="off" value={dados.site} onChange={(e) => mudar("site", e.target.value)} />
+      </div>
+
+      <Secao titulo="Fotografia">
+        <CampoFoto nome={dados.nome || "você"} obrigatoria onChange={setFoto} disabled={bloqueado} />
+      </Secao>
+
+      <Secao titulo="Identificação">
+        <Campo id="nome" rotulo="Nome completo" obrigatorio>
+          <input id="nome" type="text" autoComplete="name" maxLength={120} value={dados.nome} onChange={(e) => mudar("nome", e.target.value)} disabled={bloqueado} className={classeInput} placeholder="Ex: João da Silva" />
+        </Campo>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Campo id="cpf" rotulo="CPF" obrigatorio>
+            <input id="cpf" type="text" inputMode="numeric" autoComplete="off" value={dados.cpf} onChange={(e) => mudar("cpf", formatarCpfParcial(e.target.value))} disabled={bloqueado} className={classeInput} placeholder="000.000.000-00" />
+          </Campo>
+          <Campo id="nascimento" rotulo="Data de nascimento" obrigatorio>
+            <input id="nascimento" type="date" autoComplete="bday" max={hojeIso()} value={dados.dataNascimento} onChange={(e) => mudar("dataNascimento", e.target.value)} disabled={bloqueado} className={classeInput} />
+          </Campo>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Campo id="estado_civil" rotulo="Estado civil" obrigatorio>
+            <select id="estado_civil" value={cad.estado_civil} onChange={(e) => mudarCad("estado_civil", e.target.value)} disabled={bloqueado} className={classeInput}>
+              <option value="">Selecione</option>
+              {ESTADOS_CIVIS.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </Campo>
+          <Campo id="sexo" rotulo="Sexo" obrigatorio>
+            <select id="sexo" value={cad.sexo} onChange={(e) => mudarCad("sexo", e.target.value)} disabled={bloqueado} className={classeInput}>
+              <option value="">Selecione</option>
+              {SEXOS.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </Campo>
+        </div>
+      </Secao>
+
+      {menor && (
+        <Secao titulo="Responsável (menor de 18 anos)">
+          <Campo id="resp-nome" rotulo="Nome do responsável" obrigatorio>
+            <input id="resp-nome" type="text" maxLength={120} value={dados.responsavelNome} onChange={(e) => mudar("responsavelNome", e.target.value)} disabled={bloqueado} className={classeInput} />
+          </Campo>
+          <Campo id="resp-tel" rotulo="Telefone do responsável (com DDD)" obrigatorio>
+            <input id="resp-tel" type="tel" inputMode="numeric" value={dados.responsavelTelefone} onChange={(e) => mudar("responsavelTelefone", formatarWhatsapp(e.target.value))} disabled={bloqueado} className={classeInput} />
+          </Campo>
+          <label className="flex items-start gap-2 text-sm text-slate-700">
+            <input type="checkbox" checked={dados.aceiteResponsavel} onChange={(e) => mudar("aceiteResponsavel", e.target.checked)} disabled={bloqueado} className="mt-0.5" />
+            <span>Eu sou o responsável e concordo com este cadastro e com o aviso de privacidade.</span>
+          </label>
+        </Secao>
+      )}
+
+      <Secao titulo="Casa de Oração e cargo">
+        <Campo id="casa" rotulo="Casa de Oração" obrigatorio dica="Se a sua Casa de Oração não aparecer, procure a secretaria.">
+          <SeletorCasaPublico id="casa" valor={dados.casaOracaoId} onChange={(v) => mudar("casaOracaoId", v)} casas={opcoes.casas} disabled={bloqueado} />
+        </Campo>
+        <Campo id="cargo" rotulo="Cargo" obrigatorio>
+          <select
+            id="cargo"
+            value={dados.cargoId}
+            onChange={(e) => setDados((d) => ({ ...d, cargoId: e.target.value, categoria: "", instrumentoId: "" }))}
+            disabled={bloqueado}
+            className={classeInput}
+          >
+            <option value="">Selecione o cargo</option>
+            {cargos.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          </select>
+        </Campo>
+        {tipoCategoria && (
+          <Campo id="categoria" rotulo="Categoria" obrigatorio>
+            <select id="categoria" value={dados.categoria} onChange={(e) => mudar("categoria", e.target.value)} disabled={bloqueado} className={classeInput}>
+              <option value="">Selecione a categoria</option>
+              {CATEGORIAS.map((c) => <option key={c.valor} value={c.valor}>{c[tipoCategoria === "organista" ? "organista" : "musico"]}</option>)}
+            </select>
+          </Campo>
+        )}
+        {cargo?.permite_instrumento && (
+          <>
+            <Campo id="instrumento" rotulo="Instrumento" obrigatorio>
+              <SeletorInstrumento id="instrumento" valor={dados.instrumentoId} onChange={(v) => mudar("instrumentoId", v)} instrumentos={instrumentos} familias={opcoes.familias} obrigatorio disabled={bloqueado} className={classeInput} />
+            </Campo>
+            <FamiliaAutomatica instrumentoId={dados.instrumentoId} instrumentos={instrumentos} familias={opcoes.familias} />
+          </>
+        )}
+      </Secao>
+
+      <Secao titulo="Dados religiosos (consentimento específico)">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Campo id="batizado" rotulo="É batizado(a)?" obrigatorio>
+            <select id="batizado" value={cad.batizado} onChange={(e) => mudarCad("batizado", e.target.value as SimNao)} disabled={bloqueado} className={classeInput}>
+              <option value="">Selecione</option>
+              <option value="sim">Sim</option>
+              <option value="nao">Não</option>
+            </select>
+          </Campo>
+          {cad.batizado === "sim" && (
+            <Campo id="data_batismo" rotulo="Data do batismo" obrigatorio>
+              <input id="data_batismo" type="date" value={cad.data_batismo} onChange={(e) => mudarCad("data_batismo", e.target.value)} disabled={bloqueado} className={classeInput} />
+            </Campo>
+          )}
+        </div>
+        <Campo id="selado" rotulo="É selado(a)?" obrigatorio>
+          <select id="selado" value={cad.selado} onChange={(e) => mudarCad("selado", e.target.value as SimNao)} disabled={bloqueado} className={classeInput}>
+            <option value="">Selecione</option>
+            <option value="sim">Sim</option>
+            <option value="nao">Não</option>
+          </select>
+        </Campo>
+      </Secao>
+
+      <Secao titulo="Contato">
+        <div className="grid grid-cols-3 gap-3">
+          <Campo id="ddd" rotulo="DDD" obrigatorio>
+            <input id="ddd" type="tel" inputMode="numeric" maxLength={2} value={cad.ddd} onChange={(e) => mudarCad("ddd", somenteDigitos(e.target.value, 2))} disabled={bloqueado} className={classeInput} />
+          </Campo>
+          <div className="col-span-2">
+            <Campo id="telefone" rotulo="Telefone" obrigatorio>
+              <input id="telefone" type="tel" inputMode="numeric" value={cad.telefone} onChange={(e) => mudarCad("telefone", formatarTelefone(e.target.value))} disabled={bloqueado} className={classeInput} />
+            </Campo>
+          </div>
+        </div>
+        <Campo id="tem_whatsapp" rotulo="O telefone tem WhatsApp?" obrigatorio>
+          <select id="tem_whatsapp" value={cad.tem_whatsapp} onChange={(e) => mudarCad("tem_whatsapp", e.target.value as SimNao)} disabled={bloqueado} className={classeInput}>
+            <option value="">Selecione</option>
+            <option value="sim">Sim</option>
+            <option value="nao">Não</option>
+          </select>
+        </Campo>
+        {cad.tem_whatsapp === "sim" && (
+          <Campo id="whatsapp" rotulo="WhatsApp (com DDD)" dica="Deixe vazio se for o mesmo número do telefone.">
+            <input id="whatsapp" type="tel" inputMode="numeric" value={cad.whatsapp} onChange={(e) => mudarCad("whatsapp", formatarWhatsapp(e.target.value))} disabled={bloqueado} className={classeInput} />
+          </Campo>
+        )}
+        <Campo id="email" rotulo="E-mail">
+          <input id="email" type="email" autoComplete="email" maxLength={120} value={cad.email} onChange={(e) => mudarCad("email", e.target.value)} disabled={bloqueado} className={classeInput} />
+        </Campo>
+      </Secao>
+
+      <Secao titulo="Endereço">
+        <Campo id="cep" rotulo="CEP" obrigatorio dica={buscandoCep ? "Consultando o CEP..." : (avisoCep ?? undefined)}>
+          <input id="cep" type="text" inputMode="numeric" autoComplete="postal-code" value={formatarCep(cad.cep)} onChange={(e) => mudarCad("cep", somenteDigitos(e.target.value, 8))} onBlur={() => void aoSairDoCep()} disabled={bloqueado} className={classeInput} />
+        </Campo>
+        <Campo id="endereco" rotulo="Endereço" obrigatorio>
+          <input id="endereco" type="text" autoComplete="street-address" maxLength={150} value={cad.endereco} onChange={(e) => mudarCad("endereco", e.target.value)} disabled={bloqueado} className={classeInput} />
+        </Campo>
+        <div className="grid grid-cols-2 gap-3">
+          <Campo id="numero" rotulo="Número" obrigatorio>
+            <input id="numero" type="text" maxLength={20} value={cad.numero} onChange={(e) => mudarCad("numero", e.target.value)} disabled={bloqueado} className={classeInput} />
+          </Campo>
+          <Campo id="complemento" rotulo="Complemento">
+            <input id="complemento" type="text" maxLength={80} value={cad.complemento} onChange={(e) => mudarCad("complemento", e.target.value)} disabled={bloqueado} className={classeInput} />
+          </Campo>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Campo id="bairro" rotulo="Bairro" obrigatorio>
+            <input id="bairro" type="text" maxLength={80} value={dados.bairro} onChange={(e) => mudar("bairro", e.target.value)} disabled={bloqueado} className={classeInput} />
+          </Campo>
+          <Campo id="cidade" rotulo="Cidade" obrigatorio>
+            <input id="cidade" type="text" maxLength={80} value={dados.cidade} onChange={(e) => mudar("cidade", e.target.value)} disabled={bloqueado} className={classeInput} />
+          </Campo>
+          <Campo id="uf" rotulo="UF" obrigatorio>
+            <select id="uf" value={cad.uf} onChange={(e) => mudarCad("uf", e.target.value)} disabled={bloqueado} className={classeInput}>
+              <option value="">UF</option>
+              {UFS.map((u) => <option key={u} value={u}>{u}</option>)}
+            </select>
+          </Campo>
+        </div>
+      </Secao>
+
+      {exigeCartao && (
+        <Secao titulo="Cartão de identificação">
+          <Campo id="cartao_numero" rotulo="Número do cartão" obrigatorio>
+            <input id="cartao_numero" type="text" autoComplete="off" maxLength={40} value={cad.cartao_numero} onChange={(e) => mudarCad("cartao_numero", e.target.value)} disabled={bloqueado} className={classeInput} />
+          </Campo>
+          <div className="grid grid-cols-2 gap-3">
+            <Campo id="cartao_emissao" rotulo="Emissão">
+              <input id="cartao_emissao" type="date" value={cad.cartao_emissao} onChange={(e) => mudarCad("cartao_emissao", e.target.value)} disabled={bloqueado} className={classeInput} />
+            </Campo>
+            <Campo id="cartao_validade" rotulo="Validade" obrigatorio>
+              <input id="cartao_validade" type="date" value={cad.cartao_validade} onChange={(e) => mudarCad("cartao_validade", e.target.value)} disabled={bloqueado} className={classeInput} />
+            </Campo>
+          </div>
+        </Secao>
+      )}
+
+      <Secao titulo="Documento de identificação">
+        <p className="text-xs text-slate-500">Anexe uma foto da frente e uma do verso (RG ou CNH). Os arquivos ficam em armazenamento privado.</p>
+        <CampoDocumento id="pub-doc-frente" rotulo="Frente do documento" obrigatorio onChange={setFrente} disabled={bloqueado} />
+        <CampoDocumento id="pub-doc-verso" rotulo="Verso do documento" obrigatorio onChange={setVerso} disabled={bloqueado} />
+      </Secao>
+
+      <Secao titulo="Aviso de privacidade (LGPD)">
+        <div className="max-h-64 space-y-3 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+          {itens.map((item) => (
+            <div key={item.titulo}>
+              <p className="font-semibold">{item.titulo}</p>
+              <p>{item.texto}</p>
+            </div>
+          ))}
+        </div>
+        <label className="flex items-start gap-2 text-sm text-slate-800">
+          <input type="checkbox" checked={dados.aceitePrivacidade} onChange={(e) => mudar("aceitePrivacidade", e.target.checked)} disabled={bloqueado} className="mt-0.5" />
+          <span>Li e concordo com o aviso de privacidade, inclusive com o uso dos dados sobre batismo e selamento.</span>
+        </label>
+      </Secao>
+
+      <Turnstile onToken={aoToken} reiniciar={reiniciarTurnstile} />
+
+      {erro && (
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erro}
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={enviando}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <Send className="h-4 w-4" aria-hidden="true" />
+        {enviando ? "Enviando..." : "Enviar cadastro"}
+      </button>
+    </form>
+  );
+}
