@@ -1,0 +1,1070 @@
+### A. rotas do painel
+src/app/(painel)/administracao/auditoria/layout.tsx
+src/app/(painel)/administracao/auditoria/page.tsx
+src/app/(painel)/administracao/backup/agendamento/layout.tsx
+src/app/(painel)/administracao/backup/agendamento/page.tsx
+src/app/(painel)/administracao/backup/destinos/layout.tsx
+src/app/(painel)/administracao/backup/destinos/page.tsx
+src/app/(painel)/administracao/backup/layout.tsx
+src/app/(painel)/administracao/backup/notificacoes/layout.tsx
+src/app/(painel)/administracao/backup/notificacoes/page.tsx
+src/app/(painel)/administracao/backup/page.tsx
+src/app/(painel)/administracao/backup/restauracao/layout.tsx
+src/app/(painel)/administracao/backup/restauracao/page.tsx
+src/app/(painel)/administracao/grupos/layout.tsx
+src/app/(painel)/administracao/grupos/page.tsx
+src/app/(painel)/administracao/organizacao/layout.tsx
+src/app/(painel)/administracao/organizacao/page.tsx
+src/app/(painel)/administracao/usuarios/layout.tsx
+src/app/(painel)/administracao/usuarios/page.tsx
+src/app/(painel)/eventos/layout.tsx
+src/app/(painel)/eventos/page.tsx
+src/app/(painel)/fotografias/layout.tsx
+src/app/(painel)/fotografias/page.tsx
+src/app/(painel)/instrumentos/layout.tsx
+src/app/(painel)/instrumentos/page.tsx
+src/app/(painel)/layout.tsx
+src/app/(painel)/membros/layout.tsx
+src/app/(painel)/membros/page.tsx
+src/app/(painel)/page.tsx
+src/app/(painel)/painel-ao-vivo/layout.tsx
+src/app/(painel)/painel-ao-vivo/page.tsx
+src/app/(painel)/portaria/layout.tsx
+src/app/(painel)/portaria/page.tsx
+src/app/(painel)/portaria/registros/layout.tsx
+src/app/(painel)/portaria/registros/page.tsx
+src/app/(painel)/portarias/layout.tsx
+src/app/(painel)/portarias/page.tsx
+src/app/(painel)/relatorios/layout.tsx
+src/app/(painel)/relatorios/page.tsx
+
+################ src/components/layout/navegacao.ts
+/**
+ * SysMúsica — Configuração do menu e dos breadcrumbs (fonte única).
+ *
+ * Para incluir uma tela no menu, basta adicionar um item aqui: o menu lateral e os
+ * breadcrumbs são gerados a partir desta lista. Só devem entrar telas que EXISTEM.
+ * Cada item informa a permissão necessária: quem não a tem não vê o item no menu
+ * (e a própria tela também é protegida por RequerPermissao).
+ */
+import {
+  Activity,
+  CalendarDays,
+  Building2,
+  Camera,
+  DatabaseBackup,
+  FileText,
+  ScrollText,
+  ClipboardList,
+  DoorOpen,
+  Guitar,
+  KeyRound,
+  LayoutDashboard,
+  ShieldCheck,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
+import type { CodigoPermissao } from "@/lib/permissoes";
+
+export interface ItemMenu {
+  href: string;
+  rotulo: string;
+  icone: LucideIcon;
+  permissao: CodigoPermissao; // quem não tem esta permissão não vê o item
+  qualquer?: CodigoPermissao[]; // ...a não ser que tenha QUALQUER uma destas
+}
+
+export interface GrupoMenu {
+  titulo: string | null; // null = item solto, sem título de grupo
+  itens: ItemMenu[];
+}
+
+export const GRUPOS_MENU: GrupoMenu[] = [
+  {
+    titulo: null,
+    itens: [
+      { href: "/", rotulo: "Dashboard", icone: LayoutDashboard, permissao: "dashboard.visualizar" },
+    ],
+  },
+  {
+    titulo: "Cadastros",
+    itens: [
+      { href: "/membros", rotulo: "Músicos / Organistas", icone: Users, permissao: "membros.visualizar" },
+      { href: "/eventos", rotulo: "Eventos", icone: CalendarDays, permissao: "eventos.visualizar" },
+      {
+        href: "/instrumentos",
+        rotulo: "Instrumentos e famílias",
+        icone: Guitar,
+        permissao: "instrumentos.visualizar",
+      },
+    ],
+  },
+  {
+    titulo: "Operações",
+    itens: [
+      {
+        href: "/portarias",
+        rotulo: "Gestão de portarias",
+        icone: ClipboardList,
+        permissao: "portarias.visualizar",
+        qualquer: ["portarias.criar", "portarias.aprovar"],
+      },
+      { href: "/portaria", rotulo: "Portaria", icone: DoorOpen, permissao: "portaria.visualizar" },
+      { href: "/painel-ao-vivo", rotulo: "Painel ao vivo", icone: Activity, permissao: "painel.visualizar" },
+      { href: "/relatorios", rotulo: "Relatórios", icone: FileText, permissao: "relatorios.visualizar" },
+      { href: "/fotografias", rotulo: "Fotografias", icone: Camera, permissao: "membros.foto" },
+    ],
+  },
+  {
+    titulo: "Administração",
+    itens: [
+      {
+        href: "/administracao/organizacao",
+        rotulo: "Organização",
+        icone: Building2,
+        permissao: "organizacao.visualizar",
+      },
+      {
+        href: "/administracao/backup",
+        rotulo: "Backup",
+        icone: DatabaseBackup,
+        permissao: "backup.visualizar",
+      },
+      {
+        href: "/administracao/auditoria",
+        rotulo: "Auditoria",
+        icone: ScrollText,
+        permissao: "auditoria.visualizar",
+      },
+      {
+        href: "/administracao/usuarios",
+        rotulo: "Usuários",
+        icone: KeyRound,
+        permissao: "usuarios.visualizar",
+      },
+      {
+        href: "/administracao/grupos",
+        rotulo: "Grupos e permissões",
+        icone: ShieldCheck,
+        permissao: "grupos.visualizar",
+      },
+    ],
+  },
+];
+
+/** O usuário pode ver o item? (a permissão principal ou qualquer uma das alternativas) */
+function itemPermitido(item: ItemMenu, pode: (permissao: CodigoPermissao) => boolean): boolean {
+  return pode(item.permissao) || (item.qualquer ?? []).some((permissao) => pode(permissao));
+}
+
+/** Filtra o menu pelas permissões do usuário, removendo também os grupos que ficarem vazios. */
+export function filtrarMenu(
+  grupos: GrupoMenu[],
+  pode: (permissao: CodigoPermissao) => boolean
+): GrupoMenu[] {
+  return grupos
+    .map((grupo) => ({ ...grupo, itens: grupo.itens.filter((item) => itemPermitido(item, pode)) }))
+    .filter((grupo) => grupo.itens.length > 0);
+}
+
+/** Primeira tela (fora do dashboard) que o usuário pode acessar; null se não puder nenhuma. */
+export function primeiraRotaPermitida(pode: (permissao: CodigoPermissao) => boolean): string | null {
+  for (const grupo of GRUPOS_MENU) {
+    for (const item of grupo.itens) {
+      if (item.href !== "/" && itemPermitido(item, pode)) return item.href;
+    }
+  }
+  return null;
+}
+
+/** O item está ativo na rota atual? A raiz "/" só é ativa exatamente em "/". */
+export function itemAtivo(href: string, caminho: string): boolean {
+  if (href === "/") return caminho === "/";
+  return caminho === href || caminho.startsWith(`${href}/`);
+}
+
+export interface Migalha {
+  rotulo: string;
+  href?: string; // sem href = apenas texto (grupo ou página atual)
+}
+
+/** Monta o caminho exibido nos breadcrumbs: Início > Grupo > Página. */
+export function montarMigalhas(caminho: string): Migalha[] {
+  for (const grupo of GRUPOS_MENU) {
+    for (const item of grupo.itens) {
+      if (!itemAtivo(item.href, caminho)) continue;
+
+      // Na raiz, o próprio Dashboard é o único nível
+      if (item.href === "/") return [{ rotulo: item.rotulo }];
+
+      const migalhas: Migalha[] = [{ rotulo: "Início", href: "/" }];
+      if (grupo.titulo) migalhas.push({ rotulo: grupo.titulo });
+      migalhas.push({ rotulo: item.rotulo });
+      return migalhas;
+    }
+  }
+  // Rota fora do menu: mostra só o caminho de volta ao início
+  return [{ rotulo: "Início", href: "/" }];
+}
+
+/**
+ * Remove dos breadcrumbs o link "Início" para quem não acessa o dashboard (ex: grupo Portaria):
+ * para essa pessoa o menu mostra somente o que o grupo permite, e nada além disso.
+ */
+export function migalhasVisiveis(
+  migalhas: Migalha[],
+  pode: (permissao: CodigoPermissao) => boolean
+): Migalha[] {
+  return migalhas.filter((migalha) => migalha.href !== "/" || pode("dashboard.visualizar"));
+}
+
+################ src/components/layout/navegacao.test.ts
+import { describe, expect, it } from "vitest";
+import {
+  GRUPOS_MENU,
+  filtrarMenu,
+  itemAtivo,
+  migalhasVisiveis,
+  montarMigalhas,
+  primeiraRotaPermitida,
+} from "@/components/layout/navegacao";
+import type { CodigoPermissao } from "@/lib/permissoes";
+
+// Cria a função "pode" a partir de uma lista de permissões (como o contexto de sessão faz)
+function criarPode(permitidas: CodigoPermissao[]) {
+  return (permissao: CodigoPermissao) => permitidas.includes(permissao);
+}
+
+describe("itemAtivo", () => {
+  it("a raiz só fica ativa exatamente em '/'", () => {
+    expect(itemAtivo("/", "/")).toBe(true);
+    expect(itemAtivo("/", "/membros")).toBe(false);
+  });
+
+  it("um item fica ativo na própria rota e nas subrotas", () => {
+    expect(itemAtivo("/membros", "/membros")).toBe(true);
+    expect(itemAtivo("/membros", "/membros/123")).toBe(true);
+  });
+
+  it("não confunde rotas com o mesmo prefixo", () => {
+    expect(itemAtivo("/membros", "/membrosX")).toBe(false);
+  });
+});
+
+describe("montarMigalhas", () => {
+  it("mostra só 'Dashboard' na raiz", () => {
+    expect(montarMigalhas("/")).toEqual([{ rotulo: "Dashboard" }]);
+  });
+
+  it("monta Início > Grupo > Página", () => {
+    expect(montarMigalhas("/membros")).toEqual([
+      { rotulo: "Início", href: "/" },
+      { rotulo: "Cadastros" },
+      { rotulo: "Músicos / Organistas" },
+    ]);
+    expect(montarMigalhas("/portaria")).toEqual([
+      { rotulo: "Início", href: "/" },
+      { rotulo: "Operações" },
+      { rotulo: "Portaria" },
+    ]);
+  });
+
+  it("subrotas usam os mesmos breadcrumbs da página", () => {
+    expect(montarMigalhas("/membros/123")).toEqual(montarMigalhas("/membros"));
+  });
+
+  it("rota desconhecida volta ao início", () => {
+    expect(montarMigalhas("/inexistente")).toEqual([{ rotulo: "Início", href: "/" }]);
+  });
+});
+
+describe("filtrarMenu", () => {
+  it("o grupo Portaria enxerga apenas o item Portaria", () => {
+    const menu = filtrarMenu(GRUPOS_MENU, criarPode(["portaria.visualizar", "portaria.registrar"]));
+    expect(menu.map((grupo) => grupo.titulo)).toEqual(["Operações"]);
+    expect(menu[0].itens.map((item) => item.rotulo)).toEqual(["Portaria"]);
+  });
+
+  it("remove os grupos que ficam vazios", () => {
+    const menu = filtrarMenu(GRUPOS_MENU, criarPode(["dashboard.visualizar"]));
+    expect(menu.map((grupo) => grupo.titulo)).toEqual([null]);
+  });
+
+  it("sem permissões, o menu fica vazio", () => {
+    expect(filtrarMenu(GRUPOS_MENU, criarPode([]))).toEqual([]);
+  });
+});
+
+describe("primeiraRotaPermitida", () => {
+  it("devolve a primeira tela permitida, ignorando o dashboard", () => {
+    expect(primeiraRotaPermitida(criarPode(["portaria.visualizar"]))).toBe("/portaria");
+    expect(primeiraRotaPermitida(criarPode(["eventos.visualizar", "portaria.visualizar"]))).toBe(
+      "/eventos"
+    );
+  });
+
+  it("devolve null quando não há nenhuma tela permitida", () => {
+    expect(primeiraRotaPermitida(criarPode(["dashboard.visualizar"]))).toBeNull();
+  });
+});
+
+describe("menu de Administração", () => {
+  it("aparece só para quem tem permissão de usuários ou grupos", () => {
+    const semAdmin = filtrarMenu(GRUPOS_MENU, criarPode(["portaria.visualizar"]));
+    expect(semAdmin.map((grupo) => grupo.titulo)).not.toContain("Administração");
+
+    const comUsuarios = filtrarMenu(GRUPOS_MENU, criarPode(["usuarios.visualizar"]));
+    const administracao = comUsuarios.find((grupo) => grupo.titulo === "Administração");
+    expect(administracao?.itens.map((item) => item.rotulo)).toEqual(["Usuários"]);
+  });
+
+  it("monta os breadcrumbs Início > Administração > Usuários", () => {
+    expect(montarMigalhas("/administracao/usuarios")).toEqual([
+      { rotulo: "Início", href: "/" },
+      { rotulo: "Administração" },
+      { rotulo: "Usuários" },
+    ]);
+  });
+});
+
+describe("migalhasVisiveis", () => {
+  const caminho = montarMigalhas("/portaria");
+
+  it("quem acessa o dashboard continua vendo o 'Início'", () => {
+    const visiveis = migalhasVisiveis(caminho, criarPode(["dashboard.visualizar", "portaria.visualizar"]));
+    expect(visiveis.map((migalha) => migalha.rotulo)).toEqual(["Início", "Operações", "Portaria"]);
+  });
+
+  it("quem só tem a Portaria não vê o 'Início'", () => {
+    const visiveis = migalhasVisiveis(caminho, criarPode(["portaria.visualizar", "portaria.registrar"]));
+    expect(visiveis.map((migalha) => migalha.rotulo)).toEqual(["Operações", "Portaria"]);
+  });
+});
+
+describe("usuário só com acesso à Portaria", () => {
+  const pode = criarPode(["portaria.visualizar", "portaria.registrar"]);
+
+  it("vê somente o item Portaria no menu e nenhum outro grupo", () => {
+    const menu = filtrarMenu(GRUPOS_MENU, pode);
+    const itens = menu.flatMap((grupo) => grupo.itens.map((item) => item.rotulo));
+    expect(itens).toEqual(["Portaria"]);
+  });
+
+  it("é levado direto para a Portaria ao entrar", () => {
+    expect(primeiraRotaPermitida(pode)).toBe("/portaria");
+  });
+
+  it("não vê a Gestão de portarias (criar/aprovar é outra responsabilidade)", () => {
+    const itens = filtrarMenu(GRUPOS_MENU, pode).flatMap((grupo) => grupo.itens.map((item) => item.href));
+    expect(itens).not.toContain("/portarias");
+  });
+});
+
+describe("Gestão de portarias no menu", () => {
+  const podeCom = (permissoes: string[]) => (permissao: string) => permissoes.includes(permissao);
+  const hrefs = (permissoes: string[]) =>
+    filtrarMenu(GRUPOS_MENU, podeCom(permissoes)).flatMap((grupo) => grupo.itens.map((item) => item.href));
+
+  it("aparece para quem só cria, só aprova ou só visualiza portarias", () => {
+    for (const permissao of ["portarias.criar", "portarias.aprovar", "portarias.visualizar"]) {
+      expect(hrefs([permissao]), permissao).toContain("/portarias");
+    }
+  });
+
+  it("quem só cria portarias não vê a Portaria (registro de entrada)", () => {
+    expect(hrefs(["portarias.criar"])).toEqual(["/portarias"]);
+  });
+
+  it("quem só tem a permissão de fotografia vê apenas Fotografias", () => {
+    expect(hrefs(["membros.foto"])).toEqual(["/fotografias"]);
+  });
+
+  it("quem só tem a permissão de organização vê apenas Organização", () => {
+    expect(hrefs(["organizacao.visualizar"])).toEqual(["/administracao/organizacao"]);
+  });
+
+  it("quem só tem a permissão de auditoria vê apenas Auditoria", () => {
+    expect(hrefs(["auditoria.visualizar"])).toEqual(["/administracao/auditoria"]);
+  });
+
+  it("quem só tem a permissão de relatórios vê apenas Relatórios", () => {
+    expect(hrefs(["relatorios.visualizar"])).toEqual(["/relatorios"]);
+  });
+
+  it("quem só tem a permissão de backup vê apenas Backup", () => {
+    expect(hrefs(["backup.visualizar"])).toEqual(["/administracao/backup"]);
+  });
+});
+
+################ src/components/AbasDeLista.tsx
+"use client";
+
+/**
+ * SysMúsica — Abas simples para separar uma lista (ex.: Próximos / Encerrados / Arquivo), com contagem.
+ * Só apresentação: quem usa decide o que cada aba mostra.
+ */
+export interface AbaDeLista<Id extends string> {
+  id: Id;
+  rotulo: string;
+  total: number;
+}
+
+interface AbasDeListaProps<Id extends string> {
+  abas: AbaDeLista<Id>[];
+  atual: Id;
+  onTrocar: (id: Id) => void;
+  descricao?: string;
+}
+
+export default function AbasDeLista<Id extends string>({ abas, atual, onTrocar, descricao }: AbasDeListaProps<Id>) {
+  return (
+    <div role="tablist" aria-label={descricao} className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200">
+      {abas.map((aba) => {
+        const ativa = aba.id === atual;
+        return (
+          <button
+            key={aba.id}
+            type="button"
+            role="tab"
+            aria-selected={ativa}
+            onClick={() => onTrocar(aba.id)}
+            className={
+              "-mb-px flex shrink-0 items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition " +
+              (ativa
+                ? "border-brand-600 text-brand-700"
+                : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700")
+            }
+          >
+            {aba.rotulo}
+            <span
+              className={
+                "rounded-full px-2 py-0.5 text-xs " + (ativa ? "bg-brand-50 text-brand-700" : "bg-slate-100 text-slate-600")
+              }
+            >
+              {aba.total}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+### B. layouts de eventos / portarias / portaria
+
+################ src/app/(painel)/eventos/layout.tsx
+import type { ReactNode } from "react";
+import RequerPermissao from "@/modules/autenticacao/components/RequerPermissao";
+
+/** Protege todas as telas deste módulo: só entra quem tem a permissão de visualizar. */
+export default function EventosLayout({ children }: { children: ReactNode }) {
+  return <RequerPermissao permissao="eventos.visualizar">{children}</RequerPermissao>;
+}
+
+################ src/app/(painel)/portarias/layout.tsx
+import type { ReactNode } from "react";
+import RequerPermissao from "@/modules/autenticacao/components/RequerPermissao";
+
+/** Protege a Gestão de portarias: quem cria, aprova ou visualiza portarias entra. */
+export default function PortariasLayout({ children }: { children: ReactNode }) {
+  return (
+    <RequerPermissao permissao="portarias.visualizar" ou={["portarias.criar", "portarias.aprovar"]}>
+      {children}
+    </RequerPermissao>
+  );
+}
+
+################ src/app/(painel)/portaria/layout.tsx
+import type { ReactNode } from "react";
+import RequerPermissao from "@/modules/autenticacao/components/RequerPermissao";
+
+/** Protege todas as telas deste módulo: só entra quem tem a permissão de visualizar. */
+export default function PortariaLayout({ children }: { children: ReactNode }) {
+  return <RequerPermissao permissao="portaria.visualizar">{children}</RequerPermissao>;
+}
+
+### C. componentes de layout (menu lateral e cabeçalho)
+
+################ src/components/layout/AppShell.tsx
+"use client";
+
+/**
+ * SysMúsica — Estrutura do painel: menu lateral + topo + área de conteúdo.
+ *
+ * Guarda o estado do menu:
+ *  - recolhida: no desktop, o menu fica só com ícones;
+ *  - menuAberto: no celular/tablet, o menu vira uma gaveta sobre a tela.
+ * Guarda também se a janela de Configurações (aparência) está aberta: ela fica aqui, fora da barra do
+ * topo, e o botão que a abre fica na barra.
+ * O fundo claro fica neste wrapper (e não no <body>) para a interface continuar legível
+ * mesmo com o navegador em tema escuro.
+ * As páginas internas trazem o próprio <main>, por isso a área de conteúdo é um <div>.
+ */
+import { useEffect, useState, type ReactNode } from "react";
+import { cn } from "@/lib/cn";
+import JanelaConfiguracoes from "@/modules/preferencias/components/JanelaConfiguracoes";
+import Sidebar from "./Sidebar";
+import Topbar from "./Topbar";
+
+export default function AppShell({ children }: { children: ReactNode }) {
+  const [recolhida, setRecolhida] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(false);
+  const [configuracoesAbertas, setConfiguracoesAbertas] = useState(false);
+
+  // A tecla Esc fecha a gaveta do menu (só enquanto ela está aberta)
+  useEffect(() => {
+    if (!menuAberto) return;
+    function aoPressionar(evento: KeyboardEvent) {
+      if (evento.key === "Escape") setMenuAberto(false);
+    }
+    window.addEventListener("keydown", aoPressionar);
+    return () => window.removeEventListener("keydown", aoPressionar);
+  }, [menuAberto]);
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      {/* Atalho de acessibilidade: aparece ao navegar com Tab e pula o menu */}
+      <a
+        href="#conteudo"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-brand-700 focus:shadow-lg"
+      >
+        Pular para o conteúdo
+      </a>
+
+      <Sidebar recolhida={recolhida} aberta={menuAberto} onFechar={() => setMenuAberto(false)} />
+
+      {/* O espaço à esquerda acompanha a largura do menu fixo (só no desktop) */}
+      <div
+        className={cn(
+          "flex min-h-screen flex-col transition-[padding] duration-200",
+          recolhida ? "lg:pl-[4.5rem]" : "lg:pl-64"
+        )}
+      >
+        <Topbar
+          recolhida={recolhida}
+          menuAberto={menuAberto}
+          onAbrirMenu={() => setMenuAberto(true)}
+          onAlternarRecolhimento={() => setRecolhida((atual) => !atual)}
+          onAbrirConfiguracoes={() => setConfiguracoesAbertas(true)}
+        />
+        <div id="conteudo" className="flex-1">
+          {children}
+        </div>
+      </div>
+
+      <JanelaConfiguracoes aberto={configuracoesAbertas} onFechar={() => setConfiguracoesAbertas(false)} />
+    </div>
+  );
+}
+
+################ src/components/layout/Breadcrumbs.tsx
+"use client";
+
+/**
+ * SysMúsica — Breadcrumbs (indicam onde o usuário está): Início > Grupo > Página.
+ * Gerados pela rota atual a partir de ./navegacao.ts.
+ */
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { ChevronRight } from "lucide-react";
+import { cn } from "@/lib/cn";
+import { useSessao } from "@/modules/autenticacao/SessaoProvider";
+import { migalhasVisiveis, montarMigalhas } from "./navegacao";
+
+export default function Breadcrumbs() {
+  const caminho = usePathname() ?? "";
+  const { pode } = useSessao();
+  // Quem não acessa o dashboard (ex: grupo Portaria) não vê o "Início" nos breadcrumbs
+  const migalhas = migalhasVisiveis(montarMigalhas(caminho), pode);
+
+  return (
+    <nav aria-label="Você está em" className="min-w-0">
+      <ol className="flex items-center gap-1.5 text-sm text-slate-500">
+        {migalhas.map((migalha, indice) => {
+          const ultima = indice === migalhas.length - 1;
+
+          return (
+            <li key={`${migalha.rotulo}-${indice}`} className="flex min-w-0 items-center gap-1.5">
+              {indice > 0 && (
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+              )}
+              {migalha.href && !ultima ? (
+                <Link href={migalha.href} className="truncate hover:text-slate-900">
+                  {migalha.rotulo}
+                </Link>
+              ) : (
+                <span
+                  aria-current={ultima ? "page" : undefined}
+                  className={cn("truncate", ultima && "font-medium text-slate-900")}
+                >
+                  {migalha.rotulo}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+################ src/components/layout/Sidebar.tsx
+"use client";
+
+/**
+ * SysMúsica — Menu lateral.
+ *
+ * Os itens vêm de ./navegacao.ts. No desktop (>= lg) é fixo e pode ser recolhido (só ícones);
+ * no celular/tablet é uma gaveta que abre sobre a tela e fecha ao navegar, tocar fora ou apertar Esc.
+ * No canto de cima fica a logomarca (emblema da CCB, em uma plaquinha branca por causa do fundo escuro) e o
+ * nome do sistema; com o menu recolhido, aparece só o ícone compacto.
+ */
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Music, X } from "lucide-react";
+import LogoMarca from "@/components/ui/LogoMarca";
+import { cn } from "@/lib/cn";
+import { useSessao } from "@/modules/autenticacao/SessaoProvider";
+import { GRUPOS_MENU, filtrarMenu, itemAtivo } from "./navegacao";
+
+interface SidebarProps {
+  recolhida: boolean; // desktop: mostra só os ícones
+  aberta: boolean; // celular/tablet: gaveta aberta
+  onFechar: () => void; // fecha a gaveta (também chamado ao clicar em um item)
+}
+
+export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
+  const caminho = usePathname() ?? "";
+  const { pode } = useSessao();
+  const gruposVisiveis = filtrarMenu(GRUPOS_MENU, pode); // só o que o grupo do usuário pode ver
+
+  return (
+    <>
+      {/* Fundo escurecido atrás da gaveta (só celular/tablet) */}
+      {aberta && (
+        <div
+          className="fixed inset-0 z-40 bg-slate-900/50 lg:hidden"
+          aria-hidden="true"
+          onClick={onFechar}
+        />
+      )}
+
+      <aside
+        id="menu-lateral"
+        aria-label="Menu lateral"
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar text-sidebar-fg shadow-xl transition-all duration-200 lg:shadow-none print:hidden",
+          aberta ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+          recolhida ? "lg:w-[4.5rem]" : "lg:w-64"
+        )}
+      >
+        {/* Marca do sistema */}
+        <div className="flex h-16 shrink-0 items-center justify-between px-4">
+          <Link
+            href="/"
+            onClick={onFechar}
+            title="SysMúsica — Dashboard"
+            className="flex min-w-0 items-center gap-3"
+          >
+            {/* Menu aberto: logomarca da CCB; recolhido (só no desktop): o ícone compacto */}
+            <LogoMarca altura={30} comFundoBranco className={cn(recolhida && "lg:hidden")} />
+            <span
+              aria-hidden="true"
+              className={cn(
+                "hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white shadow-sm",
+                recolhida && "lg:flex"
+              )}
+            >
+              <Music className="h-5 w-5" />
+            </span>
+            <span
+              className={cn(
+                "truncate text-lg font-bold tracking-tight text-white",
+                recolhida && "lg:hidden"
+              )}
+            >
+              SysMúsica
+            </span>
+          </Link>
+
+          {/* Botão de fechar a gaveta (só celular/tablet) */}
+          <button
+            type="button"
+            onClick={onFechar}
+            aria-label="Fechar menu"
+            className="rounded-lg p-2 text-sidebar-fg transition hover:bg-sidebar-hover hover:text-white lg:hidden"
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+
+        {/* Itens agrupados por categoria */}
+        <nav aria-label="Principal" className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+          {gruposVisiveis.map((grupo) => (
+            <div key={grupo.titulo ?? "principal"}>
+              {grupo.titulo && (
+                <p
+                  className={cn(
+                    "mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500",
+                    recolhida && "lg:sr-only"
+                  )}
+                >
+                  {grupo.titulo}
+                </p>
+              )}
+              <ul className="space-y-1">
+                {grupo.itens.map((item) => {
+                  const ativo = itemAtivo(item.href, caminho);
+                  const Icone = item.icone;
+
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={onFechar}
+                        aria-current={ativo ? "page" : undefined}
+                        title={recolhida ? item.rotulo : undefined}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300",
+                          ativo
+                            ? "bg-brand-600 text-white"
+                            : "hover:bg-sidebar-hover hover:text-white",
+                          recolhida && "lg:justify-center lg:px-0"
+                        )}
+                      >
+                        <Icone className="h-5 w-5 shrink-0" aria-hidden="true" />
+                        {/* Recolhido: o texto continua disponível para leitores de tela */}
+                        <span className={cn("truncate", recolhida && "lg:sr-only")}>
+                          {item.rotulo}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+      </aside>
+    </>
+  );
+}
+
+################ src/components/layout/Topbar.tsx
+"use client";
+
+/**
+ * SysMúsica — Barra superior: botões do menu, identificação do sistema, breadcrumbs, Configurações
+ * (engrenagem, que abre a aparência do sistema) e o menu do usuário.
+ */
+import { Menu, PanelLeftClose, PanelLeftOpen, Settings } from "lucide-react";
+import { cn } from "@/lib/cn";
+import Breadcrumbs from "./Breadcrumbs";
+import UserMenu from "./UserMenu";
+
+interface TopbarProps {
+  recolhida: boolean;
+  menuAberto: boolean;
+  onAbrirMenu: () => void;
+  onAlternarRecolhimento: () => void;
+  onAbrirConfiguracoes: () => void;
+}
+
+// Estilo comum dos botões de ícone da barra
+const classeBotao =
+  "inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300";
+
+export default function Topbar({
+  recolhida,
+  menuAberto,
+  onAbrirMenu,
+  onAlternarRecolhimento,
+  onAbrirConfiguracoes,
+}: TopbarProps) {
+  return (
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6 print:hidden">
+      {/* Celular/tablet: abre a gaveta do menu */}
+      <button
+        type="button"
+        onClick={onAbrirMenu}
+        aria-label="Abrir menu"
+        aria-controls="menu-lateral"
+        aria-expanded={menuAberto}
+        className={cn(classeBotao, "lg:hidden")}
+      >
+        <Menu className="h-5 w-5" aria-hidden="true" />
+      </button>
+
+      {/* Desktop: recolhe/expande o menu lateral */}
+      <button
+        type="button"
+        onClick={onAlternarRecolhimento}
+        aria-label={recolhida ? "Expandir menu lateral" : "Recolher menu lateral"}
+        aria-controls="menu-lateral"
+        aria-expanded={!recolhida}
+        className={cn(classeBotao, "hidden lg:inline-flex")}
+      >
+        {recolhida ? (
+          <PanelLeftOpen className="h-5 w-5" aria-hidden="true" />
+        ) : (
+          <PanelLeftClose className="h-5 w-5" aria-hidden="true" />
+        )}
+      </button>
+
+      {/* Identificação do sistema (no desktop ela já aparece no menu lateral) */}
+      <span className="text-base font-bold tracking-tight text-slate-900 lg:hidden">SysMúsica</span>
+
+      <div className="hidden min-w-0 sm:block">
+        <Breadcrumbs />
+      </div>
+
+      {/* Configurações (aparência) e menu do usuário: nome, grupo e botão Sair */}
+      <div className="ml-auto flex items-center gap-1">
+        <button
+          type="button"
+          onClick={onAbrirConfiguracoes}
+          aria-label="Abrir as configurações de aparência"
+          aria-haspopup="dialog"
+          title="Configurações"
+          className={classeBotao}
+        >
+          <Settings className="h-5 w-5" aria-hidden="true" />
+        </button>
+        <UserMenu />
+      </div>
+    </header>
+  );
+}
+
+################ src/components/layout/UserMenu.tsx
+"use client";
+
+/**
+ * SysMúsica — Menu do usuário (topo da tela): identificação, grupo de acesso e botão Sair.
+ * Só tem ações que existem: por enquanto, encerrar a sessão.
+ */
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, LogOut } from "lucide-react";
+import Badge from "@/components/ui/Badge";
+import { useSessao } from "@/modules/autenticacao/SessaoProvider";
+
+export default function UserMenu() {
+  const { conta, sessao, sair } = useSessao();
+  const [aberto, setAberto] = useState(false);
+  const raizRef = useRef<HTMLDivElement>(null);
+
+  const nome = conta?.nome ?? sessao?.user.email ?? "Usuário";
+  const email = conta?.email ?? sessao?.user.email ?? "";
+
+  // O menu fecha ao clicar fora ou apertar Esc (só enquanto está aberto)
+  useEffect(() => {
+    if (!aberto) return;
+
+    function aoClicarFora(evento: MouseEvent) {
+      if (raizRef.current && !raizRef.current.contains(evento.target as Node)) setAberto(false);
+    }
+    function aoPressionar(evento: KeyboardEvent) {
+      if (evento.key === "Escape") setAberto(false);
+    }
+
+    document.addEventListener("mousedown", aoClicarFora);
+    document.addEventListener("keydown", aoPressionar);
+    return () => {
+      document.removeEventListener("mousedown", aoClicarFora);
+      document.removeEventListener("keydown", aoPressionar);
+    };
+  }, [aberto]);
+
+  return (
+    <div ref={raizRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setAberto((atual) => !atual)}
+        aria-haspopup="menu"
+        aria-expanded={aberto}
+        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+      >
+        <span
+          aria-hidden="true"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700"
+        >
+          {nome.charAt(0).toUpperCase()}
+        </span>
+        <span className="hidden min-w-0 sm:block">
+          <span className="block max-w-40 truncate text-sm font-medium text-slate-900">{nome}</span>
+          {conta?.grupo && (
+            <span className="block max-w-40 truncate text-xs text-slate-500">{conta.grupo}</span>
+          )}
+        </span>
+        <ChevronDown className="h-4 w-4 text-slate-500" aria-hidden="true" />
+      </button>
+
+      {aberto && (
+        <div
+          role="menu"
+          className="absolute right-0 z-50 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-2 shadow-lg"
+        >
+          <div className="px-3 py-2">
+            <p className="truncate text-sm font-medium text-slate-900">{nome}</p>
+            <p className="truncate text-xs text-slate-500">{email}</p>
+            {conta?.grupo && (
+              <div className="mt-2">
+                <Badge variante="marca">{conta.grupo}</Badge>
+              </div>
+            )}
+          </div>
+          <div className="my-1 border-t border-slate-100" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setAberto(false);
+              void sair();
+            }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+          >
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+            Sair da conta
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+### D. permissões de eventos e portaria
+18:  { codigo: "eventos.visualizar", modulo: "Eventos", acao: "Visualizar" },
+19:  { codigo: "eventos.criar", modulo: "Eventos", acao: "Criar" },
+20:  { codigo: "eventos.editar", modulo: "Eventos", acao: "Editar" },
+21:  { codigo: "eventos.excluir", modulo: "Eventos", acao: "Excluir" },
+22:  { codigo: "eventos.cancelar", modulo: "Eventos", acao: "Cancelar" },
+27:  { codigo: "portaria.visualizar", modulo: "Portaria", acao: "Visualizar" },
+28:  { codigo: "portaria.registrar", modulo: "Portaria", acao: "Registrar" },
+29:  { codigo: "portaria.editar", modulo: "Portaria", acao: "Editar" },
+30:  { codigo: "portaria.excluir", modulo: "Portaria", acao: "Excluir" },
+31:  { codigo: "portarias.visualizar", modulo: "Gestão de portarias", acao: "Visualizar" },
+32:  { codigo: "portarias.criar", modulo: "Gestão de portarias", acao: "Criar" },
+33:  { codigo: "portarias.aprovar", modulo: "Gestão de portarias", acao: "Aprovar" },
+34:  { codigo: "portarias.excluir", modulo: "Gestão de portarias", acao: "Excluir" },
+35:  { codigo: "portarias.controle_total", modulo: "Gestão de portarias", acao: "Controle total" },
+36:  { codigo: "portaria.cadastrar_visitante", modulo: "Portaria", acao: "Cadastrar visitante" },
+
+### E. proteção de rotas por permissão
+
+### F. início das páginas portarias e portaria
+
+################ src/app/(painel)/portarias/page.tsx
+"use client";
+
+/**
+ * SysMúsica — Página /portarias (Gestão de portarias): criar, aprovar, rejeitar, histórico, excluir.
+ * Quem pode criar escolhe um evento e cria a portaria (PENDENTE); um aprovador autorizado, de outro
+ * usuário e dentro da abrangência, aprova ou rejeita (com motivo). Só portaria APROVADA registra
+ * presenças. Cada botão só aparece quando o banco diz que o usuário pode; o banco confere de novo.
+ */
+import { useCallback, useEffect, useState } from "react";
+import { Plus } from "lucide-react";
+import { useSessao } from "@/modules/autenticacao/SessaoProvider";
+import CotaPortariasIndicador from "@/modules/portarias/components/CotaPortarias";
+import FormularioNovaPortaria from "@/modules/portarias/components/FormularioNovaPortaria";
+import FormularioRejeicao from "@/modules/portarias/components/FormularioRejeicao";
+import HistoricoPortaria from "@/modules/portarias/components/HistoricoPortaria";
+import TabelaPortarias from "@/modules/portarias/components/TabelaPortarias";
+import {
+  buscarEventosParaPortaria,
+  decidirPortaria,
+  excluirPortaria,
+  historicoDaPortaria,
+  listarPortarias,
+  minhaCota,
+  minhasCidades,
+} from "@/modules/portarias/services/portarias";
+import type {
+  CotaPortarias,
+  EventoParaPortaria,
+  HistoricoPortaria as ItemHistorico,
+  PortariaDetalhada,
+} from "@/modules/portarias/tipos";
+import AbasDeLista from "@/components/AbasDeLista";
+import { janelaDaPortaria } from "@/modules/portarias/janela";
+import { abrirJanelaImpressao, escreverImpressao } from "@/lib/exportacao";
+import { MARCA } from "@/lib/marca";
+import { registrarUso } from "@/modules/auditoria/services/auditoria";
+import FormularioRelatorioPresenca from "@/modules/relatorios/components/FormularioRelatorioPresenca";
+import {
+  lerOpcoesSalvas,
+  montarImpressaoPresenca,
+  salvarOpcoes,
+  type OpcoesRelatorioPresenca,
+} from "@/modules/relatorios/presencaPortaria";
+import { agoraEmSalvador } from "@/modules/relatorios/regras";
+import { buscarRelatorioPresencaPortaria } from "@/modules/relatorios/services/presencaPortaria";
+import Button from "@/components/ui/Button";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import Drawer from "@/components/ui/Drawer";
+import EmptyState from "@/components/ui/EmptyState";
+import ErrorState from "@/components/ui/ErrorState";
+import Notificacao from "@/components/ui/Notificacao";
+import PageHeader from "@/components/ui/PageHeader";
+import Skeleton from "@/components/ui/Skeleton";
+import { formatarDataHora } from "@/lib/datas";
+
+// Endereço da logomarca para a janela de impressão: completo (https) quando possível
+function enderecoDaLogo(): string {
+  return window.location.protocol === "https:" ? `${window.location.origin}${MARCA.logoCaminho}` : MARCA.logoCaminho;
+}
+
+// Qual painel lateral está aberto
+type Painel =
+  | { tipo: "nova" }
+  | { tipo: "rejeitar"; portaria: PortariaDetalhada }
+  | { tipo: "historico"; portaria: PortariaDetalhada; itens: ItemHistorico[] }
+  | { tipo: "relatorio"; portaria: PortariaDetalhada };
+
+export default function PortariasPage() {
+  const { pode, conta } = useSessao();
+  const podeCriar = pode("portarias.criar");
+  const podeAprovar = pode("portarias.aprovar");
+  const controleTotal = pode("portarias.controle_total"); // atua em qualquer cidade: não precisa de abrangência
+
+  const [portarias, setPortarias] = useState<PortariaDetalhada[]>([]);
+  const [eventos, setEventos] = useState<EventoParaPortaria[]>([]);
+  const [cota, setCota] = useState<CotaPortarias | null>(null);
+  const [cidades, setCidades] = useState<string[] | null>(null); // abrangência (só aprovadores)
+  const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
+  const [erro, setErro] = useState<string | null>(null);
+  const [painel, setPainel] = useState<Painel | null>(null);
+  const [alvoAprovar, setAlvoAprovar] = useState<PortariaDetalhada | null>(null);
+  const [alvoExcluir, setAlvoExcluir] = useState<PortariaDetalhada | null>(null);
+  const [processando, setProcessando] = useState(false);
+  const [erroConfirmacao, setErroConfirmacao] = useState<string | null>(null);
+  const [erroAcao, setErroAcao] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [aba, setAba] = useState<"ativas" | "historico">("ativas");
+  const [gerandoRelatorio, setGerandoRelatorio] = useState(false);
+  const [agora, setAgora] = useState(0); // instante atual (ms); 0 até a primeira carga
+
+
+################ src/app/(painel)/portaria/page.tsx
+"use client";
+
+/**
+ * SysMúsica — Página /portaria: atendimento da portaria (QR Code, busca pelo nome, fotografia).
+ * A tela antiga (histórico por evento, lançamento em lote, editar e excluir) está em /portaria/registros.
+ */
+import AtendimentoPortaria from "@/modules/atendimento/components/AtendimentoPortaria";
+import PageHeader from "@/components/ui/PageHeader";
+
+export default function PortariaPage() {
+  return (
+    <main className="text-slate-900">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <PageHeader
+          titulo="Portaria"
+          descricao="Atendimento: leia o QR Code do membro, confira a foto e registre a entrada."
+        />
+        <AtendimentoPortaria />
+      </div>
+    </main>
+  );
+}

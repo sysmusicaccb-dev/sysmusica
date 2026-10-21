@@ -1,0 +1,2345 @@
+### A. arquivos do módulo de membros e componentes de membro
+src/components/FormularioMembro.tsx
+src/components/ListaMembros.tsx
+src/modules/membros/components/CampoFoto.tsx
+src/modules/membros/components/FotoMembro.tsx
+src/modules/membros/components/GaleriaFotos.tsx
+src/modules/membros/components/QrMembro.tsx
+src/modules/membros/fotoImagem.ts
+src/modules/membros/services/fotos.ts
+src/modules/membros/services/membros.ts
+
+################ src/components/FormularioMembro.tsx
+"use client";
+
+/**
+ * SysMúsica — Formulário de membro (cadastro e edição) — conteúdo do painel lateral.
+ * membro = null -> cadastrar; preenchido -> editar (inclui o status Ativo/Inativo).
+ *
+ * Casa de Oração: lista agrupada por Região › Setor (cadastrada em Organização). O nome da congregação sai da casa de oração.
+ * Cidade e bairro: texto com sugestões dos valores já cadastrados.
+ * CPF: só aparece para quem tem a permissão membros.cpf (o banco também confere). É opcional,
+ *      validado pelos dígitos verificadores e não pode repetir entre os membros.
+ *
+ * Instrumento: lista suspensa agrupada por família, igual em todo o sistema (só instrumentos cadastrados).
+ *  - O campo só aparece para cargos com permite_instrumento = true.
+ *  - É OBRIGATÓRIO nos cargos que exigem instrumento (o Músico); o banco também recusa sem ele.
+ *  - A FAMÍLIA é automática e somente leitura (vem do cadastro do instrumento). Instrumento novo e
+ *    correção de família: tela Instrumentos e famílias.
+ */
+import { useState, type FormEvent } from "react";
+import Button from "@/components/ui/Button";
+import { formatarCpf, limparCpf, validarCpf } from "@/lib/cpf";
+import SeletorInstrumento, { FamiliaAutomatica } from "@/modules/instrumentos/components/SeletorInstrumento";
+import { validarInstrumentoDoCargo } from "@/modules/instrumentos/selecao";
+import { atualizarMembro, criarMembro } from "@/modules/membros/services/membros";
+import { CATEGORIAS, cargoUsaCategoria, validarCategoria } from "@/modules/painel/regras";
+import SeletorCasaOracao from "@/modules/organizacao/components/SeletorCasaOracao";
+import CampoFoto from "@/modules/membros/components/CampoFoto";
+import FotoMembro from "@/modules/membros/components/FotoMembro";
+import { descartarFoto, enviarFoto, subirFotoNova } from "@/modules/membros/services/fotos";
+import type { Cargo, Familia, Instrumento, MembroPublico } from "@/types/database";
+
+/** Listas de sugestões para os campos de localidade. */
+export interface SugestoesLocalidade {
+  congregacoes: string[];
+  cidades: string[];
+  bairros: string[];
+}
+
+interface FormularioMembroProps {
+  membro: MembroPublico | null; // null = cadastrar; preenchido = editar
+  cpfInicial: string | null; // CPF completo (só na edição e só para quem tem membros.cpf)
+  podeCpf: boolean; // permissão membros.cpf
+  podeFoto: boolean; // permissão membros.foto (trocar a fotografia de um membro já cadastrado)
+  cargos: Cargo[];
+  instrumentos: Instrumento[];
+  familias: Familia[];
+  sugestoes: SugestoesLocalidade;
+  carregando: boolean;
+  erro: string | null;
+  /** Chamado após salvar com sucesso, com a mensagem para o aviso da tela. */
+  onSalvo: (mensagem: string) => void | Promise<void>;
+}
+
+// Classe compartilhada pelos campos (mesma identidade visual dos demais módulos).
+// [color-scheme:light] mantém o ícone do seletor de data visível mesmo com o navegador em tema escuro.
+const classeInput =
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 " +
+  "placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none " +
+  "focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-60 " +
+  "[color-scheme:light]";
+
+export default function FormularioMembro({
+  membro,
+  cpfInicial,
+  podeCpf,
+  podeFoto,
+  cargos,
+  instrumentos,
+  familias,
+  sugestoes,
+  carregando,
+  erro,
+  onSalvo,
+}: FormularioMembroProps) {
+  const editando = membro !== null;
+
+  // Valores iniciais: vazios no cadastro; os dados do membro na edição
+  const [nome, setNome] = useState(membro?.nome ?? "");
+  const [congregacao, setCongregacao] = useState(membro?.congregacao ?? "");
+  const [casaOracaoId, setCasaOracaoId] = useState(membro?.casa_oracao_id ?? ""); // a casa de oração define o nome da congregação
+  const [cidade, setCidade] = useState(membro?.cidade ?? "");
+  const [bairro, setBairro] = useState(membro?.bairro ?? "");
+  const [cpf, setCpf] = useState(cpfInicial ? formatarCpf(cpfInicial) : "");
+  const [cargoId, setCargoId] = useState(membro?.cargo_id ?? "");
+  const [dataNascimento, setDataNascimento] = useState(membro?.data_nascimento ?? ""); // "AAAA-MM-DD"
+  const [instrumentoId, setInstrumentoId] = useState(membro?.instrumento_id ?? "");
+  const [categoria, setCategoria] = useState(membro?.categoria ?? ""); // Oficializado, Culto Oficial ou RJM
+  const [status, setStatus] = useState(membro?.status ?? "Ativo");
+  const [foto, setFoto] = useState<Blob | null>(null); // foto nova já preparada (obrigatória no cadastro novo)
+  const [salvando, setSalvando] = useState(false);
+  const [erroForm, setErroForm] = useState<string | null>(null);
+
+  // O cargo escolhido define se o campo de instrumento aparece e se ele é obrigatório
+  const cargoSelecionado = cargos.find((cargo) => cargo.id === cargoId);
+  const permiteInstrumento = cargoSelecionado?.permite_instrumento ?? false;
+  const exigeInstrumento =
+    (cargoSelecionado as (Cargo & { exige_instrumento?: boolean }) | undefined)?.exige_instrumento === true;
+  // Só Músico e Organista têm categoria (as demais pessoas contam no painel pelo próprio cargo)
+  const tipoCategoria = cargoUsaCategoria(cargoSelecionado?.nome);
+
+  // Ao trocar de cargo, limpa o instrumento se o novo cargo não usar instrumento
+  function trocarCargo(novoCargoId: string) {
+    setCargoId(novoCargoId);
+    const novoCargo = cargos.find((cargo) => cargo.id === novoCargoId);
+    if (!novoCargo?.permite_instrumento) setInstrumentoId("");
+    if (!cargoUsaCategoria(novoCargo?.nome)) setCategoria("");
+  }
+
+  async function salvar(submissao: FormEvent<HTMLFormElement>) {
+    submissao.preventDefault();
+    if (salvando) return; // evita envio duplicado
+    setErroForm(null);
+
+    // Barra campos obrigatórios vazios ou preenchidos só com espaços
+    if (!nome.trim() || !casaOracaoId || !cargoId) {
+      return setErroForm("Preencha nome, cargo e casa de oração.");
+    }
+
+    // CPF (opcional): se preenchido, precisa ser válido
+    const cpfDigitos = limparCpf(cpf);
+    if (podeCpf && cpfDigitos !== "" && !validarCpf(cpfDigitos)) {
+      return setErroForm("CPF inválido. Confira os números digitados.");
+    }
+
+    // Instrumento obrigatório nos cargos que exigem (o banco confere de novo)
+    const erroInstrumento = validarInstrumentoDoCargo(exigeInstrumento, instrumentoId, cargoSelecionado?.nome);
+    if (erroInstrumento) return setErroForm(erroInstrumento);
+
+    // Categoria: obrigatória para Músico e Organista (define em qual linha do painel ao vivo ele conta)
+    const erroCategoria = validarCategoria(cargoSelecionado?.nome, categoria);
+    if (erroCategoria) return setErroForm(erroCategoria);
+
+    // Fotografia: obrigatória no cadastro novo (o banco também recusa sem ela)
+    if (!editando && !foto) {
+      return setErroForm("A fotografia é obrigatória. Tire a foto ou escolha uma imagem.");
+    }
+
+    setSalvando(true);
+    try {
+      const dados = {
+        nome: nome.trim(),
+        congregacao: congregacao.trim(),
+        casa_oracao_id: casaOracaoId,
+        cidade: cidade.trim() || null,
+        bairro: bairro.trim() || null,
+        cargo_id: cargoId,
+        data_nascimento: dataNascimento || null,
+        instrumento_id: permiteInstrumento && instrumentoId ? instrumentoId : null,
+        categoria: tipoCategoria && categoria ? categoria : null,
+      };
+      if (membro) {
+        // O CPF só é enviado por quem tem a permissão (os demais nem tocam nele)
+        await atualizarMembro(membro.id, {
+          ...dados,
+          status,
+          ...(podeCpf ? { cpf: cpfDigitos || null } : {}),
+        });
+        // Foto nova (opcional na edição): só quem tem a permissão de fotografia a troca
+        if (foto && podeFoto) await enviarFoto(membro.id, foto);
+      } else {
+        // Cadastro novo: o identificador é gerado aqui para a foto subir para a pasta do próprio membro
+        // antes do cadastro; o banco confere o arquivo e recusa o cadastro sem foto.
+        const novoId = crypto.randomUUID();
+        const caminho = await subirFotoNova(novoId, foto as Blob);
+        try {
+          await criarMembro({
+            ...dados,
+            id: novoId,
+            foto_path: caminho,
+            ...(podeCpf && cpfDigitos ? { cpf: cpfDigitos } : {}),
+          });
+        } catch (e) {
+          await descartarFoto(caminho); // o cadastro falhou: não deixa a foto solta
+          throw e;
+        }
+      }
+
+      await onSalvo(editando ? `Membro "${dados.nome}" atualizado.` : `Membro "${dados.nome}" cadastrado.`);
+    } catch (e) {
+      setErroForm(e instanceof Error ? e.message : "Não foi possível salvar o membro.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  // ---------- Estados da tela ----------
+
+  if (carregando) {
+    return <p className="text-sm text-slate-600">Carregando os dados do formulário...</p>;
+  }
+
+  if (erro) {
+    return (
+      <p className="text-sm text-slate-600">
+        Formulário indisponível porque os dados não puderam ser carregados.
+      </p>
+    );
+  }
+
+  // Sem cargos: a migração do banco ainda não foi aplicada
+  if (cargos.length === 0) {
+    return (
+      <p className="text-sm text-slate-600">
+        Nenhum cargo encontrado. Aplique as migrações do banco (pasta supabase/migrations) para criar
+        os cargos padrão.
+      </p>
+    );
+  }
+
+  // Data máxima do campo de nascimento = hoje (formato AAAA-MM-DD, no fuso local)
+  const hoje = new Date().toLocaleDateString("sv-SE");
+
+  return (
+    <form onSubmit={salvar} className="space-y-5">
+      <div className="space-y-1.5">
+        <label htmlFor="nome" className="text-sm font-medium text-slate-700">
+          Nome completo
+        </label>
+        <input
+          id="nome"
+          type="text"
+          required
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          disabled={salvando}
+          placeholder="Ex: João da Silva"
+          className={classeInput}
+        />
+      </div>
+
+      {/* Fotografia: obrigatória no cadastro novo; na edição só troca quem tem a permissão de fotografia */}
+      {!editando || podeFoto ? (
+        <div className="space-y-1.5">
+          <span className="text-sm font-medium text-slate-700">
+            Fotografia{" "}
+            {editando ? (
+              <span className="font-normal text-slate-400">(opcional na edição)</span>
+            ) : (
+              <span className="font-normal text-red-600">(obrigatória)</span>
+            )}
+          </span>
+          <CampoFoto
+            nome={nome || "Membro"}
+            fotoAtualCaminho={membro?.foto_path ?? null}
+            obrigatoria={!editando}
+            onChange={setFoto}
+            disabled={salvando}
+          />
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          <span className="text-sm font-medium text-slate-700">Fotografia</span>
+          <FotoMembro caminho={membro?.foto_path ?? null} nome={nome || "Membro"} tamanho="grande" />
+          <p className="text-xs text-slate-500">A fotografia só pode ser trocada por quem tem a permissão Fotografia.</p>
+        </div>
+      )}
+
+      {/* CPF: só para quem tem a permissão membros.cpf */}
+      {podeCpf && (
+        <div className="space-y-1.5">
+          <label htmlFor="cpf" className="text-sm font-medium text-slate-700">
+            CPF <span className="font-normal text-slate-400">(opcional)</span>
+          </label>
+          <input
+            id="cpf"
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            value={cpf}
+            onChange={(e) => setCpf(formatarCpf(e.target.value))}
+            disabled={salvando}
+            placeholder="000.000.000-00"
+            className={classeInput}
+          />
+          <p className="text-xs text-slate-500">
+            Evita cadastros duplicados. O CPF é protegido: só quem tem permissão o vê por completo.
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-1.5">
+        <label htmlFor="cargo" className="text-sm font-medium text-slate-700">
+          Cargo
+        </label>
+        <select
+          id="cargo"
+          required
+          value={cargoId}
+          onChange={(e) => trocarCargo(e.target.value)}
+          disabled={salvando}
+          className={classeInput}
+        >
+          <option value="">Selecione um cargo</option>
+          {cargos.map((cargo) => (
+            <option key={cargo.id} value={cargo.id}>
+              {cargo.nome}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Instrumento (lista por família; obrigatório para Músico) + Família automática */}
+      {permiteInstrumento && (
+        <>
+          <div className="space-y-1.5">
+            <label htmlFor="instrumento" className="text-sm font-medium text-slate-700">
+              Instrumento{" "}
+              {exigeInstrumento ? (
+                <span className="font-normal text-red-600">(obrigatório)</span>
+              ) : (
+                <span className="font-normal text-slate-400">(opcional)</span>
+              )}
+            </label>
+            <SeletorInstrumento
+              id="instrumento"
+              valor={instrumentoId}
+              onChange={setInstrumentoId}
+              instrumentos={instrumentos}
+              familias={familias}
+              obrigatorio={exigeInstrumento}
+              disabled={salvando}
+              className={classeInput}
+            />
+            <p className="text-xs text-slate-500">
+              Escolha na lista. Para incluir um instrumento novo, cadastre em Instrumentos e famílias.
+            </p>
+          </div>
+
+          <FamiliaAutomatica instrumentoId={instrumentoId} instrumentos={instrumentos} familias={familias} />
+        </>
+      )}
+
+      {/* Categoria: só para Músico e Organista (define em qual linha do painel ao vivo a pessoa conta) */}
+      {tipoCategoria && (
+        <div className="space-y-1.5">
+          <label htmlFor="categoria" className="text-sm font-medium text-slate-700">
+            Categoria <span className="font-normal text-red-600">(obrigatória)</span>
+          </label>
+          <select
+            id="categoria"
+            required
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+            disabled={salvando}
+            className={classeInput}
+          >
+            <option value="">Selecione a categoria</option>
+            {CATEGORIAS.map((item) => (
+              <option key={item.valor} value={item.valor}>
+                {item[tipoCategoria]}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Localidade: casa de oração (lista do banco), cidade e bairro (com sugestões dos já cadastrados) */}
+      <div className="space-y-1.5">
+        <label htmlFor="casa-oracao-membro" className="text-sm font-medium text-slate-700">
+          Casa de Oração
+        </label>
+        <SeletorCasaOracao
+          id="casa-oracao-membro"
+          valor={casaOracaoId}
+          onChange={setCasaOracaoId}
+          onEscolherNome={setCongregacao}
+          disabled={salvando}
+          className={classeInput}
+        />
+        <p className="text-xs text-slate-500">
+          A casa de oração define o setor e quem enxerga o cadastro. Se a casa de oração não aparecer, peça a um administrador para
+          cadastrá-la em Administração &gt; Organização.
+        </p>
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="cidade" className="text-sm font-medium text-slate-700">
+          Cidade <span className="font-normal text-slate-400">(opcional)</span>
+        </label>
+        <input
+          id="cidade"
+          type="text"
+          list="sugestoes-cidade"
+          autoComplete="off"
+          value={cidade}
+          onChange={(e) => setCidade(e.target.value)}
+          disabled={salvando}
+          placeholder="Ex: Salvador, Lauro de Freitas"
+          className={classeInput}
+        />
+        <datalist id="sugestoes-cidade">
+          {sugestoes.cidades.map((valor) => (
+            <option key={valor} value={valor} />
+          ))}
+        </datalist>
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="bairro" className="text-sm font-medium text-slate-700">
+          Bairro / igreja de referência <span className="font-normal text-slate-400">(opcional)</span>
+        </label>
+        <input
+          id="bairro"
+          type="text"
+          list="sugestoes-bairro"
+          autoComplete="off"
+          value={bairro}
+          onChange={(e) => setBairro(e.target.value)}
+          disabled={salvando}
+          placeholder="Ex: Itinga"
+          className={classeInput}
+        />
+        <datalist id="sugestoes-bairro">
+          {sugestoes.bairros.map((valor) => (
+            <option key={valor} value={valor} />
+          ))}
+        </datalist>
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="data_nascimento" className="text-sm font-medium text-slate-700">
+          Data de nascimento <span className="font-normal text-slate-400">(opcional)</span>
+        </label>
+        <input
+          id="data_nascimento"
+          type="date"
+          max={hoje}
+          value={dataNascimento}
+          onChange={(e) => setDataNascimento(e.target.value)}
+          disabled={salvando}
+          className={classeInput}
+        />
+      </div>
+
+      {/* Situação: só na edição */}
+      {editando && (
+        <div className="space-y-1.5">
+          <label htmlFor="status" className="text-sm font-medium text-slate-700">
+            Situação
+          </label>
+          <select
+            id="status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            disabled={salvando}
+            className={classeInput}
+          >
+            <option value="Ativo">Ativo</option>
+            <option value="Inativo">Inativo</option>
+          </select>
+        </div>
+      )}
+
+      {erroForm && (
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erroForm}
+        </p>
+      )}
+
+      <Button type="submit" disabled={salvando} className="w-full">
+        {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Cadastrar membro"}
+      </Button>
+    </form>
+  );
+}
+
+################ src/components/ListaMembros.tsx
+"use client";
+
+/**
+ * SysMúsica — Lista de membros em tabela, com barra de ferramentas de filtros.
+ *
+ * Não acessa o banco: recebe os dados e os estados (loading/erro) da página.
+ * Os filtros (busca por nome, cargo e família) são aplicados no navegador sobre a lista recebida.
+ * Cruza cada membro com seu cargo e instrumento; a FAMÍLIA do membro é a do seu instrumento
+ * (instrumento -> familia_id), então corrigir a família de um instrumento atualiza todos os membros.
+ *
+ * Responsividade:
+ *  - telas >= 768px: colunas Nome, Cargo, Instrumento, Família, Casa de Oração e Status;
+ *  - telas menores: apenas Nome (com os demais dados em uma linha abaixo) e Status.
+ *
+ * Trata quatro cenários: carregando, erro, nenhum membro cadastrado e tabela com dados.
+ */
+import { useState } from "react";
+import { Pencil, QrCode, Trash2 } from "lucide-react";
+import BotaoIcone from "@/components/ui/BotaoIcone";
+import { normalizarTexto } from "@/lib/texto";
+import type { Cargo, Familia, Instrumento, MembroPublico } from "@/types/database";
+
+interface ListaMembrosProps {
+  membros: MembroPublico[];
+  cargos: Cargo[];
+  instrumentos: Instrumento[];
+  familias: Familia[];
+  carregando: boolean;
+  erro: string | null;
+  onTentarNovamente: () => void;
+  podeEditar: boolean; // mostra o botão Editar em cada linha
+  podeExcluir: boolean; // mostra o botão Excluir em cada linha
+  onEditar: (membro: MembroPublico) => void;
+  onExcluir: (membro: MembroPublico) => void;
+  podeQr: boolean; // mostra o botão QR Code em cada linha
+  onQr: (membro: MembroPublico) => void;
+}
+
+// Valor especial do filtro de família: membros sem instrumento ou com instrumento não classificado
+const FILTRO_SEM_FAMILIA = "sem-familia";
+
+// Classe compartilhada pelos cabeçalhos das colunas
+const classeCabecalho =
+  "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500";
+
+// Classe compartilhada pelos selects da barra de ferramentas
+const classeSelect =
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200";
+
+export default function ListaMembros({
+  membros,
+  cargos,
+  instrumentos,
+  familias,
+  carregando,
+  erro,
+  onTentarNovamente,
+  podeEditar,
+  podeExcluir,
+  onEditar,
+  onExcluir,
+  podeQr,
+  onQr,
+}: ListaMembrosProps) {
+  const [busca, setBusca] = useState("");
+  const [cargoFiltroId, setCargoFiltroId] = useState(""); // "" = todos os cargos
+  const [familiaFiltroId, setFamiliaFiltroId] = useState(""); // "" = todas as famílias
+  const mostrarAcoes = podeEditar || podeExcluir || podeQr; // a coluna Ações só existe para quem pode algo
+
+  // 1) Carregando: skeleton (barra de ferramentas + linhas)
+  if (carregando) {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+      >
+        <span className="sr-only">Carregando membros...</span>
+        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row">
+          <div className="h-10 flex-1 animate-pulse rounded-lg bg-slate-200" />
+          <div className="h-10 animate-pulse rounded-lg bg-slate-200 sm:w-48" />
+          <div className="h-10 animate-pulse rounded-lg bg-slate-200 sm:w-44" />
+        </div>
+        <div className="space-y-3 p-4">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-10 animate-pulse rounded bg-slate-100" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // 2) Erro na comunicação com o banco
+  if (erro) {
+    return (
+      <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-6">
+        <p className="font-semibold text-red-800">Não foi possível carregar os membros.</p>
+        <p className="mt-1 text-sm text-red-700">{erro}</p>
+        <button
+          type="button"
+          onClick={onTentarNovamente}
+          className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
+        >
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
+  // 3) Nenhum membro cadastrado
+  if (membros.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
+        <p className="font-medium text-slate-700">Nenhum membro cadastrado ainda.</p>
+        <p className="mt-1 text-sm text-slate-500">Clique em “Adicionar” para cadastrar o primeiro.</p>
+      </div>
+    );
+  }
+
+  // Índices por id (cruzamento em memória)
+  const cargoPorId = new Map(cargos.map((cargo): [string, Cargo] => [cargo.id, cargo]));
+  const familiaPorId = new Map(familias.map((familia): [string, Familia] => [familia.id, familia]));
+  const instrumentoPorId = new Map(
+    instrumentos.map((instrumento): [string, Instrumento] => [instrumento.id, instrumento])
+  );
+
+  // Família do membro = família do instrumento dele (null se não tiver instrumento ou classificação)
+  const familiaIdDoMembro = (membro: MembroPublico): string | null =>
+    membro.instrumento_id
+      ? (instrumentoPorId.get(membro.instrumento_id)?.familia_id ?? null)
+      : null;
+
+  // Filtros: nome (sem acento/maiúsculas, "contém"), cargo e família (igualdade)
+  const termo = normalizarTexto(busca);
+  const membrosFiltrados = membros.filter((membro) => {
+    const familiaId = familiaIdDoMembro(membro);
+    const passaNome = termo === "" || normalizarTexto(membro.nome).includes(termo);
+    const passaCargo = cargoFiltroId === "" || membro.cargo_id === cargoFiltroId;
+    const passaFamilia =
+      familiaFiltroId === "" ||
+      (familiaFiltroId === FILTRO_SEM_FAMILIA ? familiaId === null : familiaId === familiaFiltroId);
+    return passaNome && passaCargo && passaFamilia;
+  });
+  const filtrosAtivos = termo !== "" || cargoFiltroId !== "" || familiaFiltroId !== "";
+
+  function limparFiltros() {
+    setBusca("");
+    setCargoFiltroId("");
+    setFamiliaFiltroId("");
+  }
+
+  // 4) Tabela com barra de ferramentas
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      {/* Barra de ferramentas: pesquisa por nome + filtro por cargo + filtro por família */}
+      <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1">
+          <label htmlFor="busca-nome" className="sr-only">
+            Pesquisar por nome
+          </label>
+          <svg
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fillRule="evenodd"
+              d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <input
+            id="busca-nome"
+            type="search"
+            autoComplete="off"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Pesquisar por nome..."
+            className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          />
+        </div>
+
+        <div className="sm:w-48">
+          <label htmlFor="filtro-cargo" className="sr-only">
+            Filtrar por cargo
+          </label>
+          <select
+            id="filtro-cargo"
+            value={cargoFiltroId}
+            onChange={(e) => setCargoFiltroId(e.target.value)}
+            className={classeSelect}
+          >
+            <option value="">Todos os cargos</option>
+            {cargos.map((cargo) => (
+              <option key={cargo.id} value={cargo.id}>
+                {cargo.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="sm:w-44">
+          <label htmlFor="filtro-familia" className="sr-only">
+            Filtrar por família do instrumento
+          </label>
+          <select
+            id="filtro-familia"
+            value={familiaFiltroId}
+            onChange={(e) => setFamiliaFiltroId(e.target.value)}
+            className={classeSelect}
+          >
+            <option value="">Todas as famílias</option>
+            {familias.map((familia) => (
+              <option key={familia.id} value={familia.id}>
+                {familia.nome}
+              </option>
+            ))}
+            <option value={FILTRO_SEM_FAMILIA}>Sem família</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Tabela de dados (rola na horizontal só se faltar espaço) */}
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-slate-50">
+            <tr>
+              <th scope="col" className={classeCabecalho}>
+                Nome
+              </th>
+              <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>
+                Cargo
+              </th>
+              <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>
+                Instrumento
+              </th>
+              <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>
+                Família
+              </th>
+              <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>
+                Casa de Oração
+              </th>
+              <th scope="col" className={classeCabecalho}>
+                Status
+              </th>
+              {mostrarAcoes && (
+                <th scope="col" className={classeCabecalho + " text-right"}>
+                  Ações
+                </th>
+              )}
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-slate-100">
+            {membrosFiltrados.length === 0 ? (
+              // Filtros sem resultado
+              <tr>
+                <td colSpan={mostrarAcoes ? 7 : 6} className="px-4 py-10 text-center text-sm text-slate-500">
+                  Nenhum membro encontrado com os filtros atuais.
+                </td>
+              </tr>
+            ) : (
+              membrosFiltrados.map((membro) => {
+                const nomeCargo = cargoPorId.get(membro.cargo_id)?.nome ?? "Cargo não encontrado";
+                const nomeInstrumento = membro.instrumento_id
+                  ? (instrumentoPorId.get(membro.instrumento_id)?.nome ?? null)
+                  : null;
+                const familiaId = familiaIdDoMembro(membro);
+                const nomeFamilia = familiaId ? (familiaPorId.get(familiaId)?.nome ?? null) : null;
+
+                return (
+                  <tr key={membro.id} className="transition hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        {/* Avatar com a inicial do nome */}
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
+                          {membro.nome.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-slate-900">{membro.nome}</p>
+                          {/* Telas pequenas: os dados das colunas ocultas aparecem aqui */}
+                          <p className="truncate text-xs text-slate-500 md:hidden">
+                            {[nomeCargo, nomeInstrumento, nomeFamilia, membro.congregacao]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="hidden px-4 py-3 text-slate-700 md:table-cell">{nomeCargo}</td>
+                    <td className="hidden px-4 py-3 text-slate-700 md:table-cell">
+                      {nomeInstrumento ?? "—"}
+                    </td>
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      {nomeFamilia ? (
+                        <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                          {nomeFamilia}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="hidden px-4 py-3 text-slate-700 md:table-cell">
+                      {membro.congregacao}
+                      {(membro.bairro || membro.cidade) && (
+                        <span className="block text-xs text-slate-500">
+                          {[membro.bairro, membro.cidade].filter(Boolean).join(" · ")}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={
+                          "rounded-full px-2 py-0.5 text-xs font-medium " +
+                          (membro.status === "Ativo"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-slate-100 text-slate-600")
+                        }
+                      >
+                        {membro.status}
+                      </span>
+                    </td>
+                    {mostrarAcoes && (
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1">
+                          {podeQr && (
+                            <BotaoIcone
+                              icone={QrCode}
+                              rotulo={`QR Code de ${membro.nome}`}
+                              onClick={() => onQr(membro)}
+                            />
+                          )}
+                          {podeEditar && (
+                            <BotaoIcone
+                              icone={Pencil}
+                              rotulo={`Editar ${membro.nome}`}
+                              onClick={() => onEditar(membro)}
+                            />
+                          )}
+                          {podeExcluir && (
+                            <BotaoIcone
+                              icone={Trash2}
+                              variante="perigo"
+                              rotulo={`Excluir ${membro.nome}`}
+                              onClick={() => onExcluir(membro)}
+                            />
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Rodapé: contagem e atalho para limpar os filtros */}
+      <div className="flex items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+        <span>
+          Exibindo {membrosFiltrados.length} de {membros.length} membro(s)
+        </span>
+        {filtrosAtivos && (
+          <button
+            type="button"
+            onClick={limparFiltros}
+            className="font-semibold text-indigo-600 hover:underline"
+          >
+            Limpar filtros
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+################ src/modules/membros/components/CampoFoto.tsx
+"use client";
+
+/**
+ * SysMúsica — Campo de fotografia: "Tirar foto" e "Escolher da galeria", com pré-visualização.
+ * No celular, "Tirar foto" abre a câmera do aparelho; no computador abre o seletor de arquivos.
+ * A imagem é reduzida e convertida para JPEG no navegador (leve e rápida de enviar). O arquivo só é
+ * enviado quando o formulário que usa este campo salvar. Sem foto nova, mostra a foto atual (se houver).
+ */
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { Camera, ImagePlus, Trash2 } from "lucide-react";
+import { prepararFoto } from "../fotoImagem";
+import FotoMembro from "./FotoMembro";
+
+interface CampoFotoProps {
+  nome: string; // para o texto alternativo da imagem
+  fotoAtualCaminho?: string | null; // foto já cadastrada (edição)
+  obrigatoria?: boolean;
+  onChange: (foto: Blob | null) => void; // a foto nova já preparada, ou nulo ao remover a escolha
+  disabled?: boolean;
+}
+
+const classeBotao =
+  "inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium " +
+  "text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60";
+
+export default function CampoFoto({
+  nome,
+  fotoAtualCaminho = null,
+  obrigatoria = false,
+  onChange,
+  disabled = false,
+}: CampoFotoProps) {
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galeriaRef = useRef<HTMLInputElement>(null);
+  const [previa, setPrevia] = useState<string | null>(null); // endereço temporário da foto nova
+  const [processando, setProcessando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  // Libera o endereço temporário da pré-visualização quando ela troca ou o campo sai da tela
+  useEffect(() => {
+    return () => {
+      if (previa) URL.revokeObjectURL(previa);
+    };
+  }, [previa]);
+
+  async function aoEscolher(evento: ChangeEvent<HTMLInputElement>) {
+    const arquivo = evento.target.files?.[0];
+    evento.target.value = ""; // permite escolher o mesmo arquivo de novo
+    if (!arquivo) return;
+
+    setErro(null);
+    setProcessando(true);
+    try {
+      const imagem = await prepararFoto(arquivo);
+      setPrevia(URL.createObjectURL(imagem));
+      onChange(imagem);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível preparar a imagem.");
+    } finally {
+      setProcessando(false);
+    }
+  }
+
+  function removerEscolha() {
+    setPrevia(null);
+    onChange(null);
+  }
+
+  const bloqueado = disabled || processando;
+
+  return (
+    <div className="space-y-3">
+      {/* Câmera (celular) e galeria: seletores escondidos, acionados pelos botões abaixo */}
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(e) => void aoEscolher(e)}
+      />
+      <input
+        ref={galeriaRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(e) => void aoEscolher(e)}
+      />
+
+      <div className="flex items-start gap-4">
+        {previa ? (
+          <div
+            role="img"
+            aria-label={`Nova fotografia de ${nome}`}
+            style={{ backgroundImage: `url(${previa})` }}
+            className="h-44 w-36 shrink-0 rounded-xl bg-slate-100 bg-cover bg-center"
+          />
+        ) : (
+          <FotoMembro caminho={fotoAtualCaminho} nome={nome} tamanho="grande" />
+        )}
+
+        <div className="flex flex-col gap-2">
+          <button type="button" className={classeBotao} onClick={() => cameraRef.current?.click()} disabled={bloqueado}>
+            <Camera className="h-4 w-4" aria-hidden="true" />
+            Tirar foto
+          </button>
+          <button type="button" className={classeBotao} onClick={() => galeriaRef.current?.click()} disabled={bloqueado}>
+            <ImagePlus className="h-4 w-4" aria-hidden="true" />
+            Escolher da galeria
+          </button>
+          {previa && (
+            <button type="button" className={classeBotao} onClick={removerEscolha} disabled={bloqueado}>
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              Remover a nova foto
+            </button>
+          )}
+        </div>
+      </div>
+
+      {processando && <p className="text-xs text-slate-500">Preparando a imagem...</p>}
+      {erro && (
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erro}
+        </p>
+      )}
+      <p className="text-xs text-slate-500">
+        {obrigatoria ? "A fotografia é obrigatória: ela identifica a pessoa na portaria. " : ""}
+        Foto de rosto, de frente e com boa luz. A imagem é reduzida antes de ser enviada.
+      </p>
+    </div>
+  );
+}
+
+################ src/modules/membros/components/FotoMembro.tsx
+"use client";
+
+/**
+ * SysMúsica — Fotografia do membro (miniatura ou retrato grande).
+ * Busca a URL temporária da foto; sem foto (ou se falhar), mostra um espaço reservado.
+ * Usa um fundo de imagem (e não <img>) com texto alternativo para leitores de tela.
+ */
+import { useEffect, useState } from "react";
+import { User } from "lucide-react";
+import { cn } from "@/lib/cn";
+import { urlDaFoto } from "../services/fotos";
+
+interface FotoMembroProps {
+  caminho: string | null;
+  nome: string;
+  tamanho?: "pequena" | "grande";
+}
+
+export default function FotoMembro({ caminho, nome, tamanho = "pequena" }: FotoMembroProps) {
+  // Guarda junto o caminho a que a URL pertence (evita mostrar a foto de outro membro por um instante)
+  const [carregada, setCarregada] = useState<{ caminho: string; url: string | null } | null>(null);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!caminho) return;
+    let cancelado = false;
+    void urlDaFoto(caminho).then((url) => {
+      if (!cancelado) setCarregada({ caminho, url });
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [caminho]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const url = caminho && carregada?.caminho === caminho ? carregada.url : null;
+  const medidas = tamanho === "grande" ? "h-44 w-36" : "h-12 w-10";
+
+  return (
+    <div
+      role="img"
+      aria-label={url ? `Fotografia de ${nome}` : `${nome}: sem fotografia`}
+      style={url ? { backgroundImage: `url(${url})` } : undefined}
+      className={cn(
+        "flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 bg-cover bg-center text-slate-400",
+        medidas
+      )}
+    >
+      {!url && <User className={tamanho === "grande" ? "h-14 w-14" : "h-5 w-5"} aria-hidden="true" />}
+    </div>
+  );
+}
+
+################ src/modules/membros/components/GaleriaFotos.tsx
+"use client";
+
+/**
+ * SysMúsica — Lista de membros com a situação da fotografia (busca e filtro) e as ações de enviar,
+ * trocar e remover. O envio e a remoção são feitos pela página; aqui só há a interface.
+ */
+import { useRef, useState, type ChangeEvent } from "react";
+import { Search, Trash2, User } from "lucide-react";
+import BotaoIcone from "@/components/ui/BotaoIcone";
+import { cn } from "@/lib/cn";
+import { normalizarTexto } from "@/lib/texto";
+import type { MembroFoto } from "../services/fotos";
+
+interface GaleriaFotosProps {
+  membros: MembroFoto[];
+  urls: Record<string, string>; // caminho da foto -> URL temporária
+  ocupadoId: string | null; // membro cujo envio/remoção está em andamento
+  onEscolherArquivo: (membro: MembroFoto, arquivo: File) => void;
+  onRemover: (membro: MembroFoto) => void;
+}
+
+type Filtro = "todos" | "sem" | "com";
+
+const classeCampo =
+  "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm " +
+  "focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200";
+
+export default function GaleriaFotos({ membros, urls, ocupadoId, onEscolherArquivo, onRemover }: GaleriaFotosProps) {
+  const [busca, setBusca] = useState("");
+  const [filtro, setFiltro] = useState<Filtro>("todos");
+  // Um único seletor de arquivo para a lista inteira; o membro-alvo fica guardado até a escolha
+  const entradaRef = useRef<HTMLInputElement>(null);
+  const alvoRef = useRef<MembroFoto | null>(null);
+
+  const termo = normalizarTexto(busca);
+  const filtrados = membros.filter((membro) => {
+    const passaFiltro = filtro === "todos" || (filtro === "sem" ? !membro.foto_path : !!membro.foto_path);
+    const texto = normalizarTexto(`${membro.nome} ${membro.congregacao ?? ""}`);
+    return passaFiltro && (termo === "" || texto.includes(termo));
+  });
+  const semFoto = membros.filter((membro) => !membro.foto_path).length;
+
+  function escolher(membro: MembroFoto) {
+    alvoRef.current = membro;
+    entradaRef.current?.click();
+  }
+
+  function aoSelecionar(evento: ChangeEvent<HTMLInputElement>) {
+    const arquivo = evento.target.files?.[0];
+    evento.target.value = ""; // permite escolher o mesmo arquivo de novo
+    if (arquivo && alvoRef.current) onEscolherArquivo(alvoRef.current, arquivo);
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <input
+        ref={entradaRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={aoSelecionar}
+      />
+
+      <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1">
+          <label htmlFor="busca-foto" className="sr-only">
+            Pesquisar membros
+          </label>
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            aria-hidden="true"
+          />
+          <input
+            id="busca-foto"
+            type="search"
+            autoComplete="off"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Pesquisar por nome ou congregação..."
+            className={classeCampo + " w-full pl-9 placeholder:text-slate-400"}
+          />
+        </div>
+        <div className="sm:w-56">
+          <label htmlFor="filtro-foto" className="sr-only">
+            Filtrar por fotografia
+          </label>
+          <select
+            id="filtro-foto"
+            value={filtro}
+            onChange={(e) => setFiltro(e.target.value as Filtro)}
+            className={classeCampo + " w-full"}
+          >
+            <option value="todos">Todos os membros</option>
+            <option value="sem">Sem fotografia ({semFoto})</option>
+            <option value="com">Com fotografia</option>
+          </select>
+        </div>
+      </div>
+
+      <ul className="divide-y divide-slate-100">
+        {filtrados.length === 0 ? (
+          <li className="px-4 py-10 text-center text-sm text-slate-500">Nenhum membro encontrado.</li>
+        ) : (
+          filtrados.map((membro) => {
+            const url = membro.foto_path ? urls[membro.foto_path] : undefined;
+            const ocupado = ocupadoId === membro.id;
+            return (
+              <li key={membro.id} className="flex items-center gap-3 px-4 py-3">
+                <div
+                  role="img"
+                  aria-label={url ? `Fotografia de ${membro.nome}` : `${membro.nome}: sem fotografia`}
+                  style={url ? { backgroundImage: `url(${url})` } : undefined}
+                  className="flex h-14 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 bg-cover bg-center text-slate-400"
+                >
+                  {!url && <User className="h-5 w-5" aria-hidden="true" />}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-slate-900">{membro.nome}</p>
+                  <p className="truncate text-xs text-slate-500">{membro.congregacao ?? "—"}</p>
+                  <p className={cn("text-xs", membro.foto_path ? "text-emerald-700" : "text-amber-700")}>
+                    {ocupado ? "Enviando..." : membro.foto_path ? "Com fotografia" : "Sem fotografia"}
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => escolher(membro)}
+                    disabled={ocupadoId !== null}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {membro.foto_path ? "Trocar foto" : "Adicionar foto"}
+                  </button>
+                  {membro.foto_path && (
+                    <BotaoIcone
+                      icone={Trash2}
+                      rotulo={`Remover a fotografia de ${membro.nome}`}
+                      onClick={() => onRemover(membro)}
+                    />
+                  )}
+                </div>
+              </li>
+            );
+          })
+        )}
+      </ul>
+
+      <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+        Exibindo {filtrados.length} de {membros.length} membro(s) · {semFoto} sem fotografia
+      </div>
+    </div>
+  );
+}
+
+################ src/modules/membros/components/QrMembro.tsx
+"use client";
+
+/**
+ * SysMúsica — QR Code do membro (conteúdo do painel lateral).
+ *
+ * Mostra a imagem do QR Code (gerada no navegador a partir do código que o servidor devolveu),
+ * permite copiar o código e baixar a imagem. Quem tem a permissão de substituição também vê o bloco
+ * "Substituir QR Code": exige justificativa e confirmação, e o código antigo deixa de funcionar na hora.
+ * O QR Code identifica o cadastro, mas NÃO prova quem o apresenta: a portaria confere a foto.
+ */
+import { useState } from "react";
+import { Copy, Download } from "lucide-react";
+import Button from "@/components/ui/Button";
+import { normalizarTexto } from "@/lib/texto";
+
+interface QrMembroProps {
+  nome: string;
+  congregacao: string;
+  imagem: string; // data URL (PNG)
+  conteudo: string; // texto gravado no QR Code
+  podeSubstituir: boolean;
+  /** Substitui o QR Code (a tela recarrega a imagem em seguida). Deve lançar erro se falhar. */
+  onSubstituir: (justificativa: string) => Promise<void>;
+}
+
+export default function QrMembro({
+  nome,
+  congregacao,
+  imagem,
+  conteudo,
+  podeSubstituir,
+  onSubstituir,
+}: QrMembroProps) {
+  const [copiado, setCopiado] = useState(false);
+  const [justificativa, setJustificativa] = useState("");
+  const [ciente, setCiente] = useState(false);
+  const [substituindo, setSubstituindo] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  // Nome do arquivo baixado: "qr-maria-da-silva.png"
+  const nomeArquivo = `qr-${normalizarTexto(nome).replace(/\s+/g, "-")}.png`;
+  const justificativaValida = justificativa.trim().length >= 10;
+
+  async function copiarCodigo() {
+    try {
+      await navigator.clipboard.writeText(conteudo);
+      setCopiado(true);
+      window.setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      setErro("Não foi possível copiar. Selecione e copie o código manualmente.");
+    }
+  }
+
+  async function substituir() {
+    if (substituindo || !ciente || !justificativaValida) return;
+    setErro(null);
+    setSubstituindo(true);
+    try {
+      await onSubstituir(justificativa.trim());
+      setJustificativa("");
+      setCiente(false);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível substituir o QR Code.");
+    } finally {
+      setSubstituindo(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        {/* eslint-disable-next-line @next/next/no-img-element -- imagem gerada no navegador (data URL) */}
+        <img
+          src={imagem}
+          alt={`QR Code de ${nome}`}
+          width={256}
+          height={256}
+          className="mx-auto h-64 w-64 rounded-xl border border-slate-200 bg-white p-2"
+        />
+        <p className="mt-3 font-semibold text-slate-900">{nome}</p>
+        <p className="text-sm text-slate-500">{congregacao}</p>
+        <p className="mt-1 text-xs text-slate-400">Código terminado em {conteudo.slice(-6)}</p>
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button variante="secundario" icone={Copy} onClick={() => void copiarCodigo()} className="flex-1">
+          {copiado ? "Código copiado!" : "Copiar código"}
+        </Button>
+        <a
+          href={imagem}
+          download={nomeArquivo}
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+        >
+          <Download className="h-4 w-4" aria-hidden="true" />
+          Baixar imagem
+        </a>
+      </div>
+
+      <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+        O QR Code identifica o cadastro, mas não prova quem o apresenta: na portaria, confira sempre a
+        fotografia. Ele não contém nome, CPF ou outros dados pessoais.
+      </p>
+
+      {podeSubstituir && (
+        <section className="space-y-3 rounded-xl border border-red-200 bg-red-50/50 p-4">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Substituir QR Code</h3>
+            <p className="mt-0.5 text-xs text-slate-600">
+              O QR Code atual deixa de funcionar imediatamente. Use quando o código foi compartilhado
+              indevidamente ou perdido. A operação fica registrada na auditoria.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="justificativa-qr" className="text-sm font-medium text-slate-700">
+              Justificativa
+            </label>
+            <textarea
+              id="justificativa-qr"
+              rows={3}
+              maxLength={300}
+              value={justificativa}
+              onChange={(e) => setJustificativa(e.target.value)}
+              disabled={substituindo}
+              placeholder="Ex: Membro perdeu o celular e o código foi compartilhado."
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:opacity-60"
+            />
+            <p className="text-xs text-slate-500">Mínimo de 10 caracteres.</p>
+          </div>
+
+          <label className="flex items-start gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={ciente}
+              onChange={(e) => setCiente(e.target.checked)}
+              disabled={substituindo}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-300"
+            />
+            Estou ciente de que o QR Code atual será invalidado.
+          </label>
+
+          <Button
+            variante="perigo"
+            onClick={() => void substituir()}
+            disabled={substituindo || !ciente || !justificativaValida}
+            className="w-full"
+          >
+            {substituindo ? "Substituindo..." : "Gerar novo QR Code"}
+          </Button>
+        </section>
+      )}
+
+      {erro && (
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erro}
+        </p>
+      )}
+    </div>
+  );
+}
+
+################ src/modules/membros/fotoImagem.ts
+/**
+ * SysMúsica — Preparo da fotografia no navegador antes do envio.
+ * Reduz a imagem (lado maior de 800 px) e converte para JPEG: a foto fica leve (poucas centenas de KB)
+ * e o envio é rápido, inclusive em rede móvel. A conferência de tipo e tamanho final também é feita
+ * pelo armazenamento do banco (limite de 2 MB; JPEG, PNG ou WebP).
+ */
+
+const LADO_MAXIMO = 800;
+const QUALIDADE_JPEG = 0.82;
+const TAMANHO_MAXIMO_ORIGINAL = 15 * 1024 * 1024; // 15 MB de entrada (a saída é bem menor)
+
+export async function prepararFoto(arquivo: File): Promise<Blob> {
+  if (!arquivo.type.startsWith("image/")) {
+    throw new Error("Escolha um arquivo de imagem (JPG, PNG ou WebP).");
+  }
+  if (arquivo.size > TAMANHO_MAXIMO_ORIGINAL) {
+    throw new Error("A imagem é grande demais (máximo de 15 MB).");
+  }
+
+  // "from-image" respeita a rotação gravada pela câmera do celular; se o navegador não aceitar a opção, tenta sem ela
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(arquivo, { imageOrientation: "from-image" });
+  } catch {
+    try {
+      bitmap = await createImageBitmap(arquivo);
+    } catch {
+      throw new Error("Não foi possível ler esta imagem. Tente outra foto.");
+    }
+  }
+
+  const escala = Math.min(1, LADO_MAXIMO / Math.max(bitmap.width, bitmap.height));
+  const largura = Math.max(1, Math.round(bitmap.width * escala));
+  const altura = Math.max(1, Math.round(bitmap.height * escala));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = largura;
+  canvas.height = altura;
+  const contexto = canvas.getContext("2d");
+  if (!contexto) {
+    bitmap.close();
+    throw new Error("Não foi possível processar a imagem neste navegador.");
+  }
+  contexto.drawImage(bitmap, 0, 0, largura, altura);
+  bitmap.close();
+
+  const imagem = await new Promise<Blob | null>((resolver) =>
+    canvas.toBlob(resolver, "image/jpeg", QUALIDADE_JPEG)
+  );
+  if (!imagem) throw new Error("Não foi possível processar a imagem.");
+  return imagem;
+}
+
+################ src/modules/membros/services/fotos.ts
+/**
+ * SysMúsica — Serviço das fotografias dos membros.
+ * As fotos ficam em um bucket PRIVADO: para exibir, gera-se uma URL temporária (assinada).
+ * Quem pode enviar, trocar ou remover é controlado pela permissão membros.foto (banco + armazenamento).
+ */
+import { supabase } from "@/lib/supabase";
+import { mensagemDoErro } from "@/lib/erros";
+
+export const BUCKET_FOTOS = "fotos-membros";
+
+export interface MembroFoto {
+  id: string;
+  nome: string;
+  congregacao: string | null;
+  foto_path: string | null;
+}
+
+/** Membros (não excluídos) com o caminho da foto, para a tela de fotografias. */
+export async function listarMembrosParaFoto(): Promise<MembroFoto[]> {
+  const { data, error } = await supabase.rpc("listar_membros_para_foto");
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar os membros."));
+  return (data ?? []) as MembroFoto[];
+}
+
+// Guarda as URLs temporárias por alguns minutos para não pedir a mesma foto várias vezes
+const cacheUrls = new Map<string, { url: string; expira: number }>();
+const VALIDADE_URL_SEGUNDOS = 600;
+
+/** URL temporária de uma foto (ou null se não for possível gerar). */
+export async function urlDaFoto(caminho: string): Promise<string | null> {
+  const agora = Date.now();
+  const guardada = cacheUrls.get(caminho);
+  if (guardada && guardada.expira > agora) return guardada.url;
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET_FOTOS)
+    .createSignedUrl(caminho, VALIDADE_URL_SEGUNDOS);
+  if (error || !data) return null;
+
+  cacheUrls.set(caminho, { url: data.signedUrl, expira: agora + (VALIDADE_URL_SEGUNDOS - 60) * 1000 });
+  return data.signedUrl;
+}
+
+/** URLs temporárias de várias fotos de uma vez: { caminho: url }. */
+export async function urlsDasFotos(caminhos: string[]): Promise<Record<string, string>> {
+  if (caminhos.length === 0) return {};
+  const { data, error } = await supabase.storage
+    .from(BUCKET_FOTOS)
+    .createSignedUrls(caminhos, VALIDADE_URL_SEGUNDOS);
+  if (error || !data) return {};
+
+  const mapa: Record<string, string> = {};
+  for (const item of data) {
+    if (item.path && item.signedUrl) mapa[item.path] = item.signedUrl;
+  }
+  return mapa;
+}
+
+/** Envia a foto (já reduzida) e a vincula ao membro; apaga o arquivo anterior. */
+export async function enviarFoto(membroId: string, imagem: Blob): Promise<void> {
+  const caminho = `${membroId}/${crypto.randomUUID()}.jpg`;
+
+  const { error: erroEnvio } = await supabase.storage
+    .from(BUCKET_FOTOS)
+    .upload(caminho, imagem, { contentType: "image/jpeg", upsert: false });
+  if (erroEnvio) {
+    throw new Error("Não foi possível enviar a fotografia. Verifique a conexão e tente novamente.");
+  }
+
+  const { data, error } = await supabase.rpc("definir_foto_membro", { p_membro_id: membroId, p_path: caminho });
+  if (error) {
+    // Desfaz o envio: não deixa arquivo solto no armazenamento
+    await supabase.storage.from(BUCKET_FOTOS).remove([caminho]);
+    throw new Error(mensagemDoErro(error, "Não foi possível salvar a fotografia."));
+  }
+
+  // Arquivo antigo: apagar é um cuidado extra; se falhar, a foto nova já está valendo
+  const anterior = data as string | null;
+  if (anterior) await supabase.storage.from(BUCKET_FOTOS).remove([anterior]);
+}
+
+/**
+ * Envia a foto para a pasta do membro e devolve o caminho, SEM ligar a foto a ninguém ainda.
+ * Usado no cadastro novo (membro e visitante): a foto sobe antes e o caminho vai junto com o cadastro,
+ * onde o banco confere se o arquivo existe e se está na pasta certa.
+ */
+export async function subirFotoNova(membroId: string, imagem: Blob): Promise<string> {
+  const caminho = `${membroId}/${crypto.randomUUID()}.jpg`;
+  const { error } = await supabase.storage
+    .from(BUCKET_FOTOS)
+    .upload(caminho, imagem, { contentType: "image/jpeg", upsert: false });
+  if (error) {
+    throw new Error("Não foi possível enviar a fotografia. Verifique a conexão e tente novamente.");
+  }
+  return caminho;
+}
+
+/**
+ * Tenta apagar uma foto enviada que não chegou a ser usada (o cadastro falhou). Se o usuário não tiver
+ * permissão para apagar, o arquivo apenas fica sem uso no armazenamento privado.
+ */
+export async function descartarFoto(caminho: string): Promise<void> {
+  await supabase.storage.from(BUCKET_FOTOS).remove([caminho]);
+}
+
+/** Remove a fotografia do membro (referência no banco e arquivo). */
+export async function removerFoto(membroId: string): Promise<void> {
+  const { data, error } = await supabase.rpc("remover_foto_membro", { p_membro_id: membroId });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível remover a fotografia."));
+
+  const anterior = data as string | null;
+  if (anterior) await supabase.storage.from(BUCKET_FOTOS).remove([anterior]);
+}
+
+################ src/modules/membros/services/membros.ts
+/**
+ * SysMúsica — Serviço de dados de membros.
+ *
+ * Em "membros" só se lêem colunas liberadas (nunca "*": o qr_secret e o CPF completo são
+ * protegidos). O CPF completo e o código do QR Code vêm de funções do banco que conferem a
+ * permissão e registram a consulta na auditoria.
+ * Excluir é EXCLUSÃO LÓGICA: o membro some das telas e o histórico de presenças é mantido.
+ */
+import { supabase } from "@/lib/supabase";
+import { mensagemDoErro } from "@/lib/erros";
+import {
+  COLUNAS_MEMBRO_PUBLICO,
+  type Cargo,
+  type Familia,
+  type Instrumento,
+  type MembroInsert,
+  type MembroPublico,
+} from "@/types/database";
+
+const MSG_CPF_DUPLICADO = "Já existe um membro cadastrado com este CPF.";
+
+export interface DadosMembros {
+  cargos: Cargo[];
+  instrumentos: Instrumento[];
+  familias: Familia[];
+  membros: MembroPublico[];
+}
+
+/** Busca cargos, instrumentos, famílias e membros em paralelo. Lança erro se qualquer consulta falhar. */
+export async function buscarDadosMembros(): Promise<DadosMembros> {
+  const [resCargos, resInstrumentos, resFamilias, resMembros] = await Promise.all([
+    supabase.from("cargos").select("*").order("nome", { ascending: true }),
+    supabase.from("instrumentos").select("*").order("nome", { ascending: true }),
+    supabase.from("familias").select("*").order("nome", { ascending: true }),
+    supabase.from("membros").select(COLUNAS_MEMBRO_PUBLICO).order("nome", { ascending: true }),
+  ]);
+
+  const erroBanco = resCargos.error ?? resInstrumentos.error ?? resFamilias.error ?? resMembros.error;
+  if (erroBanco) throw new Error(erroBanco.message);
+
+  return {
+    cargos: (resCargos.data ?? []) as Cargo[],
+    instrumentos: (resInstrumentos.data ?? []) as Instrumento[],
+    familias: (resFamilias.data ?? []) as Familia[],
+    // Cast duplo: com lista de colunas, o cliente (sem tipagem gerada) não infere a linha
+    membros: (resMembros.data ?? []) as unknown as MembroPublico[],
+  };
+}
+
+export async function criarMembro(dados: MembroInsert): Promise<void> {
+  const { error } = await supabase.from("membros").insert(dados);
+  if (error) {
+    throw new Error(mensagemDoErro(error, "Não foi possível cadastrar o membro.", MSG_CPF_DUPLICADO));
+  }
+}
+
+/** Campos que podem ser alterados na edição (o banco libera só estas colunas). */
+export interface DadosAtualizacaoMembro {
+  nome: string;
+  congregacao: string;
+  cargo_id: string;
+  data_nascimento: string | null;
+  instrumento_id: string | null;
+  status: string;
+  cidade: string | null;
+  bairro: string | null;
+  casa_oracao_id?: string | null; // a casa de oração escolhida (o banco ajusta o nome da congregação)
+  categoria?: string | null; // Oficializado, Culto Oficial ou RJM (Músico e Organista)
+  /** Só enviar quando o usuário tem a permissão membros.cpf (null = apagar o CPF). */
+  cpf?: string | null;
+}
+
+export async function atualizarMembro(id: string, dados: DadosAtualizacaoMembro): Promise<void> {
+  // .select("id") devolve as linhas alteradas: se o RLS negar, o update não dá erro, só não altera nada
+  const { data, error } = await supabase.from("membros").update(dados).eq("id", id).select("id");
+  if (error) {
+    throw new Error(
+      mensagemDoErro(error, "Não foi possível salvar as alterações do membro.", MSG_CPF_DUPLICADO)
+    );
+  }
+  if (!data || data.length === 0) {
+    throw new Error("Não foi possível salvar: você não tem permissão ou o membro não existe mais.");
+  }
+}
+
+/** Exclusão lógica (função do banco, que confere a permissão membros.excluir). */
+export async function excluirMembro(id: string): Promise<void> {
+  const { error } = await supabase.rpc("excluir_membro", { p_id: id });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível excluir o membro."));
+}
+
+/** CPF completo (permissão membros.cpf; a consulta fica registrada na auditoria). */
+export async function obterCpfMembro(id: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc("obter_cpf_membro", { p_id: id });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível consultar o CPF."));
+  return (data as string | null) ?? null;
+}
+
+/** Código do QR Code do membro (permissão membros.qr; a consulta fica registrada na auditoria). */
+export async function obterQrMembro(id: string): Promise<string> {
+  const { data, error } = await supabase.rpc("obter_qr_membro", { p_id: id });
+  if (error || typeof data !== "string") {
+    throw new Error(
+      error ? mensagemDoErro(error, "Não foi possível obter o QR Code.") : "Não foi possível obter o QR Code."
+    );
+  }
+  return data;
+}
+
+/** Substitui o QR Code (permissão membros.qr_revogar; justificativa obrigatória). Devolve o novo código. */
+export async function regenerarQrMembro(id: string, justificativa: string): Promise<string> {
+  const { data, error } = await supabase.rpc("regenerar_qr", { p_id: id, p_justificativa: justificativa });
+  if (error || typeof data !== "string") {
+    throw new Error(
+      error
+        ? mensagemDoErro(error, "Não foi possível substituir o QR Code.")
+        : "Não foi possível substituir o QR Code."
+    );
+  }
+  return data;
+}
+
+################ src/app/(painel)/membros/page.tsx
+"use client";
+
+/**
+ * SysMúsica — Página /membros: listagem em tabela (largura total) com busca e filtros, novo,
+ * editar, excluir e QR Code. Cada botão só aparece para quem tem a permissão (grupo do usuário);
+ * o banco confere de novo em toda operação.
+ * Excluir é exclusão lógica: o membro some das telas e o histórico de presenças é mantido.
+ * Editar abre o formulário já com o CPF completo (só para quem tem a permissão membros.cpf).
+ */
+import { useCallback, useEffect, useState } from "react";
+import { Plus } from "lucide-react";
+import {
+  buscarDadosMembros,
+  excluirMembro,
+  obterCpfMembro,
+  obterQrMembro,
+  regenerarQrMembro,
+} from "@/modules/membros/services/membros";
+import QrMembro from "@/modules/membros/components/QrMembro";
+import { useSessao } from "@/modules/autenticacao/SessaoProvider";
+import Button from "@/components/ui/Button";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import Drawer from "@/components/ui/Drawer";
+import Notificacao from "@/components/ui/Notificacao";
+import PageHeader from "@/components/ui/PageHeader";
+import FormularioMembro from "@/components/FormularioMembro";
+import ListaMembros from "@/components/ListaMembros";
+import { valoresDistintos } from "@/lib/listas";
+import { montarConteudoQr } from "@/lib/qr";
+import { gerarImagemQr } from "@/lib/qrImagem";
+import type { Cargo, Familia, Instrumento, MembroPublico } from "@/types/database";
+
+// Qual painel lateral está aberto: novo membro, edição ou QR Code de um membro
+type PainelMembro =
+  | { tipo: "novo" }
+  | { tipo: "editar"; membro: MembroPublico; cpfInicial: string | null }
+  | { tipo: "qr"; membro: MembroPublico; imagem: string; conteudo: string };
+
+export default function MembrosPage() {
+  const { pode } = useSessao();
+  const [cargos, setCargos] = useState<Cargo[]>([]);
+  const [instrumentos, setInstrumentos] = useState<Instrumento[]>([]);
+  const [familias, setFamilias] = useState<Familia[]>([]);
+  const [membros, setMembros] = useState<MembroPublico[]>([]);
+  const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
+  const [erro, setErro] = useState<string | null>(null);
+  const [painel, setPainel] = useState<PainelMembro | null>(null);
+  const [abrindo, setAbrindo] = useState(false); // buscando CPF/QR antes de abrir o painel
+  const [erroAcao, setErroAcao] = useState<string | null>(null);
+  const [alvoExclusao, setAlvoExclusao] = useState<MembroPublico | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+  const [erroExclusao, setErroExclusao] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  // Busca cargos, instrumentos, famílias e membros
+  const carregar = useCallback(async () => {
+    try {
+      const dados = await buscarDadosMembros();
+      setCargos(dados.cargos);
+      setInstrumentos(dados.instrumentos);
+      setFamilias(dados.familias);
+      setMembros(dados.membros);
+      setErro(null);
+    } catch (e) {
+      // O detalhe técnico vai só para o console; a tela mostra uma mensagem simples
+      console.error("Falha ao carregar membros:", e);
+      setErro("Não foi possível carregar os dados. Verifique a conexão e tente novamente.");
+    } finally {
+      setCarregando(false);
+    }
+  }, []);
+
+  // Primeira carga ao abrir a página
+  useEffect(() => {
+    // O setState só roda DEPOIS do await (nunca de forma síncrona), então o aviso da regra
+    // set-state-in-effect não se aplica a esta carga inicial. Ignorado apenas nesta linha.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void carregar();
+  }, [carregar]);
+
+  // Botão "Tentar novamente": volta ao estado de loading e busca de novo
+  function tentarNovamente() {
+    setCarregando(true);
+    void carregar();
+  }
+
+  // Depois de salvar: recarrega a lista, fecha o painel e mostra o aviso de sucesso
+  async function aoSalvar(mensagem: string) {
+    await carregar();
+    setPainel(null);
+    setAviso(mensagem);
+  }
+
+  // Abre a edição já com o CPF completo (a consulta fica registrada na auditoria)
+  async function abrirEdicao(membro: MembroPublico) {
+    if (abrindo) return;
+    setErroAcao(null);
+    setAbrindo(true);
+    try {
+      const cpfInicial = pode("membros.cpf") ? await obterCpfMembro(membro.id) : null;
+      setPainel({ tipo: "editar", membro, cpfInicial });
+    } catch (e) {
+      setErroAcao(e instanceof Error ? e.message : "Não foi possível abrir a edição.");
+    } finally {
+      setAbrindo(false);
+    }
+  }
+
+  // Busca o código do QR Code no servidor (fica registrado na auditoria) e gera a imagem
+  async function montarPainelQr(membro: MembroPublico, codigo: string): Promise<PainelMembro> {
+    const conteudo = montarConteudoQr(codigo);
+    const imagem = await gerarImagemQr(conteudo);
+    return { tipo: "qr", membro, imagem, conteudo };
+  }
+
+  async function abrirQr(membro: MembroPublico) {
+    if (abrindo) return;
+    setErroAcao(null);
+    setAbrindo(true);
+    try {
+      setPainel(await montarPainelQr(membro, await obterQrMembro(membro.id)));
+    } catch (e) {
+      setErroAcao(e instanceof Error ? e.message : "Não foi possível abrir o QR Code.");
+    } finally {
+      setAbrindo(false);
+    }
+  }
+
+  // Substitui o QR Code (o código antigo deixa de funcionar) e mostra a nova imagem
+  async function substituirQr(membro: MembroPublico, justificativa: string) {
+    const novoCodigo = await regenerarQrMembro(membro.id, justificativa);
+    setPainel(await montarPainelQr(membro, novoCodigo));
+    setAviso(`QR Code de "${membro.nome}" substituído. O código anterior deixou de funcionar.`);
+  }
+
+  // Confirma a exclusão (lógica) do membro escolhido
+  async function confirmarExclusao() {
+    if (!alvoExclusao) return;
+    setExcluindo(true);
+    setErroExclusao(null);
+    try {
+      await excluirMembro(alvoExclusao.id);
+      await carregar();
+      setAviso(`Membro "${alvoExclusao.nome}" excluído.`);
+      setAlvoExclusao(null);
+    } catch (e) {
+      setErroExclusao(e instanceof Error ? e.message : "Não foi possível excluir o membro.");
+    } finally {
+      setExcluindo(false);
+    }
+  }
+
+  // Sugestões dos campos de localidade (valores já cadastrados)
+  const sugestoes = {
+    congregacoes: valoresDistintos(membros.map((membro) => membro.congregacao)),
+    cidades: valoresDistintos(membros.map((membro) => membro.cidade)),
+    bairros: valoresDistintos(membros.map((membro) => membro.bairro)),
+  };
+
+  const tituloPainel =
+    painel?.tipo === "editar" ? "Editar membro" : painel?.tipo === "qr" ? "QR Code do membro" : "Novo membro";
+
+  return (
+    <main className="text-slate-900">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <PageHeader
+          titulo="Músicos / Organistas"
+          descricao={`Cadastre e acompanhe os membros do SysMúsica.${
+            !carregando && !erro ? ` ${membros.length} cadastrado(s).` : ""
+          }`}
+          acoes={
+            pode("membros.criar") ? (
+              <Button icone={Plus} onClick={() => setPainel({ tipo: "novo" })} disabled={carregando || !!erro}>
+                Adicionar
+              </Button>
+            ) : undefined
+          }
+        />
+
+        {erroAcao && (
+          <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {erroAcao}
+          </p>
+        )}
+
+        <ListaMembros
+          membros={membros}
+          cargos={cargos}
+          instrumentos={instrumentos}
+          familias={familias}
+          carregando={carregando}
+          erro={erro}
+          onTentarNovamente={tentarNovamente}
+          podeEditar={pode("membros.editar")}
+          podeExcluir={pode("membros.excluir")}
+          podeQr={pode("membros.qr")}
+          onEditar={(membro) => void abrirEdicao(membro)}
+          onQr={(membro) => void abrirQr(membro)}
+          onExcluir={(membro) => {
+            setErroExclusao(null);
+            setAlvoExclusao(membro);
+          }}
+        />
+      </div>
+
+      {/* Painel lateral: novo membro, edição ou QR Code */}
+      <Drawer
+        aberto={painel !== null}
+        onFechar={() => setPainel(null)}
+        titulo={tituloPainel}
+        descricao={
+          painel?.tipo === "qr" ? "Identificação individual e permanente do membro." : "Preencha os dados do membro."
+        }
+      >
+        {(painel?.tipo === "novo" || painel?.tipo === "editar") && (
+          <FormularioMembro
+            membro={painel.tipo === "editar" ? painel.membro : null}
+            cpfInicial={painel.tipo === "editar" ? painel.cpfInicial : null}
+            podeCpf={pode("membros.cpf")}
+            podeFoto={pode("membros.foto")}
+            cargos={cargos}
+            instrumentos={instrumentos}
+            familias={familias}
+            sugestoes={sugestoes}
+            carregando={carregando}
+            erro={erro}
+            onSalvo={aoSalvar}
+          />
+        )}
+        {painel?.tipo === "qr" && (
+          <QrMembro
+            nome={painel.membro.nome}
+            congregacao={painel.membro.congregacao}
+            imagem={painel.imagem}
+            conteudo={painel.conteudo}
+            podeSubstituir={pode("membros.qr_revogar")}
+            onSubstituir={(justificativa) => substituirQr(painel.membro, justificativa)}
+          />
+        )}
+      </Drawer>
+
+      {/* Confirmação de exclusão */}
+      <ConfirmDialog
+        aberto={alvoExclusao !== null}
+        titulo="Excluir membro?"
+        mensagem={
+          <>
+            <p>
+              <strong>{alvoExclusao?.nome}</strong> deixará de aparecer nas telas. O histórico de
+              presenças dele é mantido. Para apenas impedir novos registros sem excluir, altere a situação
+              cadastral para Inativo na edição.
+            </p>
+            {erroExclusao && (
+              <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-red-700">
+                {erroExclusao}
+              </p>
+            )}
+          </>
+        }
+        textoConfirmar="Excluir"
+        processando={excluindo}
+        onConfirmar={() => void confirmarExclusao()}
+        onCancelar={() => setAlvoExclusao(null)}
+      />
+
+      <Notificacao mensagem={aviso} onFechar={() => setAviso(null)} />
+    </main>
+  );
+}
+
+################ src/app/(painel)/fotografias/page.tsx
+"use client";
+
+/**
+ * SysMúsica — Página /fotografias: cadastro, troca e remoção da fotografia dos membros.
+ * A foto é reduzida no navegador (800 px, JPEG) e guardada em armazenamento privado. A fotografia
+ * aparece para a portaria na hora de conferir a identidade (leitura do QR Code ou busca pelo nome).
+ */
+import { useCallback, useEffect, useState } from "react";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import ErrorState from "@/components/ui/ErrorState";
+import Notificacao from "@/components/ui/Notificacao";
+import PageHeader from "@/components/ui/PageHeader";
+import Skeleton from "@/components/ui/Skeleton";
+import GaleriaFotos from "@/modules/membros/components/GaleriaFotos";
+import { prepararFoto } from "@/modules/membros/fotoImagem";
+import {
+  enviarFoto,
+  listarMembrosParaFoto,
+  removerFoto,
+  urlsDasFotos,
+  type MembroFoto,
+} from "@/modules/membros/services/fotos";
+
+export default function FotografiasPage() {
+  const [membros, setMembros] = useState<MembroFoto[]>([]);
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupadoId, setOcupadoId] = useState<string | null>(null);
+  const [erroAcao, setErroAcao] = useState<string | null>(null);
+  const [alvoRemocao, setAlvoRemocao] = useState<MembroFoto | null>(null);
+  const [removendo, setRemovendo] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  // Busca os membros e as URLs temporárias das fotos já cadastradas
+  const carregar = useCallback(async () => {
+    try {
+      const lista = await listarMembrosParaFoto();
+      const mapa = await urlsDasFotos(lista.flatMap((membro) => (membro.foto_path ? [membro.foto_path] : [])));
+      setMembros(lista);
+      setUrls(mapa);
+      setErro(null);
+    } catch (e) {
+      console.error("Falha ao carregar as fotografias:", e);
+      setErro(e instanceof Error ? e.message : "Não foi possível carregar os membros.");
+    } finally {
+      setCarregando(false);
+    }
+  }, []);
+
+  // Primeira carga ao abrir a página
+  useEffect(() => {
+    // O setState só roda DEPOIS do await (nunca de forma síncrona). Ignorado apenas nesta linha.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void carregar();
+  }, [carregar]);
+
+  function tentarNovamente() {
+    setCarregando(true);
+    void carregar();
+  }
+
+  // Foto escolhida: reduz, envia, vincula ao membro e recarrega a lista
+  async function aoEscolherArquivo(membro: MembroFoto, arquivo: File) {
+    setOcupadoId(membro.id);
+    setErroAcao(null);
+    try {
+      const imagem = await prepararFoto(arquivo);
+      await enviarFoto(membro.id, imagem);
+      await carregar();
+      setAviso(`Fotografia de ${membro.nome} atualizada.`);
+    } catch (e) {
+      setErroAcao(e instanceof Error ? e.message : "Não foi possível salvar a fotografia.");
+    } finally {
+      setOcupadoId(null);
+    }
+  }
+
+  async function confirmarRemocao() {
+    if (!alvoRemocao) return;
+    setRemovendo(true);
+    setErroAcao(null);
+    try {
+      await removerFoto(alvoRemocao.id);
+      await carregar();
+      setAviso(`Fotografia de ${alvoRemocao.nome} removida.`);
+      setAlvoRemocao(null);
+    } catch (e) {
+      setErroAcao(e instanceof Error ? e.message : "Não foi possível remover a fotografia.");
+      setAlvoRemocao(null);
+    } finally {
+      setRemovendo(false);
+    }
+  }
+
+  return (
+    <main className="text-slate-900">
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+        <PageHeader
+          titulo="Fotografias"
+          descricao="Cadastre a fotografia dos membros: ela aparece para a portaria na conferência de identidade."
+        />
+
+        {erroAcao && (
+          <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {erroAcao}
+          </p>
+        )}
+
+        {carregando ? (
+          <div role="status" aria-live="polite" className="space-y-3">
+            <span className="sr-only">Carregando membros...</span>
+            <Skeleton className="h-14 rounded-2xl" />
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16" />
+            ))}
+          </div>
+        ) : erro ? (
+          <ErrorState titulo="Não foi possível carregar os membros." mensagem={erro} onTentarNovamente={tentarNovamente} />
+        ) : (
+          <GaleriaFotos
+            membros={membros}
+            urls={urls}
+            ocupadoId={ocupadoId}
+            onEscolherArquivo={(membro, arquivo) => void aoEscolherArquivo(membro, arquivo)}
+            onRemover={setAlvoRemocao}
+          />
+        )}
+      </div>
+
+      <ConfirmDialog
+        aberto={alvoRemocao !== null}
+        titulo="Remover fotografia?"
+        mensagem={
+          <p>
+            A fotografia de <strong>{alvoRemocao?.nome}</strong> será apagada. Na portaria, ele aparecerá sem
+            foto até que uma nova seja cadastrada.
+          </p>
+        }
+        textoConfirmar="Remover"
+        processando={removendo}
+        onConfirmar={() => void confirmarRemocao()}
+        onCancelar={() => setAlvoRemocao(null)}
+      />
+
+      <Notificacao mensagem={aviso} onFechar={() => setAviso(null)} />
+    </main>
+  );
+}
+
+### B. testes que citam membro
+src/components/layout/navegacao.test.ts
+src/lib/qr.test.ts
+src/modules/administracao/regras.test.ts
+src/modules/atendimento/regrasEntrada.test.ts
+src/modules/auditoria/regras.test.ts
+src/modules/backup/aplicacao.test.ts
+src/modules/backup/cripto.test.ts
+src/modules/backup/regras.test.ts
+src/modules/backup/restauracao.test.ts
+src/modules/backup/tabelas.test.ts
+src/modules/dashboard/services/agregacoes.test.ts
+src/modules/organizacao/regras.test.ts
+src/modules/painel/regras.test.ts
+src/modules/relatorios/regras.test.ts
+
+### C. tipos de Membro
+54-// Tabela: membros (antiga "musicos")
+55-// ---------------------------------------------------------------------
+56:export interface Membro {
+57-  id: string;
+58-  nome: string;
+59-  congregacao: string;
+60-  cargo_id: string; // FK -> cargos.id
+61-  data_nascimento: string | null; // date (AAAA-MM-DD)
+62-  instrumento_id: string | null; // FK -> instrumentos.id (null = sem instrumento)
+63-  status: string; // ex: "Ativo", "Inativo" (padrão no banco: "Ativo")
+64-  qr_secret: string; // segredo do QR Code; NÃO é legível pela chave anon (ver schema.sql, seção 13)
+65-  data_cadastro: string; // timestamptz, preenchido automaticamente (now())
+66-  excluido_em: string | null; // exclusão lógica: preenchido quando o membro é excluído (some das telas)
+67-  cpf: string | null; // 11 dígitos; NÃO é lido diretamente (use cpf_mascarado ou a função obter_cpf_membro)
+68-  cpf_mascarado: string | null; // "***.***.***-25": coluna gerada pelo banco
+69-  cidade: string | null; // município da congregação
+70-  bairro: string | null; // bairro ou igreja de referência
+71-  atualizado_em: string; // timestamptz, atualizado automaticamente a cada alteração
+72-  casa_oracao_id?: string | null; // FK -> casas_oracao.id: a casa de oração do membro (define quem enxerga o cadastro)
+73-  foto_path?: string | null; // caminho da fotografia no armazenamento privado (exibida por URL temporária)
+74-  categoria?: string | null; // OFICIALIZADO, CULTO_OFICIAL ou RJM (só Músico e Organista; define a linha do painel ao vivo)
+75-}
+76-
+77-/**
+78- * Membro como o frontend consegue LER com a chave anon (sem qr_secret).
+79- * Use este tipo nas telas que buscam membros. A família do membro é a do seu instrumento.
+80- */
+81-export type MembroPublico = Omit<Membro, "qr_secret" | "excluido_em" | "cpf">;
+82-
+83-/**
+84- * Colunas liberadas para leitura pública em "membros".
+85- * Deve ser IGUAL à lista do GRANT SELECT (...) em supabase/schema.sql e às chaves de MembroPublico.
+86- * Usada no lugar de select("*"), que falha porque inclui o qr_secret.
+87- */
+88-export const COLUNAS_MEMBRO_PUBLICO =
+89-  "id, nome, congregacao, cargo_id, data_nascimento, instrumento_id, status, data_cadastro, cidade, bairro, atualizado_em, cpf_mascarado, casa_oracao_id, foto_path, categoria" as const;
+90-
+91-/** Payload para INSERT: o qr_secret é sempre gerado pelo banco e não pode ser enviado. */
+92-export type MembroInsert = Pick<Membro, "nome" | "congregacao" | "cargo_id"> &
+93-  Partial<
+94-    Pick<
+95-      Membro,
+96-      "id" | "data_nascimento" | "instrumento_id" | "status" | "data_cadastro" | "cidade" | "bairro" | "cpf" | "casa_oracao_id" | "foto_path" | "categoria"
+97-    >
+98-  >;
+99-
+100-// ---------------------------------------------------------------------
+101-// Tabela: eventos
+
+### D. banco: tabelas, views, grants e policies de membros/cargos
+supabase/migrations/0001_baseline.sql:33:create table if not exists public.cargos (
+supabase/migrations/0001_baseline.sql:138:create table if not exists public.membros (
+supabase/migrations/0001_baseline.sql:151:alter table public.membros
+supabase/migrations/0001_baseline.sql:206:    alter table public.membros drop column categoria_instrumento;
+supabase/migrations/0001_baseline.sql:364:alter table public.membros       enable row level security;
+supabase/migrations/0001_baseline.sql:369:drop policy if exists "anon_select_cargos"        on public.cargos;
+supabase/migrations/0001_baseline.sql:374:drop policy if exists "anon_select_membros"       on public.membros;
+supabase/migrations/0001_baseline.sql:375:drop policy if exists "anon_insert_membros"       on public.membros;
+supabase/migrations/0001_baseline.sql:382:create policy "anon_select_cargos"       on public.cargos
+supabase/migrations/0001_baseline.sql:403:create policy "anon_select_membros"      on public.membros
+supabase/migrations/0001_baseline.sql:405:create policy "anon_insert_membros"      on public.membros
+supabase/migrations/0002_rbac.sql:287:drop policy if exists "anon_select_cargos"        on public.cargos;
+supabase/migrations/0002_rbac.sql:292:drop policy if exists "anon_select_membros"       on public.membros;
+supabase/migrations/0002_rbac.sql:293:drop policy if exists "anon_insert_membros"       on public.membros;
+supabase/migrations/0002_rbac.sql:300:drop policy if exists "cargos_select"       on public.cargos;
+supabase/migrations/0002_rbac.sql:306:drop policy if exists "membros_select"      on public.membros;
+supabase/migrations/0002_rbac.sql:307:drop policy if exists "membros_insert"      on public.membros;
+supabase/migrations/0002_rbac.sql:308:drop policy if exists "membros_update"      on public.membros;
+supabase/migrations/0002_rbac.sql:309:drop policy if exists "membros_delete"      on public.membros;
+supabase/migrations/0002_rbac.sql:320:create policy "cargos_select" on public.cargos
+supabase/migrations/0002_rbac.sql:340:create policy "membros_select" on public.membros
+supabase/migrations/0002_rbac.sql:345:create policy "membros_insert" on public.membros
+supabase/migrations/0002_rbac.sql:347:create policy "membros_update" on public.membros
+supabase/migrations/0002_rbac.sql:351:create policy "membros_delete" on public.membros
+supabase/migrations/0004_cadastros.sql:48:alter table public.membros  add column if not exists excluido_em timestamptz;
+supabase/migrations/0004_cadastros.sql:75:drop policy if exists "membros_select" on public.membros;
+supabase/migrations/0004_cadastros.sql:76:drop policy if exists "membros_update" on public.membros;
+supabase/migrations/0004_cadastros.sql:77:drop policy if exists "membros_delete" on public.membros;
+supabase/migrations/0004_cadastros.sql:83:create policy "membros_select" on public.membros
+supabase/migrations/0004_cadastros.sql:91:create policy "membros_update" on public.membros
+supabase/migrations/0006_identidade_membro.sql:82:alter table public.membros add column if not exists cpf    text;
+supabase/migrations/0006_identidade_membro.sql:83:alter table public.membros add column if not exists cidade text;
+supabase/migrations/0006_identidade_membro.sql:84:alter table public.membros add column if not exists bairro text;
+supabase/migrations/0006_identidade_membro.sql:85:alter table public.membros add column if not exists atualizado_em timestamptz not null default now();
+supabase/migrations/0006_identidade_membro.sql:86:alter table public.membros
+supabase/migrations/0006_identidade_membro.sql:96:    alter table public.membros
+supabase/migrations/0008_atendimento_portaria.sql:33:alter table public.membros add column if not exists foto_path text;
+supabase/migrations/0012_hierarquia_organizacional.sql:155:alter table public.membros add column if not exists comum_id uuid references public.comuns (id);
+supabase/migrations/0012_hierarquia_organizacional.sql:161:grant select (comum_id), insert (comum_id), update (comum_id) on public.membros to authenticated;
+supabase/migrations/0012_hierarquia_organizacional.sql:949:drop policy if exists "regiao_membros" on public.membros;
+supabase/migrations/0012_hierarquia_organizacional.sql:950:create policy "regiao_membros" on public.membros
+supabase/migrations/0014_visitantes_portaria.sql:37:alter table public.membros add column if not exists visitante boolean not null default false;
+supabase/migrations/0015_auditoria_e_origem_visitante.sql:267:alter table public.membros
+supabase/migrations/0016_instrumento_obrigatorio.sql:25:grant select (exige_instrumento) on public.cargos to authenticated;
+supabase/migrations/0017_foto_obrigatoria.sql:43:grant select (foto_path) on public.membros to authenticated;
+supabase/migrations/0017_foto_obrigatoria.sql:44:grant insert (id, foto_path) on public.membros to authenticated;
+supabase/migrations/0026_painel_ao_vivo.sql:49:alter table public.membros add column if not exists categoria text;
+supabase/migrations/0026_painel_ao_vivo.sql:50:alter table public.membros drop constraint if exists membros_categoria_check;
+supabase/migrations/0026_painel_ao_vivo.sql:51:alter table public.membros add constraint membros_categoria_check
+supabase/migrations/0026_painel_ao_vivo.sql:54:grant select (categoria), insert (categoria), update (categoria) on public.membros to authenticated;
+supabase/migrations/0031_casa_de_oracao.sql:40:drop policy if exists regiao_membros on public.membros;
+supabase/migrations/0031_casa_de_oracao.sql:62:alter table public.membros rename column comum_id to casa_oracao_id;
+supabase/migrations/0031_casa_de_oracao.sql:63:alter table public.membros rename column origem_comum_id to origem_casa_oracao_id;
+supabase/migrations/0031_casa_de_oracao.sql:71:alter table public.membros rename constraint membros_comum_id_fkey to membros_casa_oracao_id_fkey;
+supabase/migrations/0031_casa_de_oracao.sql:72:alter table public.membros rename constraint membros_origem_comum_id_fkey to membros_origem_casa_oracao_id_fkey;
+supabase/migrations/0031_casa_de_oracao.sql:1652:create policy regiao_membros on public.membros for all
+supabase/migrations/0032_regras_de_regiao.sql:7:drop policy if exists regiao_membros on public.membros;
+supabase/migrations/0032_regras_de_regiao.sql:14:create policy regiao_membros on public.membros
+
+### E. banco: CPF
+supabase/migrations/0006_identidade_membro.sql:2:-- SysMúsica — Migração 0006: identidade do membro (CPF, localidade, QR Code) e auditoria base
+supabase/migrations/0006_identidade_membro.sql:5:--   * CPF: coluna protegida (a aplicação só lê a versão mascarada), validada pelos dígitos
+supabase/migrations/0006_identidade_membro.sql:6:--     verificadores e ÚNICA entre os membros não excluídos. O CPF completo só é lido pela função
+supabase/migrations/0006_identidade_membro.sql:7:--     obter_cpf_membro (permissão membros.cpf) e cada consulta fica registrada na auditoria.
+supabase/migrations/0006_identidade_membro.sql:8:--     Só quem tem membros.cpf consegue informar ou alterar o CPF;
+supabase/migrations/0006_identidade_membro.sql:24:  ('membros.cpf',        'Membros', 'CPF',                 'Ver e informar o CPF completo dos membros'),
+supabase/migrations/0006_identidade_membro.sql:39:-- 2) CPF: validação pelos dígitos verificadores
+supabase/migrations/0006_identidade_membro.sql:40:--    (mantenha igual a validarCpf em src/lib/cpf.ts: há testes dos dois lados)
+supabase/migrations/0006_identidade_membro.sql:42:create or replace function public.cpf_valido(p_cpf text)
+supabase/migrations/0006_identidade_membro.sql:53:  if p_cpf is null or p_cpf !~ '^[0-9]{11}$' or p_cpf ~ '^(.)\1{10}$' then
+supabase/migrations/0006_identidade_membro.sql:60:    soma := soma + substr(p_cpf, i, 1)::int * (11 - i);
+supabase/migrations/0006_identidade_membro.sql:64:  if resto <> substr(p_cpf, 10, 1)::int then return false; end if;
+supabase/migrations/0006_identidade_membro.sql:69:    soma := soma + substr(p_cpf, i, 1)::int * (12 - i);
+supabase/migrations/0006_identidade_membro.sql:74:  return resto = substr(p_cpf, 11, 1)::int;
+supabase/migrations/0006_identidade_membro.sql:80:--    cpf_mascarado é uma coluna GERADA pelo banco: é a única versão do CPF que a tela lê.
+supabase/migrations/0006_identidade_membro.sql:82:alter table public.membros add column if not exists cpf    text;
+supabase/migrations/0006_identidade_membro.sql:87:  add column if not exists cpf_mascarado text
+supabase/migrations/0006_identidade_membro.sql:88:  generated always as (case when cpf is null then null else '***.***.***-' || right(cpf, 2) end) stored;
+supabase/migrations/0006_identidade_membro.sql:94:    where conname = 'membros_cpf_valido' and conrelid = 'public.membros'::regclass
+supabase/migrations/0006_identidade_membro.sql:97:      add constraint membros_cpf_valido check (cpf is null or public.cpf_valido(cpf));
+supabase/migrations/0006_identidade_membro.sql:102:-- Um CPF por membro (os excluídos liberam o CPF)
+supabase/migrations/0006_identidade_membro.sql:103:create unique index if not exists membros_cpf_unico
+supabase/migrations/0006_identidade_membro.sql:104:  on public.membros (cpf)
+supabase/migrations/0006_identidade_membro.sql:105:  where cpf is not null and excluido_em is null;
+supabase/migrations/0006_identidade_membro.sql:108:-- 4) GATILHO: protege o CPF e mantém atualizado_em
+supabase/migrations/0006_identidade_membro.sql:109:--    Quem não tem membros.cpf não informa nem altera o CPF (vale para usuários logados no sistema;
+supabase/migrations/0006_identidade_membro.sql:122:      if new.cpf is not null and not public.tem_permissao('membros.cpf') then
+supabase/migrations/0006_identidade_membro.sql:123:        raise exception 'Você não tem permissão para informar o CPF.' using errcode = '42501';
+supabase/migrations/0006_identidade_membro.sql:125:    elsif new.cpf is distinct from old.cpf and not public.tem_permissao('membros.cpf') then
+supabase/migrations/0006_identidade_membro.sql:126:      raise exception 'Você não tem permissão para alterar o CPF.' using errcode = '42501';
+supabase/migrations/0006_identidade_membro.sql:143:-- 5) PRIVILÉGIOS DAS COLUNAS (o CPF completo e o qr_secret NUNCA são lidos diretamente)
+supabase/migrations/0006_identidade_membro.sql:148:              data_cadastro, excluido_em, cidade, bairro, atualizado_em, cpf_mascarado)
+supabase/migrations/0006_identidade_membro.sql:153:              cidade, bairro, cpf)
+supabase/migrations/0006_identidade_membro.sql:164:  acao        text        not null,                   -- ex: qr_substituido, cpf_visualizado
+supabase/migrations/0006_identidade_membro.sql:228:-- CPF completo de um membro (permissão membros.cpf); a consulta fica registrada
+supabase/migrations/0006_identidade_membro.sql:229:create or replace function public.obter_cpf_membro(p_id uuid)
+supabase/migrations/0006_identidade_membro.sql:236:  v_cpf text;
+supabase/migrations/0006_identidade_membro.sql:238:  perform public.exigir_permissao('membros.cpf');
+supabase/migrations/0006_identidade_membro.sql:240:  select m.cpf into v_cpf from public.membros m where m.id = p_id and m.excluido_em is null;
+supabase/migrations/0006_identidade_membro.sql:245:  perform public.registrar_auditoria('cpf_visualizado', 'membro', p_id, '{}'::jsonb);
+supabase/migrations/0006_identidade_membro.sql:246:  return v_cpf;
+supabase/migrations/0006_identidade_membro.sql:317:  public.obter_cpf_membro(uuid),
+supabase/migrations/0006_identidade_membro.sql:322:  public.obter_cpf_membro(uuid),
+supabase/migrations/0014_visitantes_portaria.sql:7:--     QR Code próprio. Sem CPF obrigatório. Cada cadastro fica na auditoria.
+supabase/migrations/0015_auditoria_e_origem_visitante.sql:9:--      CPF e código do QR Code nunca são gravados (aparece só "(alterado)" ou "(protegido)").
+supabase/migrations/0015_auditoria_e_origem_visitante.sql:50:           case when t.k = any (array['cpf', 'qr_secret', 'cpf_mascarado', 'token_hash'])
+supabase/migrations/0015_auditoria_e_origem_visitante.sql:54:    and not (t.k = any (array['cpf', 'qr_secret', 'cpf_mascarado', 'token_hash']) and t.v = 'null'::jsonb)
+supabase/migrations/0015_auditoria_e_origem_visitante.sql:60:  v_sens   text[] := array['cpf', 'qr_secret', 'cpf_mascarado', 'token_hash'];
+supabase/migrations/0018_relatorios.sql:7:--   * Nada de CPF completo: só o CPF parcial, e só para quem tem a permissão de CPF.
+supabase/migrations/0018_relatorios.sql:90:-- 3) MEMBROS (exige membros.visualizar; só a abrangência do usuário; CPF só parcial e só com a permissão de CPF)
+supabase/migrations/0018_relatorios.sql:98:  cadastrado_em timestamptz, cpf_parcial text, total bigint
+supabase/migrations/0018_relatorios.sql:103:  v_cpf boolean;
+supabase/migrations/0018_relatorios.sql:106:  v_cpf := public.tem_permissao('membros.cpf');
+supabase/migrations/0018_relatorios.sql:112:           case when v_cpf then m.cpf_mascarado end,
+supabase/migrations/0020_backup.sql:116:  v_sens   text[] := array['cpf', 'qr_secret', 'cpf_mascarado', 'token_hash'];
+supabase/migrations/0026_painel_ao_vivo.sql:53:-- O acesso às colunas de "membros" é liberado coluna por coluna (o qr_secret e o CPF ficam protegidos)
+supabase/migrations/0031_casa_de_oracao.sql:96:  v_sens   text[] := array['cpf', 'qr_secret', 'cpf_mascarado', 'token_hash'];
+supabase/migrations/0031_casa_de_oracao.sql:1223: RETURNS TABLE(nome text, cargo text, instrumento text, familia text, regiao text, setor text, casa_oracao text, cidade text, bairro text, st
+supabase/migrations/0031_casa_de_oracao.sql:1230:  v_cpf boolean;
+supabase/migrations/0031_casa_de_oracao.sql:1233:  v_cpf := public.tem_permissao('membros.cpf');
+
+### F. banco: funções de membro
+supabase/migrations/0004_cadastros.sql:129:create or replace function public.excluir_membro(p_id uuid)
+supabase/migrations/0006_identidade_membro.sql:112:create or replace function public.membros_antes_de_gravar()
+supabase/migrations/0006_identidade_membro.sql:140:  for each row execute function public.membros_antes_de_gravar();
+supabase/migrations/0006_identidade_membro.sql:229:create or replace function public.obter_cpf_membro(p_id uuid)
+supabase/migrations/0006_identidade_membro.sql:251:create or replace function public.obter_qr_membro(p_id uuid)
+supabase/migrations/0008_atendimento_portaria.sql:65:create or replace function public.listar_membros_para_foto()
+supabase/migrations/0008_atendimento_portaria.sql:79:create or replace function public.definir_foto_membro(p_membro_id uuid, p_path text)
+supabase/migrations/0008_atendimento_portaria.sql:110:create or replace function public.remover_foto_membro(p_membro_id uuid)
+supabase/migrations/0008_atendimento_portaria.sql:149:create or replace function public.cartao_membro(p_portaria_id uuid, p_membro_id uuid)
+supabase/migrations/0008_atendimento_portaria.sql:166:create or replace function public.buscar_membro_por_qr(p_portaria_id uuid, p_codigo text)
+supabase/migrations/0008_atendimento_portaria.sql:194:create or replace function public.buscar_membros_por_nome(p_portaria_id uuid, p_nome text)
+supabase/migrations/0010_duplicidade_por_evento.sql:81:create or replace function public.cartao_membro(p_portaria_id uuid, p_membro_id uuid)
+supabase/migrations/0012_hierarquia_organizacional.sql:276:create or replace function public.membros_sincroniza_comum()
+supabase/migrations/0012_hierarquia_organizacional.sql:306:  for each row execute function public.membros_sincroniza_comum();
+supabase/migrations/0012_hierarquia_organizacional.sql:914:create or replace function public.cartao_membro(p_portaria_id uuid, p_membro_id uuid)
+supabase/migrations/0012_hierarquia_organizacional.sql:934:create or replace function public.listar_membros_para_foto()
+supabase/migrations/0013_excluir_organizacao.sql:49:create or replace function public.membros_sincroniza_comum()
+supabase/migrations/0014_visitantes_portaria.sql:121:create or replace function public.cartao_do_membro(p_portaria_id uuid, p_membro_id uuid)
+supabase/migrations/0016_instrumento_obrigatorio.sql:31:create or replace function public.membros_exige_instrumento()
+supabase/migrations/0016_instrumento_obrigatorio.sql:59:  for each row execute function public.membros_exige_instrumento();
+supabase/migrations/0016_instrumento_obrigatorio.sql:163:revoke all on function public.membros_exige_instrumento() from public, anon, authenticated;
+supabase/migrations/0017_foto_obrigatoria.sql:27:create or replace function public.validar_foto_membro(p_membro_id uuid, p_path text)
+supabase/migrations/0017_foto_obrigatoria.sql:47:create or replace function public.membros_exige_foto()
+supabase/migrations/0017_foto_obrigatoria.sql:61:  for each row execute function public.membros_exige_foto();
+supabase/migrations/0017_foto_obrigatoria.sql:74:create or replace function public.definir_foto_membro(p_membro_id uuid, p_path text)
+supabase/migrations/0017_foto_obrigatoria.sql:97:create or replace function public.remover_foto_membro(p_membro_id uuid)
+supabase/migrations/0017_foto_obrigatoria.sql:206:revoke all on function public.validar_foto_membro(uuid, text), public.membros_exige_foto()
+supabase/migrations/0018_relatorios.sql:91:create or replace function public.relatorio_membros(
+supabase/migrations/0018_relatorios.sql:182:create or replace function public.contagem_membros_por()
+supabase/migrations/0031_casa_de_oracao.sql:279:CREATE OR REPLACE FUNCTION public.cartao_membro(p_portaria_id uuid, p_membro_id uuid)
+supabase/migrations/0031_casa_de_oracao.sql:344:CREATE OR REPLACE FUNCTION public.contagem_membros_por()
+supabase/migrations/0031_casa_de_oracao.sql:492:CREATE OR REPLACE FUNCTION public.definir_foto_membro(p_membro_id uuid, p_path text)
+supabase/migrations/0031_casa_de_oracao.sql:806:CREATE OR REPLACE FUNCTION public.listar_membros_para_foto()
+supabase/migrations/0031_casa_de_oracao.sql:965:CREATE OR REPLACE FUNCTION public.membros_sincroniza_casa_oracao()
+supabase/migrations/0031_casa_de_oracao.sql:1222:CREATE OR REPLACE FUNCTION public.relatorio_membros(p_regiao uuid, p_setor uuid, p_casa_oracao uuid, p_cargo uuid, p_instrumento uuid, p_stat
+supabase/migrations/0031_casa_de_oracao.sql:1309:CREATE OR REPLACE FUNCTION public.remover_foto_membro(p_membro_id uuid)
+
+### G. cargos: definição e inserts
+supabase/migrations/0001_baseline.sql:30:--    permite_instrumento: indica se o cargo informa instrumento.
+supabase/migrations/0001_baseline.sql:36:  permite_instrumento boolean not null default false
+supabase/migrations/0001_baseline.sql:41:insert into public.cargos (nome, permite_instrumento) values
+supabase/migrations/0014_visitantes_portaria.sql:41:returns table (tipo text, id uuid, nome text, permite_instrumento boolean)
+supabase/migrations/0014_visitantes_portaria.sql:46:    select 'CARGO'::text, c.id, c.nome, c.permite_instrumento from public.cargos c
+supabase/migrations/0014_visitantes_portaria.sql:80:  select c.permite_instrumento into v_permite from public.cargos c where c.id = p_cargo_id;
+supabase/migrations/0015_auditoria_e_origem_visitante.sql:327:  select c.permite_instrumento into v_permite from public.cargos c where c.id = p_cargo_id;
+supabase/migrations/0016_instrumento_obrigatorio.sql:66:  tipo text, id uuid, nome text, permite_instrumento boolean, exige_instrumento boolean, familia_id uuid
+supabase/migrations/0016_instrumento_obrigatorio.sql:72:    select 'CARGO'::text, c.id, c.nome, c.permite_instrumento, c.exige_instrumento, null::uuid
+supabase/migrations/0016_instrumento_obrigatorio.sql:112:  select c.permite_instrumento, c.exige_instrumento, c.nome into v_permite, v_exige, v_nome_cargo
+supabase/migrations/0017_foto_obrigatoria.sql:154:  select c.permite_instrumento, c.exige_instrumento, c.nome into v_permite, v_exige, v_nome_cargo
+supabase/migrations/0026_painel_ao_vivo.sql:57:update public.cargos set permite_instrumento = true
+supabase/migrations/0026_painel_ao_vivo.sql:58: where public.normalizar_texto(nome) like 'cooperador%' and not permite_instrumento;
+supabase/migrations/0026_painel_ao_vivo.sql:65:insert into public.cargos (nome, permite_instrumento, exige_instrumento)
+supabase/migrations/0031_casa_de_oracao.sql:228:  select c.permite_instrumento, c.exige_instrumento, c.nome into v_permite, v_exige, v_nome_cargo
+
+### H. foto: bucket e policies de storage
+supabase/migrations/0008_atendimento_portaria.sql:36:values ('fotos-membros', 'fotos-membros', false, 2097152, array['image/jpeg', 'image/png', 'image/webp'])
+supabase/migrations/0008_atendimento_portaria.sql:42:drop policy if exists "fotos_membros_leitura" on storage.objects;
+supabase/migrations/0008_atendimento_portaria.sql:43:create policy "fotos_membros_leitura" on storage.objects
+supabase/migrations/0008_atendimento_portaria.sql:45:  using (bucket_id = 'fotos-membros'
+supabase/migrations/0008_atendimento_portaria.sql:48:drop policy if exists "fotos_membros_envio" on storage.objects;
+supabase/migrations/0008_atendimento_portaria.sql:49:create policy "fotos_membros_envio" on storage.objects
+supabase/migrations/0008_atendimento_portaria.sql:51:  with check (bucket_id = 'fotos-membros' and public.tem_permissao('membros.foto'));
+supabase/migrations/0008_atendimento_portaria.sql:53:drop policy if exists "fotos_membros_troca" on storage.objects;
+supabase/migrations/0008_atendimento_portaria.sql:54:create policy "fotos_membros_troca" on storage.objects
+supabase/migrations/0008_atendimento_portaria.sql:56:  using (bucket_id = 'fotos-membros' and public.tem_permissao('membros.foto'))
+supabase/migrations/0008_atendimento_portaria.sql:57:  with check (bucket_id = 'fotos-membros' and public.tem_permissao('membros.foto'));
+supabase/migrations/0008_atendimento_portaria.sql:59:drop policy if exists "fotos_membros_exclusao" on storage.objects;
+supabase/migrations/0008_atendimento_portaria.sql:60:create policy "fotos_membros_exclusao" on storage.objects
+supabase/migrations/0008_atendimento_portaria.sql:62:  using (bucket_id = 'fotos-membros' and public.tem_permissao('membros.foto'));
+supabase/migrations/0008_atendimento_portaria.sql:91:  if not exists (select 1 from storage.objects o where o.bucket_id = 'fotos-membros' and o.name = p_path) then
+supabase/migrations/0017_foto_obrigatoria.sql:36:  if not exists (select 1 from storage.objects o where o.bucket_id = 'fotos-membros' and o.name = p_path) then
+supabase/migrations/0017_foto_obrigatoria.sql:65:drop policy if exists "fotos_membros_envio" on storage.objects;
+supabase/migrations/0017_foto_obrigatoria.sql:66:create policy "fotos_membros_envio" on storage.objects
+supabase/migrations/0017_foto_obrigatoria.sql:69:    bucket_id = 'fotos-membros'

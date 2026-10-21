@@ -1,0 +1,890 @@
+### A. arquivos do módulo de eventos
+src/modules/eventos/camposEvento.test.ts
+src/modules/eventos/camposEvento.ts
+src/modules/eventos/ciclo.test.ts
+src/modules/eventos/ciclo.ts
+src/modules/eventos/components/FormularioCancelamento.tsx
+src/modules/eventos/dataEvento.test.ts
+src/modules/eventos/dataEvento.ts
+src/modules/eventos/regras.test.ts
+src/modules/eventos/regras.ts
+src/modules/eventos/services/eventos.ts
+src/modules/eventos/services/finalidades.ts
+
+################ src/components/FormularioEvento.tsx
+"use client";
+
+import SeletorCasaOracao from "@/modules/organizacao/components/SeletorCasaOracao";
+
+/**
+ * SysMúsica — Formulário de evento (cadastro e edição) — conteúdo do painel lateral.
+ * evento = null -> cadastrar; preenchido -> editar.
+ *
+ * Finalidade (combobox): sugere as finalidades já cadastradas. Se a pessoa digita uma que ainda não
+ * existe, ela é salva automaticamente e passa a aparecer como sugestão nos próximos eventos.
+ */
+import { useState, type FormEvent } from "react";
+import Button from "@/components/ui/Button";
+import { datetimeLocalParaIso, isoParaDatetimeLocal } from "@/lib/dataLocal";
+import { normalizarTexto } from "@/lib/texto";
+import type { Evento, FinalidadeEvento } from "@/types/database";
+import {
+  FINALIDADE_MAXIMO,
+  formatarNomeFinalidade,
+  validarFinalidade,
+} from "@/modules/eventos/regras";
+import { validarDataDoEvento } from "@/modules/eventos/dataEvento";
+import {
+  camposFaltando,
+  mensagemCamposFaltando,
+  ROTULO_CIDADE,
+  ROTULO_CASA_ORACAO,
+  ROTULO_DATA,
+  ROTULO_FINALIDADE,
+  ROTULO_LOCAL,
+  ROTULO_TIPO,
+} from "@/modules/eventos/camposEvento";
+import { atualizarEvento, criarEvento } from "@/modules/eventos/services/eventos";
+import { obterOuCriarFinalidade } from "@/modules/eventos/services/finalidades";
+
+interface FormularioEventoProps {
+  evento: Evento | null;
+  finalidades: FinalidadeEvento[];
+  sugestoesCidade: string[]; // cidades já cadastradas em outros eventos
+  /** Chamado após salvar com sucesso, com a mensagem para o aviso da tela. */
+  onSalvo: (mensagem: string) => void | Promise<void>;
+}
+
+// Mesma identidade visual dos demais formulários.
+// [color-scheme:light] mantém o ícone do seletor de data visível mesmo com o navegador em tema escuro.
+const classeInput =
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 " +
+  "placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none " +
+  "focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-60 " +
+  "[color-scheme:light]";
+
+export default function FormularioEvento({
+  evento,
+  finalidades,
+  sugestoesCidade,
+  onSalvo,
+}: FormularioEventoProps) {
+  const editando = evento !== null;
+
+  const finalidadeInicial = evento?.finalidade_id
+    ? (finalidades.find((finalidade) => finalidade.id === evento.finalidade_id)?.nome ?? "")
+    : "";
+
+  const [tipo, setTipo] = useState(evento?.tipo ?? "");
+  const [finalidadeTexto, setFinalidadeTexto] = useState(finalidadeInicial);
+  const [dataEvento, setDataEvento] = useState(evento ? isoParaDatetimeLocal(evento.data_evento) : "");
+  const [local, setLocal] = useState(evento?.local ?? "");
+  const [cidade, setCidade] = useState(evento?.cidade ?? "");
+  const [casaOracaoId, setCasaOracaoId] = useState(evento?.casa_oracao_id ?? "");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [faltando, setFaltando] = useState<string[]>([]); // campos obrigatórios vazios (borda vermelha)
+
+  // Borda vermelha no campo obrigatório que ficou vazio
+  const classeCampo = (rotulo: string) =>
+    classeInput + (faltando.includes(rotulo) ? " !border-red-500 !ring-2 !ring-red-200" : "");
+
+  // A finalidade digitada já existe? (comparação sem acento e sem diferenciar maiúsculas)
+  const finalidadeDigitada = finalidadeTexto.trim();
+  const finalidadeExistente = finalidadeDigitada
+    ? finalidades.find(
+        (finalidade) => normalizarTexto(finalidade.nome) === normalizarTexto(finalidadeDigitada)
+      )
+    : undefined;
+
+  async function salvar(submissao: FormEvent<HTMLFormElement>) {
+    submissao.preventDefault();
+    if (salvando) return; // evita envio duplicado
+    setErro(null);
+
+    // Todos os campos são obrigatórios: o alerta lista os que faltam e eles ficam com borda vermelha
+    const vazios = camposFaltando({ tipo, finalidade: finalidadeTexto, dataEvento, local, cidade, casaOracaoId });
+    setFaltando(vazios);
+    if (vazios.length > 0) return setErro(mensagemCamposFaltando(vazios));
+
+    const erroFinalidade = validarFinalidade(finalidadeTexto);
+    if (erroFinalidade) return setErro(erroFinalidade);
+
+    // O datetime-local não traz fuso: new Date() o lê como hora LOCAL do navegador e a conversão
+    // para ISO (UTC) é o que o campo timestamptz do banco espera.
+    const dataIso = datetimeLocalParaIso(dataEvento);
+    if (!dataIso) return setErro("Informe uma data e hora válidas.");
+
+    // Não se agenda evento em data e hora que já passaram (ao editar, só vale se a data for alterada)
+    const erroData = validarDataDoEvento(dataIso, Date.now(), evento?.data_evento ?? null);
+    if (erroData) return setErro(erroData);
+
+    setSalvando(true);
+    try {
+      // Passo 1: finalidade (usa a existente ou salva uma nova para os próximos eventos)
+      const finalidade = await obterOuCriarFinalidade(finalidadeTexto, finalidades);
+
+      // Passo 2: grava o evento
+      const dados = {
+        tipo: tipo.trim(),
+        data_evento: dataIso,
+        local: local.trim(),
+        finalidade_id: finalidade.id,
+        cidade: cidade.trim() || null,
+        casa_oracao_id: casaOracaoId || null,
+      };
+      if (evento) await atualizarEvento(evento.id, dados);
+      else await criarEvento(dados);
+
+      const complemento = finalidade.criada
+        ? ` A finalidade "${finalidade.nome}" foi salva para os próximos eventos.`
+        : "";
+      await onSalvo(
+        editando ? `Evento atualizado.${complemento}` : `Evento cadastrado com sucesso!${complemento}`
+      );
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível salvar o evento.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={salvar} noValidate className="space-y-5">
+      <p className="text-xs text-slate-500">Todos os campos são obrigatórios (marcados com *).</p>
+
+      <div className="space-y-1.5">
+        <label htmlFor="tipo" className="text-sm font-medium text-slate-700">
+          Tipo <span className="text-red-600"> *</span>
+        </label>
+        {/* Campo livre com sugestões (datalist): aceita Ensaio, Culto ou qualquer outro tipo */}
+        <input
+          id="tipo"
+          type="text"
+          list="sugestoes-tipo-evento"
+          required
+          value={tipo}
+          onChange={(e) => setTipo(e.target.value)}
+          disabled={salvando}
+          placeholder="Ex: Ensaio, Culto"
+          className={classeCampo(ROTULO_TIPO)}
+        />
+        <datalist id="sugestoes-tipo-evento">
+          <option value="Ensaio" />
+          <option value="Culto" />
+        </datalist>
+      </div>
+
+      {/* Finalidade (combobox): escolha uma cadastrada ou digite uma nova */}
+      <div className="space-y-1.5">
+        <label htmlFor="finalidade" className="text-sm font-medium text-slate-700">
+          Finalidade do evento <span className="text-red-600"> *</span>
+        </label>
+        <input
+          id="finalidade"
+          type="text"
+          list="lista-finalidades"
+          autoComplete="off"
+          required
+          maxLength={FINALIDADE_MAXIMO}
+          value={finalidadeTexto}
+          onChange={(e) => setFinalidadeTexto(e.target.value)}
+          disabled={salvando}
+          placeholder="Digite ou escolha uma finalidade"
+          className={classeCampo(ROTULO_FINALIDADE)}
+        />
+        <datalist id="lista-finalidades">
+          {finalidades.map((finalidade) => (
+            <option key={finalidade.id} value={finalidade.nome} />
+          ))}
+        </datalist>
+        {/* Feedback ao vivo: finalidade já cadastrada ou nova (será salva para os próximos eventos) */}
+        {finalidadeDigitada && (
+          <p className={"text-xs " + (finalidadeExistente ? "text-slate-500" : "text-brand-700")}>
+            {finalidadeExistente
+              ? "Finalidade já cadastrada."
+              : `Nova finalidade: "${formatarNomeFinalidade(finalidadeDigitada)}" será salva para os próximos eventos.`}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="data_evento" className="text-sm font-medium text-slate-700">
+          Data e hora <span className="text-red-600"> *</span>
+        </label>
+        <input
+          id="data_evento"
+          type="datetime-local"
+          required
+          value={dataEvento}
+          onChange={(e) => setDataEvento(e.target.value)}
+          disabled={salvando}
+          className={classeCampo(ROTULO_DATA)}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="local" className="text-sm font-medium text-slate-700">
+          Local <span className="text-red-600"> *</span>
+        </label>
+        <input
+          id="local"
+          type="text"
+          required
+          value={local}
+          onChange={(e) => setLocal(e.target.value)}
+          disabled={salvando}
+          placeholder="Ex: Congregação Central"
+          className={classeCampo(ROTULO_LOCAL)}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="cidade-evento" className="text-sm font-medium text-slate-700">
+          Cidade <span className="text-red-600"> *</span>
+        </label>
+        <datalist id="sugestoes-cidade-evento">
+          {sugestoesCidade.map((sugestao) => (
+            <option key={sugestao} value={sugestao} />
+          ))}
+        </datalist>
+        <input
+          id="cidade-evento"
+          type="text"
+          list="sugestoes-cidade-evento"
+          autoComplete="off"
+          value={cidade}
+          onChange={(e) => setCidade(e.target.value)}
+          disabled={salvando}
+          placeholder="Ex: Lauro de Freitas"
+          className={classeCampo(ROTULO_CIDADE)}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="casa-oracao-evento" className="text-sm font-medium text-slate-700">
+          Casa de Oração <span className="text-red-600"> *</span> <span className="font-normal text-slate-400">(define o setor da portaria)</span>
+        </label>
+        <SeletorCasaOracao
+          id="casa-oracao-evento"
+          valor={casaOracaoId}
+          onChange={setCasaOracaoId}
+          disabled={salvando}
+          className={classeCampo(ROTULO_CASA_ORACAO)}
+        />
+      </div>
+
+      {erro && (
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erro}
+        </p>
+      )}
+
+      <Button type="submit" disabled={salvando} className="w-full">
+        {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Cadastrar evento"}
+      </Button>
+    </form>
+  );
+}
+
+################ src/modules/eventos/camposEvento.ts
+/**
+ * SysMúsica — Campos obrigatórios do evento (regra pura, sem banco).
+ * Todos os campos do formulário de evento são obrigatórios. Devolve os NOMES (como aparecem na tela) dos
+ * campos que estão vazios, na ordem do formulário, para a tela marcar cada um e mostrar o alerta.
+ */
+export interface CamposEvento {
+  tipo: string;
+  finalidade: string;
+  dataEvento: string; // valor do campo data e hora (vazio = não preenchido)
+  local: string;
+  cidade: string;
+  casaOracaoId: string;
+}
+
+export const ROTULO_TIPO = "Tipo";
+export const ROTULO_FINALIDADE = "Finalidade do evento";
+export const ROTULO_DATA = "Data e hora";
+export const ROTULO_LOCAL = "Local";
+export const ROTULO_CIDADE = "Cidade";
+export const ROTULO_CASA_ORACAO = "Casa de Oração";
+
+export function camposFaltando(campos: CamposEvento): string[] {
+  const faltando: string[] = [];
+  if (!campos.tipo.trim()) faltando.push(ROTULO_TIPO);
+  if (!campos.finalidade.trim()) faltando.push(ROTULO_FINALIDADE);
+  if (!campos.dataEvento.trim()) faltando.push(ROTULO_DATA);
+  if (!campos.local.trim()) faltando.push(ROTULO_LOCAL);
+  if (!campos.cidade.trim()) faltando.push(ROTULO_CIDADE);
+  if (!campos.casaOracaoId.trim()) faltando.push(ROTULO_CASA_ORACAO);
+  return faltando;
+}
+
+/** Mensagem do alerta: "Preencha todos os campos obrigatórios: Local, Cidade." */
+export function mensagemCamposFaltando(faltando: string[]): string {
+  return `Preencha todos os campos obrigatórios: ${faltando.join(", ")}.`;
+}
+
+################ src/modules/eventos/camposEvento.test.ts
+import { describe, expect, it } from "vitest";
+import { camposFaltando, mensagemCamposFaltando, type CamposEvento } from "./camposEvento";
+
+const completo: CamposEvento = {
+  tipo: "Ensaio",
+  finalidade: "Ensaio Regional",
+  dataEvento: "2026-10-25T10:00",
+  local: "Casa de Oração de Cidade Nova",
+  cidade: "Jequié",
+  casaOracaoId: "abc",
+};
+
+describe("camposFaltando", () => {
+  it("nada falta quando tudo está preenchido", () => {
+    expect(camposFaltando(completo)).toEqual([]);
+  });
+
+  it("aponta o Local vazio (caso do print) e a ordem do formulário", () => {
+    expect(camposFaltando({ ...completo, local: "" })).toEqual(["Local"]);
+    expect(camposFaltando({ tipo: "", finalidade: "", dataEvento: "", local: "", cidade: "", casaOracaoId: "" })).toEqual([
+      "Tipo",
+      "Finalidade do evento",
+      "Data e hora",
+      "Local",
+      "Cidade",
+      "Casa de Oração",
+    ]);
+  });
+
+  it("espaços em branco contam como vazio", () => {
+    expect(camposFaltando({ ...completo, cidade: "   ", local: " " })).toEqual(["Local", "Cidade"]);
+  });
+
+  it("a casa de oração escolhida é obrigatória ('Nenhuma' = vazio)", () => {
+    expect(camposFaltando({ ...completo, casaOracaoId: "" })).toEqual(["Casa de Oração"]);
+  });
+});
+
+describe("mensagemCamposFaltando", () => {
+  it("monta o texto do alerta", () => {
+    expect(mensagemCamposFaltando(["Local", "Cidade"])).toBe("Preencha todos os campos obrigatórios: Local, Cidade.");
+  });
+});
+
+################ src/modules/eventos/services/eventos.ts
+/**
+ * SysMúsica — Serviço de dados de eventos.
+ * Excluir é EXCLUSÃO LÓGICA: o evento some das telas e as presenças registradas são mantidas.
+ */
+import { supabase } from "@/lib/supabase";
+import { mensagemDoErro } from "@/lib/erros";
+import type { Evento, EventoInsert, FinalidadeEvento } from "@/types/database";
+
+/** Busca eventos (do mais recente para o mais antigo) e finalidades. Lança erro se a consulta falhar. */
+export async function buscarEventosEFinalidades(): Promise<{
+  eventos: Evento[];
+  finalidades: FinalidadeEvento[];
+}> {
+  const [resEventos, resFinalidades] = await Promise.all([
+    supabase.from("eventos").select("*").order("data_evento", { ascending: false }),
+    supabase.from("finalidades_evento").select("*").order("nome", { ascending: true }),
+  ]);
+
+  const erroBanco = resEventos.error ?? resFinalidades.error;
+  if (erroBanco) throw new Error(erroBanco.message);
+
+  return {
+    eventos: (resEventos.data ?? []) as Evento[],
+    finalidades: (resFinalidades.data ?? []) as FinalidadeEvento[],
+  };
+}
+
+export async function criarEvento(dados: EventoInsert): Promise<void> {
+  const { error } = await supabase.from("eventos").insert(dados);
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível cadastrar o evento."));
+}
+
+/** Campos que podem ser alterados na edição (o banco libera só estas colunas). */
+export interface DadosAtualizacaoEvento {
+  tipo: string;
+  data_evento: string;
+  local: string;
+  finalidade_id: string | null;
+  cidade: string | null;
+  casa_oracao_id?: string | null;
+}
+
+export async function atualizarEvento(id: string, dados: DadosAtualizacaoEvento): Promise<void> {
+  // .select("id") devolve as linhas alteradas: se o RLS negar, o update não dá erro, só não altera nada
+  const { data, error } = await supabase.from("eventos").update(dados).eq("id", id).select("id");
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível salvar as alterações do evento."));
+  if (!data || data.length === 0) {
+    throw new Error("Não foi possível salvar: você não tem permissão ou o evento não existe mais.");
+  }
+}
+
+/** Cancela o evento com motivo (função do banco, que confere a permissão eventos.cancelar: só o Administrador). */
+export async function cancelarEvento(id: string, motivo: string): Promise<void> {
+  const { error } = await supabase.rpc("cancelar_evento", { p_id: id, p_motivo: motivo });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível cancelar o evento."));
+}
+
+/** Exclusão lógica (função do banco, que confere a permissão eventos.excluir). */
+export async function excluirEvento(id: string): Promise<void> {
+  const { error } = await supabase.rpc("excluir_evento", { p_id: id });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível excluir o evento."));
+}
+
+################ src/components/ListaEventos.tsx
+"use client";
+
+/**
+ * SysMúsica — Lista de eventos em tabela (largura total), com busca por finalidade, local ou tipo.
+ *
+ * Não acessa o banco: recebe os dados e os estados (loading/erro) da página.
+ * Os eventos chegam ordenados do mais recente para o mais antigo.
+ * Ações por linha (só aparecem para quem tem a permissão): editar e excluir.
+ * Trata quatro cenários: carregando, erro, nenhum evento e tabela com dados.
+ */
+import { useState } from "react";
+import { Ban, Pencil, Search, Trash2 } from "lucide-react";
+import Badge from "@/components/ui/Badge";
+import BotaoIcone from "@/components/ui/BotaoIcone";
+import EmptyState from "@/components/ui/EmptyState";
+import ErrorState from "@/components/ui/ErrorState";
+import Skeleton from "@/components/ui/Skeleton";
+import { formatarDataHora, partesDaData } from "@/lib/datas";
+import { normalizarTexto } from "@/lib/texto";
+import {
+  eventoAberto,
+  ROTULO_SITUACAO_EVENTO,
+  situacaoDoEvento,
+  varianteSituacaoEvento,
+} from "@/modules/eventos/ciclo";
+import type { Evento, FinalidadeEvento } from "@/types/database";
+
+interface ListaEventosProps {
+  eventos: Evento[];
+  finalidades: FinalidadeEvento[];
+  carregando: boolean;
+  erro: string | null;
+  onTentarNovamente: () => void;
+  podeEditar: boolean;
+  podeExcluir: boolean;
+  podeCancelar: boolean; // só o Administrador (eventos.cancelar): cancela e corrige evento encerrado
+  agora: number; // instante atual (ms), para calcular a situação de cada evento
+  tituloVazio?: string;
+  descricaoVazia?: string;
+  onEditar: (evento: Evento) => void;
+  onExcluir: (evento: Evento) => void;
+  onCancelar: (evento: Evento) => void;
+}
+
+// Cor do selo conforme o tipo do evento (tipos desconhecidos usam o neutro)
+function varianteTipo(tipo: string): "marca" | "alerta" | "neutro" {
+  const normalizado = tipo.trim().toLowerCase();
+  if (normalizado === "ensaio") return "marca";
+  if (normalizado === "culto") return "alerta";
+  return "neutro";
+}
+
+const classeCabecalho =
+  "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500";
+
+export default function ListaEventos({
+  eventos,
+  finalidades,
+  carregando,
+  erro,
+  onTentarNovamente,
+  podeEditar,
+  podeExcluir,
+  podeCancelar,
+  agora,
+  tituloVazio,
+  descricaoVazia,
+  onEditar,
+  onExcluir,
+  onCancelar,
+}: ListaEventosProps) {
+  const [busca, setBusca] = useState("");
+  const mostrarAcoes = podeEditar || podeExcluir || podeCancelar;
+
+  // 1) Carregando: skeleton (barra de ferramentas + linhas)
+  if (carregando) {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+      >
+        <span className="sr-only">Carregando eventos...</span>
+        <div className="border-b border-slate-200 p-4">
+          <Skeleton className="h-10 max-w-md" />
+        </div>
+        <div className="space-y-3 p-4">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-10" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // 2) Erro na comunicação com o banco
+  if (erro) {
+    return (
+      <ErrorState
+        titulo="Não foi possível carregar os eventos."
+        mensagem={erro}
+        onTentarNovamente={onTentarNovamente}
+      />
+    );
+  }
+
+  // 3) Nenhum evento cadastrado
+  if (eventos.length === 0) {
+    return (
+      <EmptyState
+        titulo={tituloVazio ?? "Nenhum evento cadastrado ainda."}
+        descricao={descricaoVazia ?? "Clique em “Adicionar” para cadastrar o primeiro."}
+      />
+    );
+  }
+
+  const finalidadePorId = new Map(
+    finalidades.map((finalidade): [string, FinalidadeEvento] => [finalidade.id, finalidade])
+  );
+  const nomeDaFinalidade = (evento: Evento): string | null =>
+    evento.finalidade_id ? (finalidadePorId.get(evento.finalidade_id)?.nome ?? null) : null;
+
+  // Busca por finalidade, local ou tipo (sem acento e sem diferenciar maiúsculas)
+  const termo = normalizarTexto(busca);
+  const filtrados = eventos.filter(
+    (evento) =>
+      termo === "" ||
+      normalizarTexto(evento.local).includes(termo) ||
+      normalizarTexto(evento.tipo).includes(termo) ||
+      normalizarTexto(nomeDaFinalidade(evento) ?? "").includes(termo)
+  );
+
+  // 4) Tabela
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      {/* Barra de ferramentas */}
+      <div className="border-b border-slate-200 p-4">
+        <div className="relative max-w-md">
+          <label htmlFor="busca-evento" className="sr-only">
+            Pesquisar por finalidade, local ou tipo
+          </label>
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            aria-hidden="true"
+          />
+          <input
+            id="busca-evento"
+            type="search"
+            autoComplete="off"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Pesquisar por finalidade, local ou tipo..."
+            className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+          />
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-slate-50">
+            <tr>
+              <th scope="col" className={classeCabecalho}>
+                Data e hora
+              </th>
+              <th scope="col" className={classeCabecalho}>
+                Tipo
+              </th>
+              <th scope="col" className={classeCabecalho}>
+                Situação
+              </th>
+              <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>
+                Finalidade
+              </th>
+              <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>
+                Local
+              </th>
+              {mostrarAcoes && (
+                <th scope="col" className={classeCabecalho + " text-right"}>
+                  Ações
+                </th>
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filtrados.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={mostrarAcoes ? 6 : 5}
+                  className="px-4 py-10 text-center text-sm text-slate-500"
+                >
+                  Nenhum evento encontrado com a pesquisa atual.
+                </td>
+              </tr>
+            ) : (
+              filtrados.map((evento) => {
+                const { dia, mes } = partesDaData(evento.data_evento);
+                const finalidade = nomeDaFinalidade(evento);
+                const cancelado = Boolean(evento.cancelado_em);
+                const situacao = situacaoDoEvento(evento.data_evento, cancelado, agora);
+                // Evento encerrado ou cancelado é só leitura; o Administrador (podeCancelar) ainda corrige encerrados
+                const podeAlterar = !cancelado && (eventoAberto(evento.data_evento, cancelado, agora) || podeCancelar);
+
+                return (
+                  <tr key={evento.id} className="transition hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        {/* Bloco de data: dia e mês abreviado */}
+                        <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                          <span className="text-sm font-bold leading-none">{dia}</span>
+                          <span className="mt-0.5 text-[10px] font-medium uppercase">{mes}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-slate-700">{formatarDataHora(evento.data_evento)}</p>
+                          {/* Telas pequenas: finalidade e local aparecem aqui */}
+                          <p className="line-clamp-2 text-xs text-slate-500 md:hidden">
+                            {[finalidade, evento.local, evento.cidade].filter(Boolean).join(" · ")}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variante={varianteTipo(evento.tipo)}>{evento.tipo}</Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variante={varianteSituacaoEvento(situacao)}>{ROTULO_SITUACAO_EVENTO[situacao]}</Badge>
+                      {cancelado && evento.motivo_cancelamento && (
+                        <span className="mt-1 block max-w-xs text-xs text-slate-500">
+                          Motivo: {evento.motivo_cancelamento}
+                        </span>
+                      )}
+                    </td>
+                    <td className="hidden max-w-sm px-4 py-3 text-slate-700 md:table-cell">
+                      {finalidade ?? <span className="text-slate-400">—</span>}
+                    </td>
+                    <td className="hidden px-4 py-3 font-medium text-slate-900 md:table-cell">
+                      {evento.local}
+                        {evento.cidade && (
+                          <span className="block text-xs font-normal text-slate-500">{evento.cidade}</span>
+                        )}
+                    </td>
+                    {mostrarAcoes && (
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1">
+                          {podeEditar && podeAlterar && (
+                            <BotaoIcone
+                              icone={Pencil}
+                              rotulo={`Editar o evento de ${formatarDataHora(evento.data_evento)}`}
+                              onClick={() => onEditar(evento)}
+                            />
+                          )}
+                          {podeExcluir && podeAlterar && (
+                            <BotaoIcone
+                              icone={Trash2}
+                              variante="perigo"
+                              rotulo={`Excluir o evento de ${formatarDataHora(evento.data_evento)}`}
+                              onClick={() => onExcluir(evento)}
+                            />
+                          )}
+                          {podeCancelar && !cancelado && (
+                            <BotaoIcone
+                              icone={Ban}
+                              variante="perigo"
+                              rotulo={`Cancelar o evento de ${formatarDataHora(evento.data_evento)}`}
+                              onClick={() => onCancelar(evento)}
+                            />
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+        Exibindo {filtrados.length} de {eventos.length} evento(s)
+      </div>
+    </div>
+  );
+}
+
+### B. página de eventos: linhas com finalidade/local/cidade/casa
+12:  buscarEventosEFinalidades,
+28:import type { Evento, FinalidadeEvento } from "@/types/database";
+36:  const [finalidades, setFinalidades] = useState<FinalidadeEvento[]>([]);
+47:  // Busca eventos e finalidades
+50:      const dados = await buscarEventosEFinalidades();
+53:      setFinalidades(dados.finalidades);
+165:          finalidades={finalidades}
+198:            sugestoesCidade={valoresDistintos(eventos.flatMap((item) => (item.cidade ? [item.cidade] : [])))}
+199:            finalidades={finalidades}
+214:              <strong>{alvoExclusao?.local}</strong> deixará de aparecer nas telas. Eventos que já têm
+
+### C. usos de finalidade em src
+src/app/(painel)/eventos/page.tsx:36:  const [finalidades, setFinalidades] = useState<FinalidadeEvento[]>([]);
+src/app/(painel)/eventos/page.tsx:47:  // Busca eventos e finalidades
+src/app/(painel)/eventos/page.tsx:53:      setFinalidades(dados.finalidades);
+src/app/(painel)/eventos/page.tsx:165:          finalidades={finalidades}
+src/app/(painel)/eventos/page.tsx:199:            finalidades={finalidades}
+src/modules/backup/tabelas.ts:25:  | "finalidades_evento"
+src/modules/backup/tabelas.ts:89:  tabela("finalidades_evento", "Finalidades de evento", "cadastros"),
+src/modules/backup/tabelas.ts:123:      { coluna: "finalidade_id", tabela: "finalidades_evento" },
+src/modules/backup/tabelas.ts:172:    descricao: "Cargos, famílias, instrumentos e finalidades de evento",
+src/modules/backup/tabelas.ts:173:    tabelas: ["familias", "cargos", "finalidades_evento", "instrumentos"],
+src/modules/portarias/tipos.ts:20:  evento_finalidade: string | null;
+src/modules/portarias/components/TabelaPortarias.tsx:48:      [portaria.evento_tipo, portaria.evento_local, portaria.evento_finalidade, portaria.cidade, portaria.criador_nome]
+src/modules/portarias/components/TabelaPortarias.tsx:122:                        {[portaria.evento_tipo, portaria.evento_finalidade].filter(Boolean).join(" · ")}
+src/modules/eventos/regras.test.ts:11:  it("aceita as finalidades de exemplo do cadastro", () => {
+src/modules/eventos/camposEvento.test.ts:6:  finalidade: "Ensaio Regional",
+src/modules/eventos/camposEvento.test.ts:20:    expect(camposFaltando({ tipo: "", finalidade: "", dataEvento: "", local: "", cidade: "", casaOracaoId: "" })).toEqual([
+src/modules/eventos/regras.ts:7:/** Ajusta a finalidade antes de salvar: tira espaços extras e põe a 1ª letra em maiúscula. */
+src/modules/eventos/regras.ts:13:/** Valida o texto da finalidade; devolve a mensagem de erro ou null quando está tudo certo. */
+src/modules/eventos/regras.ts:17:    return `Informe a finalidade do evento (mínimo de ${FINALIDADE_MINIMO} caracteres).`;
+src/modules/eventos/regras.ts:20:    return `A finalidade pode ter no máximo ${FINALIDADE_MAXIMO} caracteres.`;
+src/modules/eventos/camposEvento.ts:8:  finalidade: string;
+src/modules/eventos/camposEvento.ts:25:  if (!campos.finalidade.trim()) faltando.push(ROTULO_FINALIDADE);
+src/modules/eventos/services/eventos.ts:9:/** Busca eventos (do mais recente para o mais antigo) e finalidades. Lança erro se a consulta falhar. */
+src/modules/eventos/services/eventos.ts:12:  finalidades: FinalidadeEvento[];
+src/modules/eventos/services/eventos.ts:16:    supabase.from("finalidades_evento").select("*").order("nome", { ascending: true }),
+src/modules/eventos/services/eventos.ts:24:    finalidades: (resFinalidades.data ?? []) as FinalidadeEvento[],
+src/modules/eventos/services/eventos.ts:38:  finalidade_id: string | null;
+src/modules/eventos/services/finalidades.ts:2: * SysMúsica — Serviço do catálogo de finalidades de evento.
+src/modules/eventos/services/finalidades.ts:3: * O formulário de evento usa obterOuCriarFinalidade: se a pessoa digita uma finalidade que ainda
+src/modules/eventos/services/finalidades.ts:19: * Devolve a finalidade digitada, criando-a se ainda não existir.
+src/modules/eventos/services/finalidades.ts:29:  const existente = existentes.find((finalidade) => normalizarTexto(finalidade.nome) === chave);
+src/modules/eventos/services/finalidades.ts:34:  const { data, error } = await supabase.from("finalidades_evento").insert(nova).select().single();
+src/modules/eventos/services/finalidades.ts:40:  // 3) 23505 = repetida: outra pessoa criou a mesma finalidade agora há pouco. Busca de novo.
+src/modules/eventos/services/finalidades.ts:42:    const { data: lista, error: erroBusca } = await supabase.from("finalidades_evento").select("*");
+src/modules/eventos/services/finalidades.ts:45:      (finalidade) => normalizarTexto(finalidade.nome) === chave
+src/modules/eventos/services/finalidades.ts:52:      ? mensagemDoErro(error, "Não foi possível salvar a finalidade do evento.")
+src/modules/eventos/services/finalidades.ts:53:      : "Não foi possível salvar a finalidade do evento."
+src/modules/relatorios/regras.test.ts:410:    evento_finalidade: null,
+src/modules/relatorios/regras.ts:542:      finalidade: portaria.evento_finalidade ?? "",
+src/modules/relatorios/presencaPortaria.test.ts:45:    finalidade: "Ensaio Técnico",
+src/modules/relatorios/services/relatorios.ts:76:  evento_finalidade: string | null;
+src/modules/relatorios/services/relatorios.ts:116:      evento_finalidade: texto(linha.evento_finalidade),
+src/modules/relatorios/services/relatorios.ts:194:  finalidade: string | null;
+src/modules/relatorios/services/relatorios.ts:223:      finalidade: texto(linha.finalidade),
+src/modules/relatorios/presencaPortaria.ts:42:    finalidade: string | null;
+src/modules/relatorios/presencaPortaria.ts:240:      [evento.tipo, evento.finalidade].filter(Boolean).join(" · ") +
+src/modules/relatorios/catalogo.ts:26:      { id: "evento_finalidade", rotulo: "Finalidade", padrao: false },
+src/modules/relatorios/catalogo.ts:72:      { id: "finalidade", rotulo: "Finalidade", padrao: true },
+src/modules/relatorios/catalogo.ts:143:      { id: "finalidade", rotulo: "Finalidade", padrao: false },
+src/modules/auditoria/regras.ts:62:  finalidade: "Finalidade de evento",
+src/modules/auditoria/regras.ts:96:  finalidade_id: "Finalidade",
+src/modules/atendimento/components/SelecaoPortaria.tsx:58:                {[portaria.evento_tipo, portaria.evento_finalidade].filter(Boolean).join(" · ")}
+src/types/database.ts:108:  finalidade_id: string | null; // FK -> finalidades_evento.id (nula em eventos antigos)
+src/types/database.ts:116:/** Payload para INSERT: o id é gerado pelo banco; a finalidade é opcional (eventos antigos não têm). */
+src/types/database.ts:118:  Partial<Pick<Evento, "id" | "finalidade_id" | "cidade" | "casa_oracao_id">>;
+src/types/database.ts:121:// Tabela: finalidades_evento (catálogo reaproveitável de finalidades)
+src/components/ListaEventos.tsx:4: * SysMúsica — Lista de eventos em tabela (largura total), com busca por finalidade, local ou tipo.
+src/components/ListaEventos.tsx:30:  finalidades: FinalidadeEvento[];
+src/components/ListaEventos.tsx:58:  finalidades,
+src/components/ListaEventos.tsx:117:  const finalidadePorId = new Map(
+src/components/ListaEventos.tsx:118:    finalidades.map((finalidade): [string, FinalidadeEvento] => [finalidade.id, finalidade])
+src/components/ListaEventos.tsx:121:    evento.finalidade_id ? (finalidadePorId.get(evento.finalidade_id)?.nome ?? null) : null;
+src/components/ListaEventos.tsx:123:  // Busca por finalidade, local ou tipo (sem acento e sem diferenciar maiúsculas)
+src/components/ListaEventos.tsx:140:            Pesquisar por finalidade, local ou tipo
+src/components/ListaEventos.tsx:152:            placeholder="Pesquisar por finalidade, local ou tipo..."
+src/components/ListaEventos.tsx:197:                const finalidade = nomeDaFinalidade(evento);
+src/components/ListaEventos.tsx:214:                          {/* Telas pequenas: finalidade e local aparecem aqui */}
+src/components/ListaEventos.tsx:216:                            {[finalidade, evento.local, evento.cidade].filter(Boolean).join(" · ")}
+src/components/ListaEventos.tsx:233:                      {finalidade ?? <span className="text-slate-400">—</span>}
+
+### D. serviços que buscam casas de oração
+src/modules/backup/tabelas.test.ts:55:    expect(ordenarParaGravar(["presencas", "membros", "casas_oracao", "membros"])).toEqual(["casas_oracao", "membros", "presencas"]);
+src/modules/backup/tabelas.test.ts:56:    expect(ordenarParaApagar(["presencas", "membros", "casas_oracao"])).toEqual(["presencas", "membros", "casas_oracao"]);
+src/modules/backup/tabelas.ts:22:  | "casas_oracao"
+src/modules/backup/tabelas.ts:86:  tabela("casas_oracao", "Casas de Oração", "organizacao", { referencias: [{ coluna: "setor_id", tabela: "setores" }] }),
+src/modules/backup/tabelas.ts:116:      { coluna: "casa_oracao_id", tabela: "casas_oracao" },
+src/modules/backup/tabelas.ts:117:      { coluna: "origem_casa_oracao_id", tabela: "casas_oracao" },
+src/modules/backup/tabelas.ts:124:      { coluna: "casa_oracao_id", tabela: "casas_oracao" },
+src/modules/backup/tabelas.ts:133:      { coluna: "casa_oracao_id", tabela: "casas_oracao" },
+src/modules/backup/tabelas.ts:156:      { coluna: "origem_casa_oracao_id", tabela: "casas_oracao" },
+src/modules/backup/tabelas.ts:167:    tabelas: ["estados", "regioes", "setores", "casas_oracao"],
+src/types/database.ts:72:  casa_oracao_id?: string | null; // FK -> casas_oracao.id: a casa de oração do membro (define quem enxerga o cadastro)
+
+### E. banco: definição da tabela eventos
+supabase/migrations/0001_baseline.sql:214:create table if not exists public.eventos (
+supabase/migrations/0001_baseline.sql-215-  id           uuid        primary key default gen_random_uuid(),
+supabase/migrations/0001_baseline.sql-216-  tipo         text        not null,                    -- ex: Ensaio, Culto
+supabase/migrations/0001_baseline.sql-217-  data_evento  timestamptz not null,
+supabase/migrations/0001_baseline.sql-218-  local        text        not null
+supabase/migrations/0001_baseline.sql-219-);
+supabase/migrations/0001_baseline.sql-220-
+supabase/migrations/0001_baseline.sql-221--- ---------------------------------------------------------------------
+supabase/migrations/0001_baseline.sql-222--- 7) PRESENCAS — membro_id + hora_entrada / hora_saida
+supabase/migrations/0001_baseline.sql-223---    (instalação nova já nasce neste formato; banco antigo é ajustado abaixo)
+supabase/migrations/0001_baseline.sql-224--- ---------------------------------------------------------------------
+supabase/migrations/0001_baseline.sql-225-create table if not exists public.presencas (
+supabase/migrations/0001_baseline.sql-226-  id           uuid        primary key default gen_random_uuid(),
+supabase/migrations/0001_baseline.sql-227-  membro_id    uuid        not null references public.membros (id) on delete cascade,
+supabase/migrations/0001_baseline.sql-228-  evento_id    uuid        not null references public.eventos (id) on delete cascade,
+supabase/migrations/0001_baseline.sql-229-  status       text        not null,                    -- ex: Presente, Ausente, Justificado
+supabase/migrations/0001_baseline.sql-230-  hora_entrada timestamptz not null default now(),
+supabase/migrations/0001_baseline.sql-231-  hora_saida   timestamptz
+supabase/migrations/0001_baseline.sql-232-);
+supabase/migrations/0001_baseline.sql-233-
+supabase/migrations/0001_baseline.sql-234--- 7.1) Migração do formato v1 (coluna musico_id): troca por membro_id.
+supabase/migrations/0001_baseline.sql-235---      Só roda se a coluna musico_id ainda existir.
+supabase/migrations/0001_baseline.sql-236-do $$
+
+### F. banco: migrações que citam finalidade
+supabase/migrations/0004_cadastros.sql:2:-- SysMúsica — Migração 0004: finalidade do evento, exclusão lógica e exclusões protegidas
+supabase/migrations/0004_cadastros.sql:6:--   * liga cada evento a uma finalidade (eventos.finalidade_id);
+supabase/migrations/0004_cadastros.sql:12:--   * libera a edição de eventos (colunas tipo, data_evento, local e finalidade_id).
+supabase/migrations/0004_cadastros.sql:21:--    finalidades novas automaticamente quando a pessoa digita uma que ainda não existe.
+supabase/migrations/0004_cadastros.sql:23:create table if not exists public.finalidades_evento (
+supabase/migrations/0004_cadastros.sql:29:create unique index if not exists finalidades_evento_nome_lower_unico
+supabase/migrations/0004_cadastros.sql:30:  on public.finalidades_evento (lower(nome));
+supabase/migrations/0004_cadastros.sql:33:insert into public.finalidades_evento (nome) values
+supabase/migrations/0004_cadastros.sql:42:--    finalidade_id: eventos antigos ficam sem finalidade (nula) até serem editados.
+supabase/migrations/0004_cadastros.sql:46:  add column if not exists finalidade_id uuid references public.finalidades_evento (id) on delete set null;
+supabase/migrations/0004_cadastros.sql:50:create index if not exists idx_eventos_finalidade_id on public.eventos (finalidade_id);
+supabase/migrations/0004_cadastros.sql:54:--    Leitura para qualquer usuário ativo; criar finalidade só junto com o cadastro/edição de eventos.
+supabase/migrations/0004_cadastros.sql:55:--    (Editar/excluir finalidades terá tela própria numa próxima etapa.)
+supabase/migrations/0004_cadastros.sql:57:alter table public.finalidades_evento enable row level security;
+supabase/migrations/0004_cadastros.sql:59:drop policy if exists "finalidades_select" on public.finalidades_evento;
+supabase/migrations/0004_cadastros.sql:60:drop policy if exists "finalidades_insert" on public.finalidades_evento;
+supabase/migrations/0004_cadastros.sql:62:create policy "finalidades_select" on public.finalidades_evento
+supabase/migrations/0004_cadastros.sql:64:create policy "finalidades_insert" on public.finalidades_evento
+supabase/migrations/0004_cadastros.sql:68:revoke all on public.finalidades_evento from anon;
+supabase/migrations/0004_cadastros.sql:69:revoke update, delete on public.finalidades_evento from authenticated;
+supabase/migrations/0004_cadastros.sql:122:grant update (tipo, data_evento, local, finalidade_id) on public.eventos to authenticated;
+supabase/migrations/0007_portarias.sql:37:grant update (tipo, data_evento, local, finalidade_id, cidade) on public.eventos to authenticated;
+supabase/migrations/0007_portarias.sql:358:  evento_tipo text, evento_data timestamptz, evento_local text, evento_finalidade text,
+supabase/migrations/0007_portarias.sql:387:    left join public.finalidades_evento fi on fi.id = ev.finalidade_id
+supabase/migrations/0009_controle_total_portarias.sql:194:  evento_tipo text, evento_data timestamptz, evento_local text, evento_finalidade text,
+supabase/migrations/0009_controle_total_portarias.sql:226:    left join public.finalidades_evento fi on fi.id = ev.finalidade_id
+supabase/migrations/0012_hierarquia_organizacional.sql:806:  evento_tipo text, evento_data timestamptz, evento_local text, evento_finalidade text,
+supabase/migrations/0012_hierarquia_organizacional.sql:838:    left join public.finalidades_evento fi on fi.id = ev.finalidade_id
+supabase/migrations/0015_auditoria_e_origem_visitante.sql:78:    when 'finalidades_evento' then 'finalidade'
+supabase/migrations/0015_auditoria_e_origem_visitante.sql:156:    'membros', 'eventos', 'presencas', 'instrumentos', 'cargos', 'familias', 'finalidades_evento',
+supabase/migrations/0018_relatorios.sql:43:  evento_tipo text, evento_data timestamptz, evento_local text, evento_finalidade text,
+supabase/migrations/0018_relatorios.sql:68:    left join public.finalidades_evento fi on fi.id = ev.finalidade_id
+supabase/migrations/0018_relatorios.sql:142:  tipo text, data_evento timestamptz, local_evento text, finalidade text, cidade text,
+supabase/migrations/0018_relatorios.sql:165:    left join public.finalidades_evento fi on fi.id = ev.finalidade_id
+supabase/migrations/0020_backup.sql:142:    when 'finalidades_evento' then 'finalidade'
+supabase/migrations/0020_backup.sql:255:      ('finalidades_evento',  array['id'],                              false, false, ''),
+supabase/migrations/0031_casa_de_oracao.sql:122:    when 'finalidades_evento' then 'finalidade'
+supabase/migrations/0031_casa_de_oracao.sql:926: RETURNS TABLE(id uuid, evento_id uuid, status text, cidade text, criada_em timestamp with time zone, criada_por uuid, criador_nome text, decidida_em timestamp wi
+supabase/migrations/0031_casa_de_oracao.sql:959:    left join public.finalidades_evento fi on fi.id = ev.finalidade_id
+supabase/migrations/0031_casa_de_oracao.sql:1182: RETURNS TABLE(tipo text, data_evento timestamp with time zone, local_evento text, finalidade text, cidade text, regiao text, setor text, casa_oracao text, regis
+supabase/migrations/0031_casa_de_oracao.sql:1206:    left join public.finalidades_evento fi on fi.id = ev.finalidade_id
+supabase/migrations/0031_casa_de_oracao.sql:1265: RETURNS TABLE(evento_tipo text, evento_data timestamp with time zone, evento_local text, evento_finalidade text, regiao text, setor text, casa_oracao text, memb
+supabase/migrations/0031_casa_de_oracao.sql:1287:    left join public.finalidades_evento fi on fi.id = ev.finalidade_id
+supabase/migrations/0036_relatorio_presenca_portaria.sql:49:                            'cidade', e.cidade, 'finalidade', fi.nome, 'casa_oracao', c.nome,
+supabase/migrations/0036_relatorio_presenca_portaria.sql:53:    left join public.finalidades_evento fi on fi.id = e.finalidade_id
+
+### G. tipos TypeScript do evento
