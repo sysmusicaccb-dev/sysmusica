@@ -2,10 +2,8 @@ import { describe, expect, it } from "vitest";
 import { camposFaltando, mensagemCamposFaltando, type CamposEvento } from "./camposEvento";
 
 const completo: CamposEvento = {
-  tipo: "Ensaio",
-  finalidade: "Ensaio Regional",
+  tipo: "Ensaio Regional",
   dataEvento: "2026-10-25T10:00",
-  local: "Casa de Oração de Cidade Nova",
   cidade: "Jequié",
   casaOracaoId: "abc",
 };
@@ -15,20 +13,18 @@ describe("camposFaltando", () => {
     expect(camposFaltando(completo)).toEqual([]);
   });
 
-  it("aponta o Local vazio (caso do print) e a ordem do formulário", () => {
-    expect(camposFaltando({ ...completo, local: "" })).toEqual(["Local"]);
-    expect(camposFaltando({ tipo: "", finalidade: "", dataEvento: "", local: "", cidade: "", casaOracaoId: "" })).toEqual([
-      "Tipo",
-      "Finalidade do evento",
+  it("aponta o campo vazio e respeita a ordem do formulário", () => {
+    expect(camposFaltando({ ...completo, cidade: "" })).toEqual(["Cidade"]);
+    expect(camposFaltando({ tipo: "", dataEvento: "", cidade: "", casaOracaoId: "" })).toEqual([
+      "Descrição do evento",
       "Data e hora",
-      "Local",
-      "Cidade",
       "Casa de Oração",
+      "Cidade",
     ]);
   });
 
   it("espaços em branco contam como vazio", () => {
-    expect(camposFaltando({ ...completo, cidade: "   ", local: " " })).toEqual(["Local", "Cidade"]);
+    expect(camposFaltando({ ...completo, cidade: "   ", tipo: " " })).toEqual(["Descrição do evento", "Cidade"]);
   });
 
   it("a casa de oração escolhida é obrigatória ('Nenhuma' = vazio)", () => {

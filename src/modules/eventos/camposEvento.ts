@@ -4,29 +4,24 @@
  * campos que estão vazios, na ordem do formulário, para a tela marcar cada um e mostrar o alerta.
  */
 export interface CamposEvento {
-  tipo: string;
-  finalidade: string;
+  tipo: string; // "Descrição do evento" na tela
   dataEvento: string; // valor do campo data e hora (vazio = não preenchido)
-  local: string;
   cidade: string;
   casaOracaoId: string;
 }
 
-export const ROTULO_TIPO = "Tipo";
-export const ROTULO_FINALIDADE = "Finalidade do evento";
+export const ROTULO_TIPO = "Descrição do evento";
 export const ROTULO_DATA = "Data e hora";
-export const ROTULO_LOCAL = "Local";
 export const ROTULO_CIDADE = "Cidade";
 export const ROTULO_CASA_ORACAO = "Casa de Oração";
 
 export function camposFaltando(campos: CamposEvento): string[] {
   const faltando: string[] = [];
+  // Ordem do formulário: Descrição do evento, Data e hora, Casa de Oração, Cidade
   if (!campos.tipo.trim()) faltando.push(ROTULO_TIPO);
-  if (!campos.finalidade.trim()) faltando.push(ROTULO_FINALIDADE);
   if (!campos.dataEvento.trim()) faltando.push(ROTULO_DATA);
-  if (!campos.local.trim()) faltando.push(ROTULO_LOCAL);
-  if (!campos.cidade.trim()) faltando.push(ROTULO_CIDADE);
   if (!campos.casaOracaoId.trim()) faltando.push(ROTULO_CASA_ORACAO);
+  if (!campos.cidade.trim()) faltando.push(ROTULO_CIDADE);
   return faltando;
 }
 

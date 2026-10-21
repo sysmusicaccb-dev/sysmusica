@@ -6,19 +6,16 @@ import SeletorCasaOracao from "@/modules/organizacao/components/SeletorCasaOraca
  * SysMúsica — Formulário de evento (cadastro e edição) — conteúdo do painel lateral.
  * evento = null -> cadastrar; preenchido -> editar.
  *
- * Finalidade (combobox): sugere as finalidades já cadastradas. Se a pessoa digita uma que ainda não
- * existe, ela é salva automaticamente e passa a aparecer como sugestão nos próximos eventos.
+ * Campos: Descrição do evento, Data e hora, Casa de Oração e Cidade.
+ *  - A Finalidade saiu da tela (a coluna continua no banco; eventos antigos mantêm o valor).
+ *  - O "Local" também saiu: o banco exige o campo, então gravamos nele o NOME da Casa de Oração escolhida.
+ *  - A Cidade vem do cadastro da Casa de Oração (função dados_casa_oracao). Se a casa não tiver cidade
+ *    cadastrada, o campo fica livre para digitar e um aviso orienta a completar o cadastro dela.
  */
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { datetimeLocalParaIso, isoParaDatetimeLocal } from "@/lib/dataLocal";
-import { normalizarTexto } from "@/lib/texto";
 import type { Evento, FinalidadeEvento } from "@/types/database";
-import {
-  FINALIDADE_MAXIMO,
-  formatarNomeFinalidade,
-  validarFinalidade,
-} from "@/modules/eventos/regras";
 import { validarDataDoEvento } from "@/modules/eventos/dataEvento";
 import {
   camposFaltando,
@@ -26,17 +23,17 @@ import {
   ROTULO_CIDADE,
   ROTULO_CASA_ORACAO,
   ROTULO_DATA,
-  ROTULO_FINALIDADE,
-  ROTULO_LOCAL,
   ROTULO_TIPO,
 } from "@/modules/eventos/camposEvento";
+import { cidadeDaCasa } from "@/modules/eventos/casaDoEvento";
+import { buscarDadosDaCasa } from "@/modules/eventos/services/casaDoEvento";
 import { atualizarEvento, criarEvento } from "@/modules/eventos/services/eventos";
-import { obterOuCriarFinalidade } from "@/modules/eventos/services/finalidades";
 
 interface FormularioEventoProps {
   evento: Evento | null;
-  finalidades: FinalidadeEvento[];
-  sugestoesCidade: string[]; // cidades já cadastradas em outros eventos
+  /** Legado: a finalidade saiu da tela. A página ainda envia a lista, mas ela não é mais usada aqui. */
+  finalidades?: FinalidadeEvento[];
+  sugestoesCidade: string[]; // cidades já cadastradas em outros eventos (usadas só se a casa não tiver cidade)
   /** Chamado após salvar com sucesso, com a mensagem para o aviso da tela. */
   onSalvo: (mensagem: string) => void | Promise<void>;
 }
@@ -51,22 +48,20 @@ const classeInput =
 
 export default function FormularioEvento({
   evento,
-  finalidades,
   sugestoesCidade,
   onSalvo,
 }: FormularioEventoProps) {
   const editando = evento !== null;
 
-  const finalidadeInicial = evento?.finalidade_id
-    ? (finalidades.find((finalidade) => finalidade.id === evento.finalidade_id)?.nome ?? "")
-    : "";
-
   const [tipo, setTipo] = useState(evento?.tipo ?? "");
-  const [finalidadeTexto, setFinalidadeTexto] = useState(finalidadeInicial);
   const [dataEvento, setDataEvento] = useState(evento ? isoParaDatetimeLocal(evento.data_evento) : "");
+  // "local" não aparece mais na tela: guarda o NOME da Casa de Oração (o banco exige o campo).
   const [local, setLocal] = useState(evento?.local ?? "");
   const [cidade, setCidade] = useState(evento?.cidade ?? "");
   const [casaOracaoId, setCasaOracaoId] = useState(evento?.casa_oracao_id ?? "");
+  const [cidadeTravada, setCidadeTravada] = useState(false); // true = a cidade veio do cadastro da casa
+  const [avisoCidade, setAvisoCidade] = useState<string | null>(null);
+  const escolhaAtual = useRef(0); // descarta a resposta antiga se a pessoa trocar de casa rapidamente
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [faltando, setFaltando] = useState<string[]>([]); // campos obrigatórios vazios (borda vermelha)
@@ -75,13 +70,29 @@ export default function FormularioEvento({
   const classeCampo = (rotulo: string) =>
     classeInput + (faltando.includes(rotulo) ? " !border-red-500 !ring-2 !ring-red-200" : "");
 
-  // A finalidade digitada já existe? (comparação sem acento e sem diferenciar maiúsculas)
-  const finalidadeDigitada = finalidadeTexto.trim();
-  const finalidadeExistente = finalidadeDigitada
-    ? finalidades.find(
-        (finalidade) => normalizarTexto(finalidade.nome) === normalizarTexto(finalidadeDigitada)
-      )
-    : undefined;
+  // Ao escolher a Casa de Oração: o nome vai para "local" (onEscolherNome do seletor) e a cidade vem do cadastro dela.
+  async function aoEscolherCasa(id: string) {
+    setCasaOracaoId(id);
+    setAvisoCidade(null);
+    const escolha = ++escolhaAtual.current;
+    if (!id) {
+      setCidade("");
+      setCidadeTravada(false);
+      return;
+    }
+    try {
+      const resultado = cidadeDaCasa(await buscarDadosDaCasa(id));
+      if (escolha !== escolhaAtual.current) return; // chegou depois de outra escolha: ignora
+      setCidade(resultado.cidade);
+      setCidadeTravada(resultado.travada);
+      setAvisoCidade(resultado.aviso);
+    } catch {
+      if (escolha !== escolhaAtual.current) return;
+      setCidade("");
+      setCidadeTravada(false);
+      setAvisoCidade("Não foi possível buscar a cidade desta Casa de Oração. Informe a cidade abaixo.");
+    }
+  }
 
   async function salvar(submissao: FormEvent<HTMLFormElement>) {
     submissao.preventDefault();
@@ -89,12 +100,12 @@ export default function FormularioEvento({
     setErro(null);
 
     // Todos os campos são obrigatórios: o alerta lista os que faltam e eles ficam com borda vermelha
-    const vazios = camposFaltando({ tipo, finalidade: finalidadeTexto, dataEvento, local, cidade, casaOracaoId });
+    const vazios = camposFaltando({ tipo, dataEvento, cidade, casaOracaoId });
     setFaltando(vazios);
     if (vazios.length > 0) return setErro(mensagemCamposFaltando(vazios));
 
-    const erroFinalidade = validarFinalidade(finalidadeTexto);
-    if (erroFinalidade) return setErro(erroFinalidade);
+    // O banco exige o "local": ele vem do nome da casa escolhida na lista
+    if (!local.trim()) return setErro("Escolha a Casa de Oração na lista.");
 
     // O datetime-local não traz fuso: new Date() o lê como hora LOCAL do navegador e a conversão
     // para ISO (UTC) é o que o campo timestamptz do banco espera.
@@ -107,27 +118,18 @@ export default function FormularioEvento({
 
     setSalvando(true);
     try {
-      // Passo 1: finalidade (usa a existente ou salva uma nova para os próximos eventos)
-      const finalidade = await obterOuCriarFinalidade(finalidadeTexto, finalidades);
-
-      // Passo 2: grava o evento
+      // Grava o evento. A finalidade não é mais enviada: eventos antigos mantêm a que já tinham.
       const dados = {
         tipo: tipo.trim(),
         data_evento: dataIso,
         local: local.trim(),
-        finalidade_id: finalidade.id,
         cidade: cidade.trim() || null,
         casa_oracao_id: casaOracaoId || null,
       };
       if (evento) await atualizarEvento(evento.id, dados);
       else await criarEvento(dados);
 
-      const complemento = finalidade.criada
-        ? ` A finalidade "${finalidade.nome}" foi salva para os próximos eventos.`
-        : "";
-      await onSalvo(
-        editando ? `Evento atualizado.${complemento}` : `Evento cadastrado com sucesso!${complemento}`
-      );
+      await onSalvo(editando ? "Evento atualizado." : "Evento cadastrado com sucesso!");
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível salvar o evento.");
     } finally {
@@ -141,7 +143,7 @@ export default function FormularioEvento({
 
       <div className="space-y-1.5">
         <label htmlFor="tipo" className="text-sm font-medium text-slate-700">
-          Tipo <span className="text-red-600"> *</span>
+          Descrição do evento <span className="text-red-600"> *</span>
         </label>
         {/* Campo livre com sugestões (datalist): aceita Ensaio, Culto ou qualquer outro tipo */}
         <input
@@ -152,46 +154,13 @@ export default function FormularioEvento({
           value={tipo}
           onChange={(e) => setTipo(e.target.value)}
           disabled={salvando}
-          placeholder="Ex: Ensaio, Culto"
+          placeholder="Ex: Ensaio Regional, Culto Oficial"
           className={classeCampo(ROTULO_TIPO)}
         />
         <datalist id="sugestoes-tipo-evento">
           <option value="Ensaio" />
           <option value="Culto" />
         </datalist>
-      </div>
-
-      {/* Finalidade (combobox): escolha uma cadastrada ou digite uma nova */}
-      <div className="space-y-1.5">
-        <label htmlFor="finalidade" className="text-sm font-medium text-slate-700">
-          Finalidade do evento <span className="text-red-600"> *</span>
-        </label>
-        <input
-          id="finalidade"
-          type="text"
-          list="lista-finalidades"
-          autoComplete="off"
-          required
-          maxLength={FINALIDADE_MAXIMO}
-          value={finalidadeTexto}
-          onChange={(e) => setFinalidadeTexto(e.target.value)}
-          disabled={salvando}
-          placeholder="Digite ou escolha uma finalidade"
-          className={classeCampo(ROTULO_FINALIDADE)}
-        />
-        <datalist id="lista-finalidades">
-          {finalidades.map((finalidade) => (
-            <option key={finalidade.id} value={finalidade.nome} />
-          ))}
-        </datalist>
-        {/* Feedback ao vivo: finalidade já cadastrada ou nova (será salva para os próximos eventos) */}
-        {finalidadeDigitada && (
-          <p className={"text-xs " + (finalidadeExistente ? "text-slate-500" : "text-brand-700")}>
-            {finalidadeExistente
-              ? "Finalidade já cadastrada."
-              : `Nova finalidade: "${formatarNomeFinalidade(finalidadeDigitada)}" será salva para os próximos eventos.`}
-          </p>
-        )}
       </div>
 
       <div className="space-y-1.5">
@@ -209,19 +178,18 @@ export default function FormularioEvento({
         />
       </div>
 
+      {/* Casa de Oração (no lugar do antigo "Local"): o nome vai para "local" e a cidade vem do cadastro dela */}
       <div className="space-y-1.5">
-        <label htmlFor="local" className="text-sm font-medium text-slate-700">
-          Local <span className="text-red-600"> *</span>
+        <label htmlFor="casa-oracao-evento" className="text-sm font-medium text-slate-700">
+          Casa de Oração <span className="text-red-600"> *</span> <span className="font-normal text-slate-400">(define o setor da portaria)</span>
         </label>
-        <input
-          id="local"
-          type="text"
-          required
-          value={local}
-          onChange={(e) => setLocal(e.target.value)}
+        <SeletorCasaOracao
+          id="casa-oracao-evento"
+          valor={casaOracaoId}
+          onChange={(id) => void aoEscolherCasa(id)}
+          onEscolherNome={setLocal}
           disabled={salvando}
-          placeholder="Ex: Congregação Central"
-          className={classeCampo(ROTULO_LOCAL)}
+          className={classeCampo(ROTULO_CASA_ORACAO)}
         />
       </div>
 
@@ -234,6 +202,7 @@ export default function FormularioEvento({
             <option key={sugestao} value={sugestao} />
           ))}
         </datalist>
+        {/* Cidade vinda do cadastro da casa fica travada; sem cidade cadastrada, a pessoa digita */}
         <input
           id="cidade-evento"
           type="text"
@@ -241,23 +210,17 @@ export default function FormularioEvento({
           autoComplete="off"
           value={cidade}
           onChange={(e) => setCidade(e.target.value)}
+          readOnly={cidadeTravada}
           disabled={salvando}
-          placeholder="Ex: Lauro de Freitas"
-          className={classeCampo(ROTULO_CIDADE)}
+          placeholder="Preenchida ao escolher a Casa de Oração"
+          className={classeCampo(ROTULO_CIDADE) + " read-only:bg-slate-50 read-only:text-slate-600"}
         />
-      </div>
-
-      <div className="space-y-1.5">
-        <label htmlFor="casa-oracao-evento" className="text-sm font-medium text-slate-700">
-          Casa de Oração <span className="text-red-600"> *</span> <span className="font-normal text-slate-400">(define o setor da portaria)</span>
-        </label>
-        <SeletorCasaOracao
-          id="casa-oracao-evento"
-          valor={casaOracaoId}
-          onChange={setCasaOracaoId}
-          disabled={salvando}
-          className={classeCampo(ROTULO_CASA_ORACAO)}
-        />
+        {cidadeTravada && <p className="text-xs text-slate-500">Preenchida pelo cadastro da Casa de Oração.</p>}
+        {avisoCidade && (
+          <p role="status" className="text-xs text-amber-700">
+            {avisoCidade}
+          </p>
+        )}
       </div>
 
       {erro && (

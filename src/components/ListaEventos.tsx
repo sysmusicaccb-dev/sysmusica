@@ -137,7 +137,7 @@ export default function ListaEventos({
       <div className="border-b border-slate-200 p-4">
         <div className="relative max-w-md">
           <label htmlFor="busca-evento" className="sr-only">
-            Pesquisar por finalidade, local ou tipo
+            Pesquisar por descrição ou Casa de Oração
           </label>
           <Search
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
@@ -149,7 +149,7 @@ export default function ListaEventos({
             autoComplete="off"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Pesquisar por finalidade, local ou tipo..."
+            placeholder="Pesquisar por descrição ou Casa de Oração..."
             className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
           />
         </div>
@@ -163,16 +163,13 @@ export default function ListaEventos({
                 Data e hora
               </th>
               <th scope="col" className={classeCabecalho}>
-                Tipo
+                Descrição do evento
               </th>
               <th scope="col" className={classeCabecalho}>
                 Situação
               </th>
               <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>
-                Finalidade
-              </th>
-              <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>
-                Local
+                Casa de Oração
               </th>
               {mostrarAcoes && (
                 <th scope="col" className={classeCabecalho + " text-right"}>
@@ -185,7 +182,7 @@ export default function ListaEventos({
             {filtrados.length === 0 ? (
               <tr>
                 <td
-                  colSpan={mostrarAcoes ? 6 : 5}
+                  colSpan={mostrarAcoes ? 5 : 4}
                   className="px-4 py-10 text-center text-sm text-slate-500"
                 >
                   Nenhum evento encontrado com a pesquisa atual.
@@ -228,9 +225,6 @@ export default function ListaEventos({
                           Motivo: {evento.motivo_cancelamento}
                         </span>
                       )}
-                    </td>
-                    <td className="hidden max-w-sm px-4 py-3 text-slate-700 md:table-cell">
-                      {finalidade ?? <span className="text-slate-400">—</span>}
                     </td>
                     <td className="hidden px-4 py-3 font-medium text-slate-900 md:table-cell">
                       {evento.local}

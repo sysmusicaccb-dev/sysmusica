@@ -35,7 +35,7 @@ export interface DadosAtualizacaoEvento {
   tipo: string;
   data_evento: string;
   local: string;
-  finalidade_id: string | null;
+  finalidade_id?: string | null; // opcional: a tela não envia mais (mantém o valor atual)
   cidade: string | null;
   casa_oracao_id?: string | null;
 }
