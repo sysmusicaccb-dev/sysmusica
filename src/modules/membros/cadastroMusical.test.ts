@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
   CADASTRO_VAZIO,
+  ESTADOS_CIVIS,
   cargoEntraNoCadastro,
   cargoExigeCartao,
+  cargoSomenteOrgao,
   cargosDoCadastro,
   deRetornoDoBanco,
   emailValido,
+  enderecoDoViaCep,
   formatarCep,
   formatarTelefone,
   formatarWhatsapp,
+  instrumentoEOrgao,
+  instrumentosDoCargo,
   paraEnvioAoBanco,
   somenteDigitos,
   temAlgumDado,
@@ -18,6 +23,10 @@ import {
 
 const completoOk: CadastroMusical = {
   ...CADASTRO_VAZIO,
+  estado_civil: "Solteiro (a)",
+  sexo: "Feminino",
+  batizado: "sim",
+  data_batismo: "2015-06-01",
   selado: "sim",
   ddd: "71",
   telefone: "999998888",
@@ -26,12 +35,26 @@ const completoOk: CadastroMusical = {
   endereco: "Rua das Flores",
   numero: "10",
   uf: "BA",
+  documento_frente_path: "m1/frente-1.jpg",
+  documento_verso_path: "m1/verso-1.jpg",
 };
-const base = { completo: true, exigeCartao: false, cidade: "Salvador", bairro: "Itinga" };
+const base = {
+  completo: true,
+  exigeCartao: false,
+  cidade: "Salvador",
+  bairro: "Itinga",
+  cpf: "52998224725",
+  cpfObrigatorio: true,
+  dataNascimento: "1990-05-10",
+  instrumentoId: "i1",
+  instrumentoObrigatorio: true,
+  temDocumentoFrente: true,
+  temDocumentoVerso: true,
+};
 
 describe("cargos do cadastro", () => {
   it("aceita os cargos do formulário (com ou sem acento, com (a))", () => {
-    for (const nome of ["Encarregado Regional", "Encarregado Local", "Examinadora", "Instrutor (a)", "Músico", "Organista"]) {
+    for (const nome of ["Encarregado Regional", "Encarregado Local", "Examinadora", "Instrutor (a)", "Instrutor", "Instrutora", "Músico", "Organista"]) {
       expect(cargoEntraNoCadastro(nome), nome).toBe(true);
     }
   });
@@ -59,6 +82,69 @@ describe("cargos do cadastro", () => {
     expect(cargoExigeCartao({ id: "1", nome: "Examinadora", exige_cartao: null })).toBe(true);
     expect(cargoExigeCartao({ id: "1", nome: "Organista" })).toBe(false);
     expect(cargoExigeCartao(undefined)).toBe(false);
+  });
+});
+
+describe("instrumento Órgão", () => {
+  it("cargos travados: usa a coluna do banco; sem ela, a lista padrão", () => {
+    expect(cargoSomenteOrgao({ id: "1", nome: "Músico", somente_orgao: true })).toBe(true);
+    expect(cargoSomenteOrgao({ id: "1", nome: "Organista", somente_orgao: false })).toBe(false);
+    for (const nome of ["Organista", "Examinadora", "Instrutor", "Instrutora", "Instrutor (a)"]) {
+      expect(cargoSomenteOrgao({ id: "1", nome }), nome).toBe(true);
+    }
+    for (const nome of ["Músico", "Encarregado Local", "Encarregado Regional"]) {
+      expect(cargoSomenteOrgao({ id: "1", nome }), nome).toBe(false);
+    }
+    expect(cargoSomenteOrgao(undefined)).toBe(false);
+  });
+
+  it("reconhece o Órgão pelo nome (com ou sem acento)", () => {
+    expect(instrumentoEOrgao("Orgão Eletrônico")).toBe(true);
+    expect(instrumentoEOrgao("Órgão")).toBe(true);
+    expect(instrumentoEOrgao("Violino")).toBe(false);
+    expect(instrumentoEOrgao(null)).toBe(false);
+  });
+
+  it("filtra os instrumentos do cargo travado", () => {
+    const lista = [{ nome: "Violino" }, { nome: "Orgão Eletrônico" }, { nome: "Órgão de tubos" }];
+    expect(instrumentosDoCargo(lista, true).map((i) => i.nome)).toEqual(["Orgão Eletrônico", "Órgão de tubos"]);
+    expect(instrumentosDoCargo(lista, false)).toHaveLength(3);
+  });
+});
+
+describe("estado civil", () => {
+  it("usa os rótulos com espaço antes do (a)", () => {
+    expect([...ESTADOS_CIVIS]).toEqual(["Casado (a)", "Solteiro (a)", "Viúvo (a)"]);
+  });
+});
+
+describe("endereço pelo CEP (ViaCEP)", () => {
+  it("converte a resposta do serviço", () => {
+    const resposta = {
+      cep: "40000-000", logradouro: "Rua das Flores", complemento: "lado par", bairro: "Itinga",
+      localidade: "Lauro de Freitas", uf: "ba",
+    };
+    expect(enderecoDoViaCep(resposta)).toEqual({
+      endereco: "Rua das Flores", complemento: "lado par", bairro: "Itinga", cidade: "Lauro de Freitas", uf: "BA",
+    });
+  });
+
+  it("CEP geral (sem rua e bairro) preenche só cidade e UF", () => {
+    expect(enderecoDoViaCep({ logradouro: "", bairro: "", localidade: "Ipiaú", uf: "BA" })).toEqual({
+      endereco: "", complemento: "", bairro: "", cidade: "Ipiaú", uf: "BA",
+    });
+  });
+
+  it("CEP inexistente ou resposta inválida devolve null", () => {
+    expect(enderecoDoViaCep({ erro: true })).toBeNull();
+    expect(enderecoDoViaCep({ erro: "true" })).toBeNull();
+    expect(enderecoDoViaCep(null)).toBeNull();
+    expect(enderecoDoViaCep("texto")).toBeNull();
+    expect(enderecoDoViaCep({})).toBeNull();
+  });
+
+  it("UF desconhecida não é aceita no campo", () => {
+    expect(enderecoDoViaCep({ localidade: "Algum lugar", uf: "XX" })?.uf).toBe("");
   });
 });
 
@@ -94,6 +180,10 @@ describe("validarCadastro", () => {
 
   it("exige cada campo obrigatório quando completo", () => {
     const casos: [Partial<CadastroMusical>, string][] = [
+      [{ estado_civil: "" }, "estado civil"],
+      [{ sexo: "" }, "sexo"],
+      [{ batizado: "" }, "batizada"],
+      [{ data_batismo: "" }, "batismo"],
       [{ selado: "" }, "selada"],
       [{ ddd: "" }, "DDD"],
       [{ telefone: "" }, "telefone"],
@@ -109,6 +199,28 @@ describe("validarCadastro", () => {
     }
     expect(validarCadastro(completoOk, { ...base, cidade: "" })).toContain("cidade");
     expect(validarCadastro(completoOk, { ...base, bairro: " " })).toContain("bairro");
+  });
+
+  it("CPF, data de nascimento e instrumento são obrigatórios no cadastro completo", () => {
+    expect(validarCadastro(completoOk, { ...base, cpf: "" })).toContain("CPF");
+    expect(validarCadastro(completoOk, { ...base, dataNascimento: "" })).toContain("nascimento");
+    expect(validarCadastro(completoOk, { ...base, instrumentoId: "" })).toContain("instrumento");
+    // quem não vê o CPF (sem a permissão) não é cobrado por ele; cargo sem instrumento não pede instrumento
+    expect(validarCadastro(completoOk, { ...base, cpf: "", cpfObrigatorio: false })).toBeNull();
+    expect(validarCadastro(completoOk, { ...base, instrumentoId: "", instrumentoObrigatorio: false })).toBeNull();
+  });
+
+  it("batizado: a data só é cobrada para quem é batizado e não pode ser anterior ao nascimento", () => {
+    expect(validarCadastro({ ...completoOk, batizado: "nao", data_batismo: "" }, base)).toBeNull();
+    expect(validarCadastro({ ...completoOk, data_batismo: "1980-01-01" }, base)).toContain("anterior ao nascimento");
+  });
+
+  it("documento: frente e verso são obrigatórios no cadastro completo", () => {
+    expect(validarCadastro(completoOk, { ...base, temDocumentoFrente: false })).toContain("frente");
+    expect(validarCadastro(completoOk, { ...base, temDocumentoVerso: false })).toContain("verso");
+    expect(
+      validarCadastro(CADASTRO_VAZIO, { ...base, completo: false, temDocumentoFrente: false, temDocumentoVerso: false })
+    ).toBeNull();
   });
 
   it("sem exigir completo, aceita vazio mas confere o formato do que foi preenchido", () => {
@@ -163,6 +275,14 @@ describe("conversão com o banco", () => {
     expect(envio.complemento).toBeNull();
     expect(envio.email).toBeNull();
     expect(envio.uf).toBe("BA");
+    expect(envio.batizado).toBe(true);
+    expect(envio.documento_frente_path).toBe("m1/frente-1.jpg");
+  });
+
+  it("não batizado: a data do batismo não é enviada", () => {
+    const envio = paraEnvioAoBanco({ ...completoOk, batizado: "nao", data_batismo: "2015-06-01" });
+    expect(envio.batizado).toBe(false);
+    expect(envio.data_batismo).toBeNull();
   });
 
   it("WhatsApp: vazio com 'sim' copia o telefone; com 'não' não guarda", () => {
@@ -179,6 +299,12 @@ describe("conversão com o banco", () => {
     expect(lido.uf).toBe("BA");
     expect(lido.ddd).toBe("");
     expect(lido.numero).toBe("");
+    expect(lido.batizado).toBe("");
+  });
+
+  it("cadastro antigo sem a coluna batizado: quem tem data de batismo é batizado", () => {
+    expect(deRetornoDoBanco({ data_batismo: "2010-01-01" }).batizado).toBe("sim");
+    expect(deRetornoDoBanco({ batizado: false }).batizado).toBe("nao");
   });
 
   it("ida e volta mantém os dados", () => {

@@ -1,0 +1,1629 @@
+##### ARQUIVOS COM CADASTRO MUSICAL
+src/app/(painel)/administracao/backup/notificacoes/page.tsx
+src/app/(painel)/administracao/backup/restauracao/page.tsx
+src/app/(painel)/membros/page.tsx
+src/components/FormularioMembro.tsx
+src/lib/cpf.test.ts
+src/lib/cpf.ts
+src/lib/permissoes.ts
+src/lib/qr.ts
+src/modules/auditoria/components/DetalheAuditoria.tsx
+src/modules/auditoria/regras.test.ts
+src/modules/auditoria/regras.ts
+src/modules/backup/cripto.test.ts
+src/modules/backup/regras.ts
+src/modules/backup/restauracao.test.ts
+src/modules/backup/restauracao.ts
+src/modules/backup/server/notificar.ts
+src/modules/backup/tabelas.test.ts
+src/modules/backup/tabelas.ts
+src/modules/eventos/regras.test.ts
+src/modules/membros/cadastroMusical.test.ts
+src/modules/membros/cadastroMusical.ts
+src/modules/membros/components/QrMembro.tsx
+src/modules/membros/services/membros.ts
+src/modules/painel/regras.test.ts
+src/modules/portaria/services/portaria.ts
+src/modules/relatorios/catalogo.ts
+src/modules/relatorios/regras.test.ts
+src/modules/relatorios/services/relatorios.ts
+src/types/database.ts
+supabase/migrations/0001_baseline.sql
+supabase/migrations/0002_rbac.sql
+supabase/migrations/0004_cadastros.sql
+supabase/migrations/0006_identidade_membro.sql
+supabase/migrations/0014_visitantes_portaria.sql
+supabase/migrations/0015_auditoria_e_origem_visitante.sql
+supabase/migrations/0018_relatorios.sql
+supabase/migrations/0020_backup.sql
+supabase/migrations/0026_painel_ao_vivo.sql
+supabase/migrations/0031_casa_de_oracao.sql
+supabase/migrations/0036_relatorio_presenca_portaria.sql
+supabase/migrations/0038_cadastro_musical.sql
+supabase/migrations/0039_organizacao_rrm_ra_adm.sql
+supabase/migrations/LEIA-ME.md
+
+################ src/components/FormularioMembro.tsx
+"use client";
+
+/**
+ * SysMúsica — Formulário de membro (cadastro e edição) — conteúdo do painel lateral.
+ * membro = null -> cadastrar; preenchido -> editar (inclui o status Ativo/Inativo).
+ *
+ * Casa de Oração: lista agrupada por Região › Setor (cadastrada em Organização). O nome da congregação sai da casa de oração.
+ * Cidade e bairro: texto com sugestões dos valores já cadastrados.
+ * CPF: só aparece para quem tem a permissão membros.cpf (o banco também confere). É opcional,
+ *      validado pelos dígitos verificadores e não pode repetir entre os membros.
+ *
+ * CADASTRO MUSICAL (migração 0038): além dos dados de "membros", o formulário coleta os dados pessoais
+ *      (estado civil, sexo, batismo, selado, telefone/WhatsApp, e-mail, endereço, cartão de identificação,
+ *      apresentado por, observação), gravados na tabela protegida membros_cadastro pelas funções do banco
+ *      (services/cadastroMusical.ts). As regras e validações ficam em modules/membros/cadastroMusical.ts.
+ *  - Só os cargos do cadastro aparecem na lista (o cargo atual do membro é mantido na edição).
+ *  - Cargos com cartão de identificação (cargos.exige_cartao) mostram os campos do cartão.
+ *  - "Status do cargo" (Oficializado / Culto Oficial / RJM) é o campo Categoria; outros cargos são Oficializado.
+ *  - Os campos obrigatórios (*) valem no cadastro novo e em quem já tem o cadastro preenchido.
+ *
+ * Instrumento: lista suspensa agrupada por família, igual em todo o sistema (só instrumentos cadastrados).
+ *  - O campo só aparece para cargos com permite_instrumento = true.
+ *  - É OBRIGATÓRIO nos cargos que exigem instrumento (o Músico); o banco também recusa sem ele.
+ *  - A FAMÍLIA é automática e somente leitura (vem do cadastro do instrumento). Instrumento novo e
+ *    correção de família: tela Instrumentos e famílias.
+ */
+import { useState, type FormEvent, type ReactNode } from "react";
+import Button from "@/components/ui/Button";
+import { formatarCpf, limparCpf, validarCpf } from "@/lib/cpf";
+import SeletorInstrumento, { FamiliaAutomatica } from "@/modules/instrumentos/components/SeletorInstrumento";
+import { validarInstrumentoDoCargo } from "@/modules/instrumentos/selecao";
+import { atualizarMembro, criarMembro } from "@/modules/membros/services/membros";
+import { CATEGORIAS, cargoUsaCategoria, validarCategoria } from "@/modules/painel/regras";
+import SeletorCasaOracao from "@/modules/organizacao/components/SeletorCasaOracao";
+import CampoFoto from "@/modules/membros/components/CampoFoto";
+import FotoMembro from "@/modules/membros/components/FotoMembro";
+import { descartarFoto, enviarFoto, removerFoto, subirFotoNova } from "@/modules/membros/services/fotos";
+import {
+  CADASTRO_VAZIO,
+  ESTADOS_CIVIS,
+  SEXOS,
+  UFS,
+  cargoExigeCartao,
+  cargosDoCadastro,
+  formatarCep,
+  formatarTelefone,
+  formatarWhatsapp,
+  somenteDigitos,
+  temAlgumDado,
+  validarCadastro,
+  type CadastroMusical,
+  type SimNao,
+} from "@/modules/membros/cadastroMusical";
+import { salvarCadastroMusical } from "@/modules/membros/services/cadastroMusical";
+import type { Cargo, Familia, Instrumento, MembroPublico } from "@/types/database";
+
+/** Listas de sugestões para os campos de localidade. */
+export interface SugestoesLocalidade {
+  congregacoes: string[];
+  cidades: string[];
+  bairros: string[];
+}
+
+interface FormularioMembroProps {
+  membro: MembroPublico | null; // null = cadastrar; preenchido = editar
+  cpfInicial: string | null; // CPF completo (só na edição e só para quem tem membros.cpf)
+  cadastroInicial: CadastroMusical | null; // dados pessoais já gravados (só na edição; null = ainda sem cadastro)
+  podeCpf: boolean; // permissão membros.cpf
+  podeFoto: boolean; // permissão membros.foto (trocar a fotografia de um membro já cadastrado)
+  cargos: Cargo[];
+  instrumentos: Instrumento[];
+  familias: Familia[];
+  sugestoes: SugestoesLocalidade;
+  carregando: boolean;
+  erro: string | null;
+  /** Chamado após salvar com sucesso, com a mensagem para o aviso da tela. */
+  onSalvo: (mensagem: string) => void | Promise<void>;
+}
+
+// Classe compartilhada pelos campos (mesma identidade visual dos demais módulos).
+// [color-scheme:light] mantém o ícone do seletor de data visível mesmo com o navegador em tema escuro.
+const classeInput =
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 " +
+  "placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none " +
+  "focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-60 " +
+  "[color-scheme:light]";
+
+export default function FormularioMembro({
+  membro,
+  cpfInicial,
+  cadastroInicial,
+  podeCpf,
+  podeFoto,
+  cargos,
+  instrumentos,
+  familias,
+  sugestoes,
+  carregando,
+  erro,
+  onSalvo,
+}: FormularioMembroProps) {
+  const editando = membro !== null;
+
+  // Valores iniciais: vazios no cadastro; os dados do membro na edição
+  const [nome, setNome] = useState(membro?.nome ?? "");
+  const [congregacao, setCongregacao] = useState(membro?.congregacao ?? "");
+  const [casaOracaoId, setCasaOracaoId] = useState(membro?.casa_oracao_id ?? ""); // a casa de oração define o nome da congregação
+  const [cidade, setCidade] = useState(membro?.cidade ?? "");
+  const [bairro, setBairro] = useState(membro?.bairro ?? "");
+  const [cpf, setCpf] = useState(cpfInicial ? formatarCpf(cpfInicial) : "");
+  const [cargoId, setCargoId] = useState(membro?.cargo_id ?? "");
+  const [dataNascimento, setDataNascimento] = useState(membro?.data_nascimento ?? ""); // "AAAA-MM-DD"
+  const [instrumentoId, setInstrumentoId] = useState(membro?.instrumento_id ?? "");
+  const [categoria, setCategoria] = useState(membro?.categoria ?? ""); // Oficializado, Culto Oficial ou RJM
+  const [status, setStatus] = useState(membro?.status ?? "Ativo");
+  const [foto, setFoto] = useState<Blob | null>(null); // foto nova já preparada (obrigatória no cadastro novo)
+  const [cadastro, setCadastro] = useState<CadastroMusical>(cadastroInicial ?? CADASTRO_VAZIO); // dados pessoais
+  const [confirmandoRemocaoFoto, setConfirmandoRemocaoFoto] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [erroForm, setErroForm] = useState<string | null>(null);
+
+  // Cargos do Cadastro Musical (Ancião, Diácono, Cooperadores e Secretário da Música não têm mais cadastro;
+  // na edição o cargo atual do membro continua na lista para não ser trocado sem querer)
+  const cargosDisponiveis = cargosDoCadastro(cargos, membro?.cargo_id);
+
+  // O cargo escolhido define se o campo de instrumento aparece e se ele é obrigatório
+  const cargoSelecionado = cargos.find((cargo) => cargo.id === cargoId);
+  const permiteInstrumento = cargoSelecionado?.permite_instrumento ?? false;
+  const exigeInstrumento =
+    (cargoSelecionado as (Cargo & { exige_instrumento?: boolean }) | undefined)?.exige_instrumento === true;
+  // Só Músico e Organista têm categoria (as demais pessoas contam no painel pelo próprio cargo)
+  const tipoCategoria = cargoUsaCategoria(cargoSelecionado?.nome);
+  // Cartão de identificação: só para os cargos marcados (cargos.exige_cartao)
+  const exigeCartao = cargoExigeCartao(cargoSelecionado as (Cargo & { exige_cartao?: boolean }) | undefined);
+  // Campos obrigatórios (*): cadastro novo, ou edição de quem já tem o cadastro preenchido (ou começou a preencher)
+  const completo = !editando || cadastroInicial !== null || temAlgumDado(cadastro);
+
+  // Ao trocar de cargo, limpa o instrumento se o novo cargo não usar instrumento
+  function trocarCargo(novoCargoId: string) {
+    setCargoId(novoCargoId);
+    const novoCargo = cargos.find((cargo) => cargo.id === novoCargoId);
+    if (!novoCargo?.permite_instrumento) setInstrumentoId("");
+    if (!cargoUsaCategoria(novoCargo?.nome)) setCategoria("");
+  }
+
+  // Atualiza um campo dos dados pessoais
+  function mudar<K extends keyof CadastroMusical>(campo: K, valor: CadastroMusical[K]) {
+    setCadastro((atual) => ({ ...atual, [campo]: valor }));
+  }
+
+  // "Tem WhatsApp? Sim" já preenche o número com o próprio telefone (pode ser trocado)
+  function escolherWhatsapp(valor: SimNao) {
+    setCadastro((atual) => ({
+      ...atual,
+      tem_whatsapp: valor,
+      whatsapp: valor === "sim" && !atual.whatsapp ? `${atual.ddd}${atual.telefone}` : atual.whatsapp,
+    }));
+  }
+
+  // Remove a fotografia atual (só na edição, com a permissão de fotografia, depois de confirmar)
+  async function removerFotoAtual() {
+    if (!membro || salvando) return;
+    setErroForm(null);
+    setSalvando(true);
+    try {
+      await removerFoto(membro.id);
+      await onSalvo(`Fotografia de "${membro.nome}" removida.`);
+    } catch (e) {
+      setErroForm(e instanceof Error ? e.message : "Não foi possível remover a fotografia.");
+    } finally {
+      setSalvando(false);
+      setConfirmandoRemocaoFoto(false);
+    }
+  }
+
+  async function salvar(submissao: FormEvent<HTMLFormElement>) {
+    submissao.preventDefault();
+    if (salvando) return; // evita envio duplicado
+    setErroForm(null);
+
+    // Barra campos obrigatórios vazios ou preenchidos só com espaços
+    if (!nome.trim() || !casaOracaoId || !cargoId) {
+      return setErroForm("Preencha nome, cargo e casa de oração.");
+    }
+
+    // CPF (opcional): se preenchido, precisa ser válido
+    const cpfDigitos = limparCpf(cpf);
+    if (podeCpf && cpfDigitos !== "" && !validarCpf(cpfDigitos)) {
+      return setErroForm("CPF inválido. Confira os números digitados.");
+    }
+
+    // Instrumento obrigatório nos cargos que exigem (o banco confere de novo)
+    const erroInstrumento = validarInstrumentoDoCargo(exigeInstrumento, instrumentoId, cargoSelecionado?.nome);
+    if (erroInstrumento) return setErroForm(erroInstrumento);
+
+    // Categoria: obrigatória para Músico e Organista (define em qual linha do painel ao vivo ele conta)
+    const erroCategoria = validarCategoria(cargoSelecionado?.nome, categoria);
+    if (erroCategoria) return setErroForm(erroCategoria);
+
+    // Fotografia: obrigatória no cadastro novo (o banco também recusa sem ela)
+    if (!editando && !foto) {
+      return setErroForm("A fotografia é obrigatória. Tire a foto ou escolha uma imagem.");
+    }
+
+    // Dados pessoais do Cadastro Musical (o banco confere tudo de novo)
+    const erroCadastro = validarCadastro(cadastro, { completo, exigeCartao, cidade, bairro });
+    if (erroCadastro) return setErroForm(erroCadastro);
+
+    setSalvando(true);
+    try {
+      const dados = {
+        nome: nome.trim(),
+        congregacao: congregacao.trim(),
+        casa_oracao_id: casaOracaoId,
+        cidade: cidade.trim() || null,
+        bairro: bairro.trim() || null,
+        cargo_id: cargoId,
+        data_nascimento: dataNascimento || null,
+        instrumento_id: permiteInstrumento && instrumentoId ? instrumentoId : null,
+        categoria: tipoCategoria && categoria ? categoria : null,
+      };
+      if (membro) {
+        // O CPF só é enviado por quem tem a permissão (os demais nem tocam nele)
+        await atualizarMembro(membro.id, {
+          ...dados,
+          status,
+          ...(podeCpf ? { cpf: cpfDigitos || null } : {}),
+        });
+        // Foto nova (opcional na edição): só quem tem a permissão de fotografia a troca
+        if (foto && podeFoto) await enviarFoto(membro.id, foto);
+        // Dados pessoais: depois do cargo, porque o banco confere o cartão pelo cargo atual do membro
+        if (completo) await salvarCadastroMusical(membro.id, cadastro);
+      } else {
+        // Cadastro novo: o identificador é gerado aqui para a foto subir para a pasta do próprio membro
+        // antes do cadastro; o banco confere o arquivo e recusa o cadastro sem foto.
+        const novoId = crypto.randomUUID();
+        const caminho = await subirFotoNova(novoId, foto as Blob);
+        try {
+          await criarMembro({
+            ...dados,
+            id: novoId,
+            foto_path: caminho,
+            ...(podeCpf && cpfDigitos ? { cpf: cpfDigitos } : {}),
+          });
+        } catch (e) {
+          await descartarFoto(caminho); // o cadastro falhou: não deixa a foto solta
+          throw e;
+        }
+        try {
+          await salvarCadastroMusical(novoId, cadastro);
+        } catch (e) {
+          // O membro já existe: fecha o formulário (evita cadastrar duas vezes) e avisa o que faltou
+          const motivo = e instanceof Error ? e.message : "erro desconhecido";
+          await onSalvo(
+            `Membro "${dados.nome}" cadastrado, mas os dados pessoais NÃO foram salvos (${motivo}). ` +
+              "Abra Editar e preencha de novo."
+          );
+          return;
+        }
+      }
+
+      await onSalvo(editando ? `Membro "${dados.nome}" atualizado.` : `Membro "${dados.nome}" cadastrado.`);
+    } catch (e) {
+      setErroForm(e instanceof Error ? e.message : "Não foi possível salvar o membro.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  // ---------- Estados da tela ----------
+
+  if (carregando) {
+    return <p className="text-sm text-slate-600">Carregando os dados do formulário...</p>;
+  }
+
+  if (erro) {
+    return (
+      <p className="text-sm text-slate-600">
+        Formulário indisponível porque os dados não puderam ser carregados.
+      </p>
+    );
+  }
+
+  // Sem cargos: a migração do banco ainda não foi aplicada
+  if (cargos.length === 0) {
+    return (
+      <p className="text-sm text-slate-600">
+        Nenhum cargo encontrado. Aplique as migrações do banco (pasta supabase/migrations) para criar
+        os cargos padrão.
+      </p>
+    );
+  }
+
+  // Data máxima do campo de nascimento = hoje (formato AAAA-MM-DD, no fuso local)
+  const hoje = new Date().toLocaleDateString("sv-SE");
+  const rotuloSimNao = (obrigatorio: boolean) => (obrigatorio ? "Selecione" : "—");
+
+  return (
+    <form onSubmit={salvar} className="space-y-6">
+      {/* ---------- Fotografia ---------- */}
+      {/* Obrigatória no cadastro novo; na edição só troca/remove quem tem a permissão de fotografia */}
+      {!editando || podeFoto ? (
+        <div className="space-y-1.5">
+          <span className="text-sm font-medium text-slate-700">
+            Fotografia{" "}
+            {editando ? (
+              <span className="font-normal text-slate-400">(opcional na edição)</span>
+            ) : (
+              <span className="font-normal text-red-600">(obrigatória)</span>
+            )}
+          </span>
+          <CampoFoto
+            nome={nome || "Membro"}
+            fotoAtualCaminho={membro?.foto_path ?? null}
+            obrigatoria={!editando}
+            onChange={setFoto}
+            disabled={salvando}
+          />
+          {editando && membro?.foto_path && (
+            <div className="pt-1">
+              {confirmandoRemocaoFoto ? (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
+                  <span>Remover a fotografia? Na portaria ele aparecerá sem foto.</span>
+                  <button
+                    type="button"
+                    onClick={() => void removerFotoAtual()}
+                    disabled={salvando}
+                    className="rounded-lg bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-60"
+                  >
+                    Sim, remover
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmandoRemocaoFoto(false)}
+                    disabled={salvando}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmandoRemocaoFoto(true)}
+                  disabled={salvando}
+                  className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-60"
+                >
+                  Remover a fotografia atual
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          <span className="text-sm font-medium text-slate-700">Fotografia</span>
+          <FotoMembro caminho={membro?.foto_path ?? null} nome={nome || "Membro"} tamanho="grande" />
+          <p className="text-xs text-slate-500">A fotografia só pode ser trocada por quem tem a permissão Fotografia.</p>
+        </div>
+      )}
+
+      {/* ---------- Identificação ---------- */}
+      <Secao titulo="Identificação">
+        <Campo id="nome" rotulo="Nome completo" obrigatorio>
+          <input
+            id="nome"
+            type="text"
+            required
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            disabled={salvando}
+            placeholder="Ex: João da Silva"
+            className={classeInput}
+          />
+        </Campo>
+
+        {/* CPF: só para quem tem a permissão membros.cpf */}
+        {podeCpf && (
+          <Campo
+            id="cpf"
+            rotulo="CPF"
+            dica="Evita cadastros duplicados. O CPF é protegido: só quem tem permissão o vê por completo."
+          >
+            <input
+              id="cpf"
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              value={cpf}
+              onChange={(e) => setCpf(formatarCpf(e.target.value))}
+              disabled={salvando}
+              placeholder="000.000.000-00"
+              className={classeInput}
+            />
+          </Campo>
+        )}
+
+        <Campo id="data_nascimento" rotulo="Data de nascimento">
+          <input
+            id="data_nascimento"
+            type="date"
+            max={hoje}
+            value={dataNascimento}
+            onChange={(e) => setDataNascimento(e.target.value)}
+            disabled={salvando}
+            className={classeInput}
+          />
+        </Campo>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Campo id="estado_civil" rotulo="Estado civil">
+            <select
+              id="estado_civil"
+              value={cadastro.estado_civil}
+              onChange={(e) => mudar("estado_civil", e.target.value)}
+              disabled={salvando}
+              className={classeInput}
+            >
+              <option value="">—</option>
+              {ESTADOS_CIVIS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <Campo id="sexo" rotulo="Sexo">
+            <select
+              id="sexo"
+              value={cadastro.sexo}
+              onChange={(e) => mudar("sexo", e.target.value)}
+              disabled={salvando}
+              className={classeInput}
+            >
+              <option value="">—</option>
+              {SEXOS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </Campo>
+        </div>
+      </Secao>
+
+      {/* ---------- Vínculo e função ---------- */}
+      <Secao titulo="Casa de Oração e cargo">
+        {/* Casa de oração (lista do banco) */}
+        <Campo
+          id="casa-oracao-membro"
+          rotulo="Casa de Oração"
+          obrigatorio
+          dica="A casa de oração define o setor e quem enxerga o cadastro. Se a casa de oração não aparecer, peça a um administrador para cadastrá-la em Administração > Organização."
+        >
+          <SeletorCasaOracao
+            id="casa-oracao-membro"
+            valor={casaOracaoId}
+            onChange={setCasaOracaoId}
+            onEscolherNome={setCongregacao}
+            disabled={salvando}
+            className={classeInput}
+          />
+        </Campo>
+
+        <Campo id="cargo" rotulo="Cargo" obrigatorio>
+          <select
+            id="cargo"
+            required
+            value={cargoId}
+            onChange={(e) => trocarCargo(e.target.value)}
+            disabled={salvando}
+            className={classeInput}
+          >
+            <option value="">Selecione um cargo</option>
+            {cargosDisponiveis.map((cargo) => (
+              <option key={cargo.id} value={cargo.id}>
+                {cargo.nome}
+              </option>
+            ))}
+          </select>
+        </Campo>
+
+        {/* Status do cargo (Categoria): só Músico e Organista informam; os demais cargos são Oficializado */}
+        {tipoCategoria ? (
+          <Campo id="categoria" rotulo="Status do cargo" obrigatorio>
+            <select
+              id="categoria"
+              required
+              value={categoria}
+              onChange={(e) => setCategoria(e.target.value)}
+              disabled={salvando}
+              className={classeInput}
+            >
+              <option value="">Selecione o status</option>
+              {CATEGORIAS.map((item) => (
+                <option key={item.valor} value={item.valor}>
+                  {item[tipoCategoria]}
+                </option>
+              ))}
+            </select>
+          </Campo>
+        ) : (
+          cargoSelecionado && (
+            <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              Status do cargo: <strong>Oficializado</strong> (automático para este cargo).
+            </p>
+          )
+        )}
+
+        {/* Instrumento (lista por família; obrigatório para Músico) + Família automática */}
+        {permiteInstrumento && (
+          <>
+            <Campo
+              id="instrumento"
+              rotulo="Instrumento"
+              obrigatorio={exigeInstrumento}
+              dica="Escolha na lista. Para incluir um instrumento novo, cadastre em Instrumentos e famílias."
+            >
+              <SeletorInstrumento
+                id="instrumento"
+                valor={instrumentoId}
+                onChange={setInstrumentoId}
+                instrumentos={instrumentos}
+                familias={familias}
+                obrigatorio={exigeInstrumento}
+                disabled={salvando}
+                className={classeInput}
+              />
+            </Campo>
+
+            <FamiliaAutomatica instrumentoId={instrumentoId} instrumentos={instrumentos} familias={familias} />
+          </>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <Campo id="data_batismo" rotulo="Data de batismo">
+            <input
+              id="data_batismo"
+              type="date"
+              max={hoje}
+              value={cadastro.data_batismo}
+              onChange={(e) => mudar("data_batismo", e.target.value)}
+              disabled={salvando}
+              className={classeInput}
+            />
+          </Campo>
+          <Campo id="selado" rotulo="Selado(a)?" obrigatorio={completo}>
+            <select
+              id="selado"
+              value={cadastro.selado}
+              onChange={(e) => mudar("selado", e.target.value as SimNao)}
+              disabled={salvando}
+              className={classeInput}
+            >
+              <option value="">{rotuloSimNao(completo)}</option>
+              <option value="sim">Sim</option>
+              <option value="nao">Não</option>
+            </select>
+          </Campo>
+        </div>
+      </Secao>
+
+      {/* ---------- Cartão de identificação (só para os cargos marcados em cargos.exige_cartao) ---------- */}
+      {exigeCartao && (
+        <Secao titulo="Cartão de identificação">
+          <Campo id="cartao_numero" rotulo="Número do cartão" obrigatorio>
+            <input
+              id="cartao_numero"
+              type="text"
+              autoComplete="off"
+              maxLength={40}
+              value={cadastro.cartao_numero}
+              onChange={(e) => mudar("cartao_numero", e.target.value)}
+              disabled={salvando}
+              className={classeInput}
+            />
+          </Campo>
+          <div className="grid grid-cols-2 gap-3">
+            <Campo id="cartao_emissao" rotulo="Emissão do cartão">
+              <input
+                id="cartao_emissao"
+                type="date"
+                value={cadastro.cartao_emissao}
+                onChange={(e) => mudar("cartao_emissao", e.target.value)}
+                disabled={salvando}
+                className={classeInput}
+              />
+            </Campo>
+            <Campo id="cartao_validade" rotulo="Validade do cartão" obrigatorio>
+              <input
+                id="cartao_validade"
+                type="date"
+                value={cadastro.cartao_validade}
+                onChange={(e) => mudar("cartao_validade", e.target.value)}
+                disabled={salvando}
+                className={classeInput}
+              />
+            </Campo>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Campo id="apresentado_em" rotulo="Apresentado em">
+              <input
+                id="apresentado_em"
+                type="date"
+                value={cadastro.apresentado_em}
+                onChange={(e) => mudar("apresentado_em", e.target.value)}
+                disabled={salvando}
+                className={classeInput}
+              />
+            </Campo>
+            <Campo id="apresentado_por" rotulo="Apresentado por" dica="Nome do ancião.">
+              <input
+                id="apresentado_por"
+                type="text"
+                autoComplete="off"
+                maxLength={120}
+                value={cadastro.apresentado_por}
+                onChange={(e) => mudar("apresentado_por", e.target.value)}
+                disabled={salvando}
+                className={classeInput}
+              />
+            </Campo>
+          </div>
+        </Secao>
+      )}
+
+      {/* ---------- Contato ---------- */}
+      <Secao titulo="Contato">
+        <div className="grid grid-cols-3 gap-3">
+          <Campo id="ddd" rotulo="DDD" obrigatorio={completo}>
+            <input
+              id="ddd"
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              value={cadastro.ddd}
+              onChange={(e) => mudar("ddd", somenteDigitos(e.target.value, 2))}
+              disabled={salvando}
+              placeholder="71"
+              className={classeInput}
+            />
+          </Campo>
+          <div className="col-span-2">
+            <Campo id="telefone" rotulo="Telefone" obrigatorio={completo}>
+              <input
+                id="telefone"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                value={formatarTelefone(cadastro.telefone)}
+                onChange={(e) => mudar("telefone", somenteDigitos(e.target.value, 9))}
+                disabled={salvando}
+                placeholder="99999-9999"
+                className={classeInput}
+              />
+            </Campo>
+          </div>
+        </div>
+
+        <Campo id="tem_whatsapp" rotulo="Tem WhatsApp?" obrigatorio={completo}>
+          <select
+            id="tem_whatsapp"
+            value={cadastro.tem_whatsapp}
+            onChange={(e) => escolherWhatsapp(e.target.value as SimNao)}
+            disabled={salvando}
+            className={classeInput}
+          >
+            <option value="">{rotuloSimNao(completo)}</option>
+            <option value="sim">Sim</option>
+            <option value="nao">Não</option>
+          </select>
+        </Campo>
+
+        {cadastro.tem_whatsapp === "sim" && (
+          <Campo id="whatsapp" rotulo="Número do WhatsApp" dica="Já vem com o telefone acima; troque se for outro número.">
+            <input
+              id="whatsapp"
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              value={formatarWhatsapp(cadastro.whatsapp)}
+              onChange={(e) => mudar("whatsapp", somenteDigitos(e.target.value, 11))}
+              disabled={salvando}
+              placeholder="(71) 99999-9999"
+              className={classeInput}
+            />
+          </Campo>
+        )}
+
+        <Campo id="email" rotulo="E-mail">
+          <input
+            id="email"
+            type="email"
+            autoComplete="off"
+            maxLength={160}
+            value={cadastro.email}
+            onChange={(e) => mudar("email", e.target.value)}
+            disabled={salvando}
+            placeholder="nome@exemplo.com"
+            className={classeInput}
+          />
+        </Campo>
+      </Secao>
+
+      {/* ---------- Endereço ---------- */}
+      <Secao titulo="Endereço">
+        <div className="grid grid-cols-2 gap-3">
+          <Campo id="cep" rotulo="CEP" obrigatorio={completo}>
+            <input
+              id="cep"
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              value={formatarCep(cadastro.cep)}
+              onChange={(e) => mudar("cep", somenteDigitos(e.target.value, 8))}
+              disabled={salvando}
+              placeholder="00000-000"
+              className={classeInput}
+            />
+          </Campo>
+          <Campo id="numero" rotulo="Número" obrigatorio={completo}>
+            <input
+              id="numero"
+              type="text"
+              autoComplete="off"
+              maxLength={20}
+              value={cadastro.numero}
+              onChange={(e) => mudar("numero", e.target.value)}
+              disabled={salvando}
+              className={classeInput}
+            />
+          </Campo>
+        </div>
+
+        <Campo id="endereco" rotulo="Endereço" obrigatorio={completo}>
+          <input
+            id="endereco"
+            type="text"
+            autoComplete="off"
+            maxLength={160}
+            value={cadastro.endereco}
+            onChange={(e) => mudar("endereco", e.target.value)}
+            disabled={salvando}
+            placeholder="Rua, avenida..."
+            className={classeInput}
+          />
+        </Campo>
+
+        <Campo id="complemento" rotulo="Complemento">
+          <input
+            id="complemento"
+            type="text"
+            autoComplete="off"
+            maxLength={80}
+            value={cadastro.complemento}
+            onChange={(e) => mudar("complemento", e.target.value)}
+            disabled={salvando}
+            className={classeInput}
+          />
+        </Campo>
+
+        <div className="grid grid-cols-3 gap-3">
+          <Campo id="uf" rotulo="Estado" obrigatorio={completo}>
+            <select
+              id="uf"
+              value={cadastro.uf}
+              onChange={(e) => mudar("uf", e.target.value)}
+              disabled={salvando}
+              className={classeInput}
+            >
+              <option value="">UF</option>
+              {UFS.map((sigla) => (
+                <option key={sigla} value={sigla}>
+                  {sigla}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <div className="col-span-2">
+            <Campo id="cidade" rotulo="Cidade" obrigatorio={completo}>
+              <input
+                id="cidade"
+                type="text"
+                list="sugestoes-cidade"
+                autoComplete="off"
+                value={cidade}
+                onChange={(e) => setCidade(e.target.value)}
+                disabled={salvando}
+                placeholder="Ex: Salvador, Lauro de Freitas"
+                className={classeInput}
+              />
+              <datalist id="sugestoes-cidade">
+                {sugestoes.cidades.map((valor) => (
+                  <option key={valor} value={valor} />
+                ))}
+              </datalist>
+            </Campo>
+          </div>
+        </div>
+
+        <Campo id="bairro" rotulo="Bairro" obrigatorio={completo}>
+          <input
+            id="bairro"
+            type="text"
+            list="sugestoes-bairro"
+            autoComplete="off"
+            value={bairro}
+            onChange={(e) => setBairro(e.target.value)}
+            disabled={salvando}
+            placeholder="Ex: Itinga"
+            className={classeInput}
+          />
+          <datalist id="sugestoes-bairro">
+            {sugestoes.bairros.map((valor) => (
+              <option key={valor} value={valor} />
+            ))}
+          </datalist>
+        </Campo>
+      </Secao>
+
+      {/* ---------- Observação e situação ---------- */}
+      <Secao titulo="Outras informações">
+        <Campo id="observacao" rotulo="Observação">
+          <textarea
+            id="observacao"
+            rows={3}
+            maxLength={500}
+            value={cadastro.observacao}
+            onChange={(e) => mudar("observacao", e.target.value)}
+            disabled={salvando}
+            className={classeInput}
+          />
+        </Campo>
+
+        {/* Situação: só na edição */}
+        {editando && (
+          <Campo id="status" rotulo="Situação cadastral" obrigatorio>
+            <select
+              id="status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              disabled={salvando}
+              className={classeInput}
+            >
+              <option value="Ativo">Ativo</option>
+              <option value="Inativo">Inativo</option>
+            </select>
+          </Campo>
+        )}
+      </Secao>
+
+      {erroForm && (
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erroForm}
+        </p>
+      )}
+
+      <Button type="submit" disabled={salvando} className="w-full">
+        {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Cadastrar membro"}
+      </Button>
+    </form>
+  );
+}
+
+/** Bloco do formulário com título (agrupa os campos por assunto). */
+function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
+  return (
+    <section className="space-y-4">
+      <h3 className="border-b border-slate-200 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {titulo}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+/** Campo com rótulo, marcação de obrigatório (*) ou (opcional) e dica opcional. */
+function Campo({
+  id,
+  rotulo,
+  obrigatorio = false,
+  dica,
+  children,
+}: {
+  id: string;
+  rotulo: string;
+  obrigatorio?: boolean;
+  dica?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="text-sm font-medium text-slate-700">
+        {rotulo}{" "}
+        {obrigatorio ? (
+          <span className="font-normal text-red-600" aria-hidden="true">
+            *
+          </span>
+        ) : (
+          <span className="font-normal text-slate-400">(opcional)</span>
+        )}
+      </label>
+      {children}
+      {dica && <p className="text-xs text-slate-500">{dica}</p>}
+    </div>
+  );
+}
+
+################ src/modules/eventos/regras.test.ts
+import { describe, expect, it } from "vitest";
+import { formatarNomeFinalidade, validarFinalidade } from "@/modules/eventos/regras";
+
+describe("formatarNomeFinalidade", () => {
+  it("remove espaços extras e põe a primeira letra em maiúscula", () => {
+    expect(formatarNomeFinalidade("  reunião   geral  ")).toBe("Reunião geral");
+  });
+});
+
+describe("validarFinalidade", () => {
+  it("aceita as finalidades de exemplo do cadastro", () => {
+    const exemplos = [
+      "Reunião Geral para Músicos e Organistas",
+      "Reunião Geral para Músicos, Organistas, Examinadoras, Instrutores (as), Encarregados Locais e Regionais",
+      "Reunião Geral para Examinadoras, Encarregados Locais e Regionais",
+      "Reunião Geral para Instrutores (as), Examinadoras, Encarregados Locais e Regionais",
+    ];
+    for (const exemplo of exemplos) expect(validarFinalidade(exemplo)).toBeNull();
+  });
+
+  it("recusa texto curto demais (ignorando espaços) e longo demais", () => {
+    expect(validarFinalidade("  ab ")).toMatch(/mínimo/);
+    expect(validarFinalidade("x".repeat(151))).toMatch(/no máximo/);
+  });
+});
+
+################ src/modules/membros/cadastroMusical.test.ts
+import { describe, expect, it } from "vitest";
+import {
+  CADASTRO_VAZIO,
+  cargoEntraNoCadastro,
+  cargoExigeCartao,
+  cargosDoCadastro,
+  deRetornoDoBanco,
+  emailValido,
+  formatarCep,
+  formatarTelefone,
+  formatarWhatsapp,
+  paraEnvioAoBanco,
+  somenteDigitos,
+  temAlgumDado,
+  validarCadastro,
+  type CadastroMusical,
+} from "./cadastroMusical";
+
+const completoOk: CadastroMusical = {
+  ...CADASTRO_VAZIO,
+  selado: "sim",
+  ddd: "71",
+  telefone: "999998888",
+  tem_whatsapp: "sim",
+  cep: "40000000",
+  endereco: "Rua das Flores",
+  numero: "10",
+  uf: "BA",
+};
+const base = { completo: true, exigeCartao: false, cidade: "Salvador", bairro: "Itinga" };
+
+describe("cargos do cadastro", () => {
+  it("aceita os cargos do formulário (com ou sem acento, com (a))", () => {
+    for (const nome of ["Encarregado Regional", "Encarregado Local", "Examinadora", "Instrutor (a)", "Músico", "Organista"]) {
+      expect(cargoEntraNoCadastro(nome), nome).toBe(true);
+    }
+  });
+
+  it("não aceita os cargos que só entram nas contagens", () => {
+    for (const nome of ["Ancião", "Diácono", "Cooperador do Ofício Ministerial", "Secretário da Música", "Candidato (a)"]) {
+      expect(cargoEntraNoCadastro(nome), nome).toBe(false);
+    }
+  });
+
+  it("na edição mantém o cargo atual do membro, mesmo antigo", () => {
+    const cargos = [
+      { id: "1", nome: "Músico" },
+      { id: "2", nome: "Ancião" },
+      { id: "3", nome: "Diácono" },
+    ];
+    expect(cargosDoCadastro(cargos).map((c) => c.id)).toEqual(["1"]);
+    expect(cargosDoCadastro(cargos, "2").map((c) => c.id)).toEqual(["1", "2"]);
+  });
+
+  it("exige o cartão: usa a coluna do banco; sem ela, a lista padrão", () => {
+    expect(cargoExigeCartao({ id: "1", nome: "Músico", exige_cartao: true })).toBe(true);
+    expect(cargoExigeCartao({ id: "1", nome: "Examinadora", exige_cartao: false })).toBe(false);
+    expect(cargoExigeCartao({ id: "1", nome: "Encarregado Local" })).toBe(true);
+    expect(cargoExigeCartao({ id: "1", nome: "Examinadora", exige_cartao: null })).toBe(true);
+    expect(cargoExigeCartao({ id: "1", nome: "Organista" })).toBe(false);
+    expect(cargoExigeCartao(undefined)).toBe(false);
+  });
+});
+
+describe("formatos de digitação", () => {
+  it("só dígitos", () => {
+    expect(somenteDigitos("(71) 9 9999-8888")).toBe("71999998888");
+    expect(somenteDigitos("abc123456", 4)).toBe("1234");
+  });
+  it("CEP", () => {
+    expect(formatarCep("40000")).toBe("40000");
+    expect(formatarCep("40000000")).toBe("40000-000");
+    expect(formatarCep("40.000-000999")).toBe("40000-000");
+  });
+  it("telefone", () => {
+    expect(formatarTelefone("9999")).toBe("9999");
+    expect(formatarTelefone("99998888")).toBe("9999-8888");
+    expect(formatarTelefone("999998888")).toBe("99999-8888");
+  });
+  it("WhatsApp", () => {
+    expect(formatarWhatsapp("")).toBe("");
+    expect(formatarWhatsapp("7")).toBe("(7");
+    expect(formatarWhatsapp("71")).toBe("(71");
+    expect(formatarWhatsapp("719999")).toBe("(71) 9999");
+    expect(formatarWhatsapp("7199998888")).toBe("(71) 9999-8888");
+    expect(formatarWhatsapp("71999998888")).toBe("(71) 99999-8888");
+  });
+});
+
+describe("validarCadastro", () => {
+  it("cadastro completo e correto passa", () => {
+    expect(validarCadastro(completoOk, base)).toBeNull();
+  });
+
+  it("exige cada campo obrigatório quando completo", () => {
+    const casos: [Partial<CadastroMusical>, string][] = [
+      [{ selado: "" }, "selada"],
+      [{ ddd: "" }, "DDD"],
+      [{ telefone: "" }, "telefone"],
+      [{ tem_whatsapp: "" }, "WhatsApp"],
+      [{ cep: "" }, "CEP"],
+      [{ endereco: " " }, "endereço"],
+      [{ numero: "" }, "número"],
+      [{ uf: "" }, "UF"],
+    ];
+    for (const [troca, trecho] of casos) {
+      const erro = validarCadastro({ ...completoOk, ...troca }, base);
+      expect(erro, trecho).toContain(trecho);
+    }
+    expect(validarCadastro(completoOk, { ...base, cidade: "" })).toContain("cidade");
+    expect(validarCadastro(completoOk, { ...base, bairro: " " })).toContain("bairro");
+  });
+
+  it("sem exigir completo, aceita vazio mas confere o formato do que foi preenchido", () => {
+    const solto = { ...base, completo: false };
+    expect(validarCadastro(CADASTRO_VAZIO, solto)).toBeNull();
+    expect(validarCadastro({ ...CADASTRO_VAZIO, ddd: "7" }, solto)).toContain("DDD");
+    expect(validarCadastro({ ...CADASTRO_VAZIO, telefone: "123" }, solto)).toContain("telefone");
+    expect(validarCadastro({ ...CADASTRO_VAZIO, cep: "123" }, solto)).toContain("CEP");
+    expect(validarCadastro({ ...CADASTRO_VAZIO, uf: "XX" }, solto)).toContain("UF");
+    expect(validarCadastro({ ...CADASTRO_VAZIO, email: "sem-arroba" }, solto)).toContain("e-mail");
+    expect(
+      validarCadastro({ ...CADASTRO_VAZIO, tem_whatsapp: "sim", whatsapp: "123" }, solto)
+    ).toContain("WhatsApp");
+  });
+
+  it("cartão de identificação: número e validade obrigatórios quando o cargo exige", () => {
+    const comCartao = { ...base, exigeCartao: true };
+    expect(validarCadastro(completoOk, comCartao)).toContain("número do cartão");
+    expect(validarCadastro({ ...completoOk, cartao_numero: "123" }, comCartao)).toContain("validade");
+    expect(
+      validarCadastro({ ...completoOk, cartao_numero: "123", cartao_validade: "2030-01-01" }, comCartao)
+    ).toBeNull();
+  });
+
+  it("validade não pode ser anterior à emissão", () => {
+    const erro = validarCadastro(
+      { ...completoOk, cartao_emissao: "2025-05-01", cartao_validade: "2025-01-01" },
+      base
+    );
+    expect(erro).toContain("anterior");
+  });
+});
+
+describe("e-mail e dados preenchidos", () => {
+  it("e-mail", () => {
+    expect(emailValido("a@b.com")).toBe(true);
+    expect(emailValido("a@b")).toBe(false);
+    expect(emailValido("a b@c.com")).toBe(false);
+  });
+  it("detecta se há algum dado", () => {
+    expect(temAlgumDado(CADASTRO_VAZIO)).toBe(false);
+    expect(temAlgumDado({ ...CADASTRO_VAZIO, observacao: "x" })).toBe(true);
+    expect(temAlgumDado({ ...CADASTRO_VAZIO, selado: "nao" })).toBe(true);
+  });
+});
+
+describe("conversão com o banco", () => {
+  it("envio: vazio vira null e booleanos viram true/false", () => {
+    const envio = paraEnvioAoBanco({ ...completoOk, selado: "nao", complemento: "  " });
+    expect(envio.selado).toBe(false);
+    expect(envio.tem_whatsapp).toBe(true);
+    expect(envio.complemento).toBeNull();
+    expect(envio.email).toBeNull();
+    expect(envio.uf).toBe("BA");
+  });
+
+  it("WhatsApp: vazio com 'sim' copia o telefone; com 'não' não guarda", () => {
+    expect(paraEnvioAoBanco({ ...completoOk, whatsapp: "" }).whatsapp).toBe("71999998888");
+    expect(paraEnvioAoBanco({ ...completoOk, whatsapp: "(71) 98888-7777" }).whatsapp).toBe("71988887777");
+    expect(paraEnvioAoBanco({ ...completoOk, tem_whatsapp: "nao", whatsapp: "71999998888" }).whatsapp).toBeNull();
+  });
+
+  it("retorno do banco: aceita nulos e lixo sem quebrar", () => {
+    expect(deRetornoDoBanco(null)).toEqual(CADASTRO_VAZIO);
+    const lido = deRetornoDoBanco({ selado: true, tem_whatsapp: false, uf: "BA", ddd: null, numero: 5 });
+    expect(lido.selado).toBe("sim");
+    expect(lido.tem_whatsapp).toBe("nao");
+    expect(lido.uf).toBe("BA");
+    expect(lido.ddd).toBe("");
+    expect(lido.numero).toBe("");
+  });
+
+  it("ida e volta mantém os dados", () => {
+    const volta = deRetornoDoBanco(paraEnvioAoBanco(completoOk));
+    expect(volta).toEqual({ ...completoOk, whatsapp: "71999998888" });
+  });
+});
+
+################ src/modules/membros/cadastroMusical.ts
+/**
+ * SysMúsica — Regras puras do "Cadastro Musical" (sem banco, sem tela). Testadas em cadastroMusical.test.ts.
+ *
+ * O cadastro tem duas partes:
+ *  - dados que já ficavam em "membros" (nome, casa de oração, cargo, instrumento, categoria, cidade, bairro, CPF...);
+ *  - dados pessoais novos (estado civil, sexo, telefone, endereço, cartão de identificação...), guardados na
+ *    tabela PROTEGIDA membros_cadastro e lidos/gravados só pelas funções do banco obter_cadastro_musical e
+ *    salvar_cadastro_musical (migração 0038). A tela nunca lê essa tabela diretamente.
+ *
+ * Para mudar quais cargos aparecem no cadastro: lista CARGOS_DO_CADASTRO abaixo.
+ * Para mudar quais cargos exigem o cartão de identificação: coluna cargos.exige_cartao (banco);
+ * enquanto a coluna não existir, vale a lista CARGOS_COM_CARTAO_PADRAO.
+ */
+
+export const ESTADOS_CIVIS = ["Casado(a)", "Solteiro(a)", "Viúvo(a)"] as const;
+export const SEXOS = ["Masculino", "Feminino"] as const;
+export const UFS = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA",
+  "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+] as const;
+
+/** Sim/Não dos campos de múltipla escolha ("" = ainda não respondido). */
+export type SimNao = "" | "sim" | "nao";
+
+/** Os dados do formulário (todos texto, para ligar direto nos campos da tela). */
+export interface CadastroMusical {
+  estado_civil: string;
+  sexo: string;
+  data_batismo: string; // AAAA-MM-DD
+  selado: SimNao;
+  ddd: string; // 2 dígitos
+  telefone: string; // 8 ou 9 dígitos
+  tem_whatsapp: SimNao;
+  whatsapp: string; // DDD + número (10 ou 11 dígitos)
+  email: string;
+  cep: string; // 8 dígitos
+  endereco: string;
+  numero: string;
+  complemento: string;
+  uf: string;
+  cartao_numero: string;
+  cartao_emissao: string; // AAAA-MM-DD
+  cartao_validade: string; // AAAA-MM-DD
+  apresentado_em: string; // AAAA-MM-DD
+  apresentado_por: string;
+  observacao: string;
+}
+
+export const CADASTRO_VAZIO: CadastroMusical = {
+  estado_civil: "",
+  sexo: "",
+  data_batismo: "",
+  selado: "",
+  ddd: "",
+  telefone: "",
+  tem_whatsapp: "",
+  whatsapp: "",
+  email: "",
+  cep: "",
+  endereco: "",
+  numero: "",
+  complemento: "",
+  uf: "",
+  cartao_numero: "",
+  cartao_emissao: "",
+  cartao_validade: "",
+  apresentado_em: "",
+  apresentado_por: "",
+  observacao: "",
+};
+
+// ---------- Cargos ----------
+
+/** O mínimo que precisamos de um cargo (o tipo Cargo do projeto atende a isto). */
+export interface CargoCadastro {
+  id: string;
+  nome: string;
+  exige_cartao?: boolean | null;
+}
+
+function semAcento(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Cargos que têm Cadastro Musical (início do nome, sem acento). Ancião, Diácono, Cooperadores e Secretário da
+ * Música não têm mais cadastro: só entram nas contagens. "Candidato(a)" ficou de fora até a CCB confirmar.
+ */
+export const CARGOS_DO_CADASTRO = [
+  "encarregado regional",
+  "encarregado local",
+  "examinadora",
+  "instrutor",
+  "musico",
+  "organista",
+] as const;
+
+/** Cargos que exigem o cartão de identificação enquanto a coluna cargos.exige_cartao não decide. */
+const CARGOS_COM_CARTAO_PADRAO = ["encarregado regional", "encarregado local", "examinadora"];
+
+export function cargoEntraNoCadastro(nomeCargo: string | null | undefined): boolean {
+  if (!nomeCargo) return false;
+  const nome = semAcento(nomeCargo);
+  return CARGOS_DO_CADASTRO.some((prefixo) => nome.startsWith(prefixo));
+}
+
+/**
+ * Cargos oferecidos no formulário. Na edição, o cargo atual do membro continua na lista mesmo que seja
+ * um cargo antigo (ex.: Ancião), para não apagar nem trocar o cargo sem querer.
+ */
+export function cargosDoCadastro<T extends CargoCadastro>(cargos: T[], cargoAtualId?: string | null): T[] {
+  return cargos.filter((cargo) => cargoEntraNoCadastro(cargo.nome) || cargo.id === cargoAtualId);
+}
+
+/** O cargo exige o cartão de identificação (número, validade...)? */
+export function cargoExigeCartao(cargo: CargoCadastro | null | undefined): boolean {
+  if (!cargo) return false;
+  if (typeof cargo.exige_cartao === "boolean") return cargo.exige_cartao;
+  const nome = semAcento(cargo.nome);
+  return CARGOS_COM_CARTAO_PADRAO.some((prefixo) => nome.startsWith(prefixo));
+}
+
+// ---------- Formatos de digitação ----------
+
+export function somenteDigitos(texto: string, maximo?: number): string {
+  const digitos = texto.replace(/\D/g, "");
+  return maximo ? digitos.slice(0, maximo) : digitos;
+}
+
+/** "40000-000" (aceita digitação parcial). */
+export function formatarCep(texto: string): string {
+  const d = somenteDigitos(texto, 8);
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
+}
+
+/** Telefone sem DDD: "99999-9999" (9 dígitos) ou "9999-9999" (8 dígitos). */
+export function formatarTelefone(texto: string): string {
+  const d = somenteDigitos(texto, 9);
+  if (d.length > 8) return `${d.slice(0, 5)}-${d.slice(5)}`;
+  return d.length > 4 ? `${d.slice(0, 4)}-${d.slice(4)}` : d;
+}
+
+/** WhatsApp com DDD: "(71) 99999-9999" (aceita digitação parcial). */
+export function formatarWhatsapp(texto: string): string {
+  const d = somenteDigitos(texto, 11);
+  if (d.length <= 2) return d.length ? `(${d}` : "";
+  const resto = d.slice(2);
+  const corte = resto.length > 8 ? 5 : 4;
+  return `(${d.slice(0, 2)}) ${resto.length > corte ? `${resto.slice(0, corte)}-${resto.slice(corte)}` : resto}`;
+}
+
+// ---------- Validação ----------
+
+export function emailValido(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
+/** Alguma informação do cadastro pessoal foi preenchida? (os campos "" e os Sim/Não vazios não contam) */
+export function temAlgumDado(dados: CadastroMusical): boolean {
+  return Object.values(dados).some((valor) => valor.trim() !== "");
+}
+
+export interface OpcoesValidacao {
+  /** Exige todos os campos obrigatórios (cadastro novo, ou edição de quem já tem o cadastro preenchido). */
+  completo: boolean;
+  /** O cargo escolhido exige o cartão de identificação. */
+  exigeCartao: boolean;
+  /** Cidade e bairro ficam em "membros", mas são obrigatórios junto com o endereço. */
+  cidade: string;
+  bairro: string;
+}
+
+/** Confere o cadastro. Devolve a mensagem do primeiro problema ou null se estiver tudo certo. */
+export function validarCadastro(dados: CadastroMusical, opcoes: OpcoesValidacao): string | null {
+  const { completo, exigeCartao, cidade, bairro } = opcoes;
+  const vazio = (texto: string) => texto.trim() === "";
+
+  if (completo) {
+    if (dados.selado === "") return "Informe se a pessoa é selada.";
+    if (vazio(dados.ddd) || vazio(dados.telefone)) return "Informe o DDD e o telefone.";
+    if (dados.tem_whatsapp === "") return "Informe se o telefone tem WhatsApp.";
+    if (vazio(dados.cep)) return "Informe o CEP.";
+    if (vazio(dados.endereco)) return "Informe o endereço.";
+    if (vazio(dados.numero)) return "Informe o número do endereço.";
+    if (vazio(dados.uf)) return "Informe o estado (UF).";
+    if (vazio(cidade)) return "Informe a cidade.";
+    if (vazio(bairro)) return "Informe o bairro.";
+  }
+
+  if (!vazio(dados.ddd) && !/^\d{2}$/.test(dados.ddd)) return "O DDD deve ter 2 números.";
+  if (!vazio(dados.telefone) && !/^\d{8,9}$/.test(dados.telefone)) return "O telefone deve ter 8 ou 9 números.";
+  if (dados.tem_whatsapp === "sim" && !vazio(dados.whatsapp) && !/^\d{10,11}$/.test(dados.whatsapp)) {
+    return "O WhatsApp deve ter o DDD e 8 ou 9 números.";
+  }
+  if (!vazio(dados.email) && !emailValido(dados.email)) return "O e-mail informado não é válido.";
+  if (!vazio(dados.cep) && !/^\d{8}$/.test(dados.cep)) return "O CEP deve ter 8 números.";
+  if (!vazio(dados.uf) && !(UFS as readonly string[]).includes(dados.uf)) return "Escolha um estado (UF) da lista.";
+
+  if (exigeCartao) {
+    if (vazio(dados.cartao_numero)) return "Informe o número do cartão de identificação.";
+    if (vazio(dados.cartao_validade)) return "Informe a validade do cartão de identificação.";
+  }
+  if (!vazio(dados.cartao_emissao) && !vazio(dados.cartao_validade) && dados.cartao_emissao > dados.cartao_validade) {
+    return "A validade do cartão não pode ser anterior à emissão.";
+  }
+  return null;
+}
+
+// ---------- Conversão com o banco ----------
+
+type Bruto = Record<string, unknown>;
+
+const texto = (valor: unknown): string => (typeof valor === "string" ? valor : "");
+const simNao = (valor: unknown): SimNao => (valor === true ? "sim" : valor === false ? "nao" : "");
+
+/** Resposta de obter_cadastro_musical (JSON do banco) -> dados do formulário. */
+export function deRetornoDoBanco(bruto: unknown): CadastroMusical {
+  const b = (bruto && typeof bruto === "object" ? bruto : {}) as Bruto;
+  return {
+    estado_civil: texto(b.estado_civil),
+    sexo: texto(b.sexo),
+    data_batismo: texto(b.data_batismo),
+    selado: simNao(b.selado),
+    ddd: texto(b.ddd),
+    telefone: texto(b.telefone),
+    tem_whatsapp: simNao(b.tem_whatsapp),
+    whatsapp: texto(b.whatsapp),
+    email: texto(b.email),
+    cep: texto(b.cep),
+    endereco: texto(b.endereco),
+    numero: texto(b.numero),
+    complemento: texto(b.complemento),
+    uf: texto(b.uf),
+    cartao_numero: texto(b.cartao_numero),
+    cartao_emissao: texto(b.cartao_emissao),
+    cartao_validade: texto(b.cartao_validade),
+    apresentado_em: texto(b.apresentado_em),
+    apresentado_por: texto(b.apresentado_por),
+    observacao: texto(b.observacao),
+  };
+}
+
+/**
+ * Dados do formulário -> JSON para salvar_cadastro_musical (campos vazios viram null).
+ * Se tem WhatsApp e o número ficou vazio, usa o próprio telefone (DDD + número).
+ * Se não tem WhatsApp, o número do WhatsApp não é guardado.
+ */
+export function paraEnvioAoBanco(dados: CadastroMusical): Record<string, string | boolean | null> {
+  const t = (valor: string) => (valor.trim() === "" ? null : valor.trim());
+  const b = (valor: SimNao) => (valor === "sim" ? true : valor === "nao" ? false : null);
+
+  let whatsapp: string | null = null;
+  if (dados.tem_whatsapp === "sim") {
+    whatsapp = t(somenteDigitos(dados.whatsapp)) ?? t(`${dados.ddd}${dados.telefone}`);
+  }
+  return {
+    estado_civil: t(dados.estado_civil),
+    sexo: t(dados.sexo),
+    data_batismo: t(dados.data_batismo),
+    selado: b(dados.selado),
+    ddd: t(dados.ddd),
+    telefone: t(dados.telefone),
+    tem_whatsapp: b(dados.tem_whatsapp),
+    whatsapp,
+    email: t(dados.email),
+    cep: t(dados.cep),
+    endereco: t(dados.endereco),
+    numero: t(dados.numero),
+    complemento: t(dados.complemento),
+    uf: t(dados.uf),
+    cartao_numero: t(dados.cartao_numero),
+    cartao_emissao: t(dados.cartao_emissao),
+    cartao_validade: t(dados.cartao_validade),
+    apresentado_em: t(dados.apresentado_em),
+    apresentado_por: t(dados.apresentado_por),
+    observacao: t(dados.observacao),
+  };
+}
+
+################ src/modules/painel/regras.test.ts
+import { describe, expect, it } from "vitest";
+import {
+  agruparBlocos,
+  cargoUsaCategoria,
+  formatarHoraDoEvento,
+  formatarPercentual,
+  intervaloValido,
+  montarFamilias,
+  rotuloDaCategoria,
+  validarCategoria,
+} from "./regras";
+import type { LinhaPainel } from "./tipos";
+
+const linha = (parcial: Partial<LinhaPainel> & Pick<LinhaPainel, "codigo" | "bloco">): LinhaPainel => ({
+  rotulo: parcial.codigo,
+  ordem: 0,
+  qtd: 0,
+  selecionavel: true,
+  ...parcial,
+});
+
+describe("intervaloValido", () => {
+  it("aceita os intervalos permitidos", () => {
+    expect(intervaloValido(5)).toBe(5);
+    expect(intervaloValido("30")).toBe(30);
+    expect(intervaloValido(60)).toBe(60);
+  });
+  it("qualquer outro valor volta para 10 segundos", () => {
+    expect(intervaloValido(7)).toBe(10);
+    expect(intervaloValido(null)).toBe(10);
+    expect(intervaloValido("abc")).toBe(10);
+    expect(intervaloValido(0)).toBe(10);
+  });
+});
+
+describe("formatarPercentual", () => {
+  it("usa vírgula e uma casa decimal", () => {
+    expect(formatarPercentual(13, 47)).toBe("27,7%");
+    expect(formatarPercentual(18, 47)).toBe("38,3%");
+    expect(formatarPercentual(16, 47)).toBe("34,0%");
+  });
+  it("total zero não divide por zero", () => {
+    expect(formatarPercentual(0, 0)).toBe("0,0%");
+  });
+});
+
+describe("formatarHoraDoEvento", () => {
+  it("em ponto mostra só a hora; senão, hora e minutos (fuso de Salvador)", () => {
+    expect(formatarHoraDoEvento("2026-10-11T12:00:00Z")).toBe("09h");
+    expect(formatarHoraDoEvento("2026-10-11T12:30:00Z")).toBe("09h30");
+    expect(formatarHoraDoEvento("2026-10-11T22:05:00Z")).toBe("19h05");
+  });
+});
+
+describe("agruparBlocos", () => {
+  const linhas = [
+    linha({ codigo: "MUS_B", bloco: "MUSICOS", ordem: 2, qtd: 3 }),
+    linha({ codigo: "MUS_A", bloco: "MUSICOS", ordem: 1, qtd: 2 }),
+    linha({ codigo: "MUS_SEM", bloco: "MUSICOS", ordem: 9, qtd: 0, selecionavel: false }),
+    linha({ codigo: "MIN_A", bloco: "MINISTERIO", ordem: 1, qtd: 4 }),
+    linha({ codigo: "ORG_SEM", bloco: "ORGANISTAS", ordem: 9, qtd: 1, selecionavel: false }),
+  ];
+
+  it("separa em Ministério, Músicos e Organistas, nessa ordem, com o total de cada um", () => {
+    const blocos = agruparBlocos(linhas);
+    expect(blocos.map((b) => b.rotulo)).toEqual(["Ministério", "Músicos", "Organistas"]);
+    expect(blocos.map((b) => b.total)).toEqual([4, 5, 1]);
+  });
+
+  it("ordena as linhas e esconde 'Sem categoria' quando está zerada, mas mostra quando há gente", () => {
+    const [, musicos, organistas] = agruparBlocos(linhas);
+    expect(musicos.linhas.map((l) => l.codigo)).toEqual(["MUS_A", "MUS_B"]);
+    expect(organistas.linhas.map((l) => l.codigo)).toEqual(["ORG_SEM"]);
+  });
+
+  it("não altera a lista original", () => {
+    const copia = JSON.stringify(linhas);
+    agruparBlocos(linhas);
+    expect(JSON.stringify(linhas)).toBe(copia);
+  });
+});
+
+describe("montarFamilias", () => {
+  it("Cordas, Madeiras e Metais sempre aparecem; percentual sobre o total do bloco", () => {
+    const { total, familias } = montarFamilias([
+      { familia: "Cordas", qtd: 13 },
+      { familia: "Madeiras", qtd: 18 },
+      { familia: "Metais", qtd: 16 },
+    ]);
+    expect(total).toBe(47);
+    expect(familias.map((f) => [f.nome, f.qtd, f.percentual])).toEqual([
+      ["Cordas", 13, "27,7%"],
+      ["Madeiras", 18, "38,3%"],
+      ["Metais", 16, "34,0%"],
+    ]);
+  });
+
+  it("sem ninguém, mostra as três com zero", () => {
+    const { total, familias } = montarFamilias([]);
+    expect(total).toBe(0);
+    expect(familias.map((f) => f.qtd)).toEqual([0, 0, 0]);
+    expect(familias[0].percentual).toBe("0,0%");
+  });
+
+  it("Teclas (acordeom) só aparece quando há alguém e entra no total", () => {
+    const { total, familias } = montarFamilias([
+      { familia: "Cordas", qtd: 1 },
+      { familia: "Teclas", qtd: 1 },
+      { familia: "Sem família", qtd: 0 },
+    ]);
+    expect(total).toBe(2);
+    expect(familias.map((f) => f.nome)).toEqual(["Cordas", "Madeiras", "Metais", "Teclas"]);
+  });
+});
+
+describe("categoria do membro", () => {
+  it("só Músico e Organista usam categoria", () => {
+    expect(cargoUsaCategoria("Músico")).toBe("musico");
+    expect(cargoUsaCategoria("Organista")).toBe("organista");
+    expect(cargoUsaCategoria("Encarregado Local")).toBeNull();
+    expect(cargoUsaCategoria("Examinadora")).toBeNull();
+    expect(cargoUsaCategoria(undefined)).toBeNull();
+  });
+
+  it("a organista é Oficializada (feminino) e sem valor vira 'Sem categoria'", () => {
+    expect(rotuloDaCategoria("OFICIALIZADO", "musico")).toBe("Oficializado");
+    expect(rotuloDaCategoria("OFICIALIZADO", "organista")).toBe("Oficializada");
+    expect(rotuloDaCategoria("RJM", "musico")).toBe("RJM");
+    expect(rotuloDaCategoria(null, "musico")).toBe("Sem categoria");
+  });
+
+  it("exige a categoria só para Músico e Organista", () => {
+    expect(validarCategoria("Músico", "")).toMatch(/Escolha a categoria/);
+    expect(validarCategoria("Organista", "")).toMatch(/Oficializada/);
+    expect(validarCategoria("Músico", "RJM")).toBeNull();
+    expect(validarCategoria("Ancião", "")).toBeNull();
+  });
+});
+
+##### MIGRAÇÕES QUE CITAM membros / cargos / storage
+supabase/migrations/0001_baseline.sql
+supabase/migrations/0008_atendimento_portaria.sql
+supabase/migrations/0017_foto_obrigatoria.sql
+supabase/migrations/0020_backup.sql
+supabase/migrations/0026_painel_ao_vivo.sql
+supabase/migrations/0038_cadastro_musical.sql
+
+##### package.json (dependências)
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
+    "lucide-react": "^1.59.0",
+    "next": "16.4.0",
+    "nodemailer": "^10.1.6",
+    "qr-scanner": "^1.4.2",
+    "qrcode": "^1.5.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^24.19.2",
+    "@types/nodemailer": "^8.0.2",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.0",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^5.0.5"
+  }
+}

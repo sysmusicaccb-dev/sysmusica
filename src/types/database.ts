@@ -19,6 +19,7 @@ export interface Cargo {
   id: string;
   nome: string;
   permite_instrumento: boolean; // true = o cargo informa instrumento
+  somente_orgao?: boolean; // true = o cargo só aceita o instrumento Órgão (migração 0040)
 }
 
 /** Payload para INSERT: apenas o id é gerado pelo banco (permite_instrumento tem padrão false). */

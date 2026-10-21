@@ -1,0 +1,879 @@
+################ supabase/migrations/0038_cadastro_musical.sql
+-- =============================================================================
+-- SysMúsica — Migração 0038: Cadastro Musical (dados pessoais do músico/organista)
+--
+--   * Tabela PROTEGIDA membros_cadastro: estado civil, sexo, batismo, selado, telefone, WhatsApp, e-mail,
+--     endereço e cartão de identificação. Ninguém lê nem grava a tabela direto (sem permissão para
+--     anon/authenticated e sem policy): só as funções abaixo, que conferem a permissão e a abrangência.
+--   * obter_cadastro_musical(membro)  -> JSON com os dados (ou null se o membro ainda não tem cadastro)
+--   * salvar_cadastro_musical(membro, json) -> grava/atualiza (permissão membros.criar ou membros.editar)
+--   * cargos.exige_cartao: define quais cargos exigem o cartão de identificação (configurável por SQL).
+--   * Sem permissão nova: criar/editar membros já cobre este cadastro.
+--
+-- OBS. para futuros administradores: esta tabela ainda NÃO entra no backup/restauração da tela Backup
+-- (a lista de tabelas permitidas fica na função backup_aplicar). Incluir numa etapa própria.
+-- É seguro rodar mais de uma vez.
+-- =============================================================================
+
+-- 1) Cartão de identificação por cargo ---------------------------------------
+alter table public.cargos add column if not exists exige_cartao boolean not null default false;
+grant select (exige_cartao) on public.cargos to authenticated;
+
+update public.cargos
+   set exige_cartao = true
+ where public.normalizar_texto(nome) in ('encarregado regional', 'encarregado local', 'examinadora');
+
+-- 2) Tabela protegida ---------------------------------------------------------
+create table if not exists public.membros_cadastro (
+  membro_id        uuid primary key references public.membros (id) on delete cascade,
+  estado_civil     text check (estado_civil in ('Casado(a)', 'Solteiro(a)', 'Viúvo(a)')),
+  sexo             text check (sexo in ('Masculino', 'Feminino')),
+  data_batismo     date,
+  selado           boolean,
+  ddd              text check (ddd ~ '^[0-9]{2}$'),
+  telefone         text check (telefone ~ '^[0-9]{8,9}$'),
+  tem_whatsapp     boolean,
+  whatsapp         text check (whatsapp ~ '^[0-9]{10,11}$'),
+  email            text,
+  cep              text check (cep ~ '^[0-9]{8}$'),
+  endereco         text,
+  numero           text,
+  complemento      text,
+  uf               text check (uf ~ '^[A-Z]{2}$'),
+  cartao_numero    text,
+  cartao_emissao   date,
+  cartao_validade  date,
+  apresentado_em   date,
+  apresentado_por  text,
+  observacao       text,
+  criado_em        timestamptz not null default now(),
+  atualizado_em    timestamptz not null default now(),
+  constraint membros_cadastro_cartao_datas check (
+    cartao_emissao is null or cartao_validade is null or cartao_emissao <= cartao_validade
+  )
+);
+
+alter table public.membros_cadastro enable row level security;
+revoke all on public.membros_cadastro from public, anon, authenticated;
+
+-- 3) Ler o cadastro ----------------------------------------------------------
+create or replace function public.obter_cadastro_musical(p_membro uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path to 'public'
+as $$
+declare
+  v_casa uuid;
+  v_res  jsonb;
+begin
+  if not (public.tem_permissao('membros.editar') or public.tem_permissao('membros.criar')) then
+    raise exception 'Você não tem permissão para ver este cadastro.' using errcode = '42501';
+  end if;
+
+  select m.casa_oracao_id into v_casa
+    from public.membros m
+   where m.id = p_membro and m.excluido_em is null;
+  if not found then
+    raise exception 'Membro não encontrado.' using errcode = 'P0002';
+  end if;
+  if v_casa is not null and not public.casa_oracao_na_abrangencia(v_casa) then
+    raise exception 'Você não tem acesso a este cadastro.' using errcode = '42501';
+  end if;
+
+  select to_jsonb(c) - 'membro_id' - 'criado_em' - 'atualizado_em'
+    into v_res
+    from public.membros_cadastro c
+   where c.membro_id = p_membro;
+  return v_res; -- null quando o membro ainda não tem o cadastro preenchido
+end;
+$$;
+
+-- 4) Gravar o cadastro -------------------------------------------------------
+create or replace function public.salvar_cadastro_musical(p_membro uuid, p_dados jsonb)
+returns void
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+declare
+  v_casa   uuid;
+  v_cargo  uuid;
+  v_exige  boolean;
+  v_estado_civil    text := nullif(btrim(p_dados ->> 'estado_civil'), '');
+  v_sexo            text := nullif(btrim(p_dados ->> 'sexo'), '');
+  v_data_batismo    date := nullif(btrim(p_dados ->> 'data_batismo'), '')::date;
+  v_selado          boolean := (p_dados ->> 'selado')::boolean;
+  v_ddd             text := nullif(btrim(p_dados ->> 'ddd'), '');
+  v_telefone        text := nullif(btrim(p_dados ->> 'telefone'), '');
+  v_tem_whatsapp    boolean := (p_dados ->> 'tem_whatsapp')::boolean;
+  v_whatsapp        text := nullif(btrim(p_dados ->> 'whatsapp'), '');
+  v_email           text := nullif(btrim(p_dados ->> 'email'), '');
+  v_cep             text := nullif(btrim(p_dados ->> 'cep'), '');
+  v_endereco        text := nullif(btrim(p_dados ->> 'endereco'), '');
+  v_numero          text := nullif(btrim(p_dados ->> 'numero'), '');
+  v_complemento     text := nullif(btrim(p_dados ->> 'complemento'), '');
+  v_uf              text := nullif(btrim(p_dados ->> 'uf'), '');
+  v_cartao_numero   text := nullif(btrim(p_dados ->> 'cartao_numero'), '');
+  v_cartao_emissao  date := nullif(btrim(p_dados ->> 'cartao_emissao'), '')::date;
+  v_cartao_validade date := nullif(btrim(p_dados ->> 'cartao_validade'), '')::date;
+  v_apresentado_em  date := nullif(btrim(p_dados ->> 'apresentado_em'), '')::date;
+  v_apresentado_por text := nullif(btrim(p_dados ->> 'apresentado_por'), '');
+  v_observacao      text := nullif(btrim(p_dados ->> 'observacao'), '');
+begin
+  if not (public.tem_permissao('membros.criar') or public.tem_permissao('membros.editar')) then
+    raise exception 'Você não tem permissão para salvar este cadastro.' using errcode = '42501';
+  end if;
+
+  select m.casa_oracao_id, m.cargo_id into v_casa, v_cargo
+    from public.membros m
+   where m.id = p_membro and m.excluido_em is null;
+  if not found then
+    raise exception 'Membro não encontrado.' using errcode = 'P0002';
+  end if;
+  if v_casa is not null and not public.casa_oracao_na_abrangencia(v_casa) then
+    raise exception 'Você não tem acesso a este cadastro.' using errcode = '42501';
+  end if;
+
+  -- Validações com mensagem clara (as regras da tabela são a segunda barreira)
+  if v_estado_civil is not null and v_estado_civil not in ('Casado(a)', 'Solteiro(a)', 'Viúvo(a)') then
+    raise exception 'Estado civil inválido.' using errcode = '22023';
+  end if;
+  if v_sexo is not null and v_sexo not in ('Masculino', 'Feminino') then
+    raise exception 'Sexo inválido.' using errcode = '22023';
+  end if;
+  if v_ddd is not null and v_ddd !~ '^[0-9]{2}$' then
+    raise exception 'O DDD deve ter 2 números.' using errcode = '22023';
+  end if;
+  if v_telefone is not null and v_telefone !~ '^[0-9]{8,9}$' then
+    raise exception 'O telefone deve ter 8 ou 9 números.' using errcode = '22023';
+  end if;
+  if v_whatsapp is not null and v_whatsapp !~ '^[0-9]{10,11}$' then
+    raise exception 'O WhatsApp deve ter o DDD e 8 ou 9 números.' using errcode = '22023';
+  end if;
+  if v_email is not null and v_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then
+    raise exception 'O e-mail informado não é válido.' using errcode = '22023';
+  end if;
+  if v_cep is not null and v_cep !~ '^[0-9]{8}$' then
+    raise exception 'O CEP deve ter 8 números.' using errcode = '22023';
+  end if;
+  if v_uf is not null and v_uf !~ '^[A-Z]{2}$' then
+    raise exception 'Estado (UF) inválido.' using errcode = '22023';
+  end if;
+  if v_cartao_emissao is not null and v_cartao_validade is not null and v_cartao_emissao > v_cartao_validade then
+    raise exception 'A validade do cartão não pode ser anterior à emissão.' using errcode = '22023';
+  end if;
+
+  -- Cargos que exigem o cartão de identificação (coluna cargos.exige_cartao)
+  select c.exige_cartao into v_exige from public.cargos c where c.id = v_cargo;
+  if coalesce(v_exige, false) and (v_cartao_numero is null or v_cartao_validade is null) then
+    raise exception 'Este cargo exige o número e a validade do cartão de identificação.' using errcode = '22023';
+  end if;
+
+  -- Sem WhatsApp: não guarda número de WhatsApp
+  if v_tem_whatsapp is not true then
+    v_whatsapp := null;
+  end if;
+
+  insert into public.membros_cadastro as c (
+    membro_id, estado_civil, sexo, data_batismo, selado, ddd, telefone, tem_whatsapp, whatsapp, email,
+    cep, endereco, numero, complemento, uf, cartao_numero, cartao_emissao, cartao_validade,
+    apresentado_em, apresentado_por, observacao
+  ) values (
+    p_membro, v_estado_civil, v_sexo, v_data_batismo, v_selado, v_ddd, v_telefone, v_tem_whatsapp, v_whatsapp, v_email,
+    v_cep, v_endereco, v_numero, v_complemento, v_uf, v_cartao_numero, v_cartao_emissao, v_cartao_validade,
+    v_apresentado_em, v_apresentado_por, v_observacao
+  )
+  on conflict (membro_id) do update set
+    estado_civil = excluded.estado_civil, sexo = excluded.sexo, data_batismo = excluded.data_batismo,
+    selado = excluded.selado, ddd = excluded.ddd, telefone = excluded.telefone,
+    tem_whatsapp = excluded.tem_whatsapp, whatsapp = excluded.whatsapp, email = excluded.email,
+    cep = excluded.cep, endereco = excluded.endereco, numero = excluded.numero,
+    complemento = excluded.complemento, uf = excluded.uf, cartao_numero = excluded.cartao_numero,
+    cartao_emissao = excluded.cartao_emissao, cartao_validade = excluded.cartao_validade,
+    apresentado_em = excluded.apresentado_em, apresentado_por = excluded.apresentado_por,
+    observacao = excluded.observacao, atualizado_em = now();
+end;
+$$;
+
+-- 5) Quem pode chamar --------------------------------------------------------
+revoke all on function public.obter_cadastro_musical(uuid) from public, anon;
+revoke all on function public.salvar_cadastro_musical(uuid, jsonb) from public, anon;
+grant execute on function public.obter_cadastro_musical(uuid) to authenticated;
+grant execute on function public.salvar_cadastro_musical(uuid, jsonb) to authenticated;
+
+################ src/modules/membros/services/cadastroMusical.ts
+/**
+ * SysMúsica — Serviço do Cadastro Musical (dados pessoais do membro: estado civil, telefone, endereço, cartão...).
+ * Esses dados ficam na tabela protegida membros_cadastro: a tela só fala com as funções do banco, que conferem a
+ * permissão (membros.criar / membros.editar) e a abrangência do usuário (casa de oração do membro).
+ */
+import { supabase } from "@/lib/supabase";
+import { mensagemDoErro } from "@/lib/erros";
+import { deRetornoDoBanco, paraEnvioAoBanco, type CadastroMusical } from "../cadastroMusical";
+
+/** Dados pessoais do membro, ou null se ele ainda não tem o cadastro preenchido (membros antigos). */
+export async function obterCadastroMusical(membroId: string): Promise<CadastroMusical | null> {
+  const { data, error } = await supabase.rpc("obter_cadastro_musical", { p_membro: membroId });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar os dados do cadastro."));
+  return data ? deRetornoDoBanco(data) : null;
+}
+
+/** Grava (ou atualiza) os dados pessoais do membro. O banco valida de novo todos os campos. */
+export async function salvarCadastroMusical(membroId: string, dados: CadastroMusical): Promise<void> {
+  const { error } = await supabase.rpc("salvar_cadastro_musical", {
+    p_membro: membroId,
+    p_dados: paraEnvioAoBanco(dados),
+  });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível salvar os dados do cadastro."));
+}
+
+################ src/modules/membros/services/fotos.ts
+/**
+ * SysMúsica — Serviço das fotografias dos membros.
+ * As fotos ficam em um bucket PRIVADO: para exibir, gera-se uma URL temporária (assinada).
+ * Quem pode enviar, trocar ou remover é controlado pela permissão membros.foto (banco + armazenamento).
+ */
+import { supabase } from "@/lib/supabase";
+import { mensagemDoErro } from "@/lib/erros";
+
+export const BUCKET_FOTOS = "fotos-membros";
+
+export interface MembroFoto {
+  id: string;
+  nome: string;
+  congregacao: string | null;
+  foto_path: string | null;
+}
+
+/** Membros (não excluídos) com o caminho da foto, para a tela de fotografias. */
+export async function listarMembrosParaFoto(): Promise<MembroFoto[]> {
+  const { data, error } = await supabase.rpc("listar_membros_para_foto");
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar os membros."));
+  return (data ?? []) as MembroFoto[];
+}
+
+// Guarda as URLs temporárias por alguns minutos para não pedir a mesma foto várias vezes
+const cacheUrls = new Map<string, { url: string; expira: number }>();
+const VALIDADE_URL_SEGUNDOS = 600;
+
+/** URL temporária de uma foto (ou null se não for possível gerar). */
+export async function urlDaFoto(caminho: string): Promise<string | null> {
+  const agora = Date.now();
+  const guardada = cacheUrls.get(caminho);
+  if (guardada && guardada.expira > agora) return guardada.url;
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET_FOTOS)
+    .createSignedUrl(caminho, VALIDADE_URL_SEGUNDOS);
+  if (error || !data) return null;
+
+  cacheUrls.set(caminho, { url: data.signedUrl, expira: agora + (VALIDADE_URL_SEGUNDOS - 60) * 1000 });
+  return data.signedUrl;
+}
+
+/** URLs temporárias de várias fotos de uma vez: { caminho: url }. */
+export async function urlsDasFotos(caminhos: string[]): Promise<Record<string, string>> {
+  if (caminhos.length === 0) return {};
+  const { data, error } = await supabase.storage
+    .from(BUCKET_FOTOS)
+    .createSignedUrls(caminhos, VALIDADE_URL_SEGUNDOS);
+  if (error || !data) return {};
+
+  const mapa: Record<string, string> = {};
+  for (const item of data) {
+    if (item.path && item.signedUrl) mapa[item.path] = item.signedUrl;
+  }
+  return mapa;
+}
+
+/** Envia a foto (já reduzida) e a vincula ao membro; apaga o arquivo anterior. */
+export async function enviarFoto(membroId: string, imagem: Blob): Promise<void> {
+  const caminho = `${membroId}/${crypto.randomUUID()}.jpg`;
+
+  const { error: erroEnvio } = await supabase.storage
+    .from(BUCKET_FOTOS)
+    .upload(caminho, imagem, { contentType: "image/jpeg", upsert: false });
+  if (erroEnvio) {
+    throw new Error("Não foi possível enviar a fotografia. Verifique a conexão e tente novamente.");
+  }
+
+  const { data, error } = await supabase.rpc("definir_foto_membro", { p_membro_id: membroId, p_path: caminho });
+  if (error) {
+    // Desfaz o envio: não deixa arquivo solto no armazenamento
+    await supabase.storage.from(BUCKET_FOTOS).remove([caminho]);
+    throw new Error(mensagemDoErro(error, "Não foi possível salvar a fotografia."));
+  }
+
+  // Arquivo antigo: apagar é um cuidado extra; se falhar, a foto nova já está valendo
+  const anterior = data as string | null;
+  if (anterior) await supabase.storage.from(BUCKET_FOTOS).remove([anterior]);
+}
+
+/**
+ * Envia a foto para a pasta do membro e devolve o caminho, SEM ligar a foto a ninguém ainda.
+ * Usado no cadastro novo (membro e visitante): a foto sobe antes e o caminho vai junto com o cadastro,
+ * onde o banco confere se o arquivo existe e se está na pasta certa.
+ */
+export async function subirFotoNova(membroId: string, imagem: Blob): Promise<string> {
+  const caminho = `${membroId}/${crypto.randomUUID()}.jpg`;
+  const { error } = await supabase.storage
+    .from(BUCKET_FOTOS)
+    .upload(caminho, imagem, { contentType: "image/jpeg", upsert: false });
+  if (error) {
+    throw new Error("Não foi possível enviar a fotografia. Verifique a conexão e tente novamente.");
+  }
+  return caminho;
+}
+
+/**
+ * Tenta apagar uma foto enviada que não chegou a ser usada (o cadastro falhou). Se o usuário não tiver
+ * permissão para apagar, o arquivo apenas fica sem uso no armazenamento privado.
+ */
+export async function descartarFoto(caminho: string): Promise<void> {
+  await supabase.storage.from(BUCKET_FOTOS).remove([caminho]);
+}
+
+/** Remove a fotografia do membro (referência no banco e arquivo). */
+export async function removerFoto(membroId: string): Promise<void> {
+  const { data, error } = await supabase.rpc("remover_foto_membro", { p_membro_id: membroId });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível remover a fotografia."));
+
+  const anterior = data as string | null;
+  if (anterior) await supabase.storage.from(BUCKET_FOTOS).remove([anterior]);
+}
+
+################ src/modules/membros/services/membros.ts
+/**
+ * SysMúsica — Serviço de dados de membros.
+ *
+ * Em "membros" só se lêem colunas liberadas (nunca "*": o qr_secret e o CPF completo são
+ * protegidos). O CPF completo e o código do QR Code vêm de funções do banco que conferem a
+ * permissão e registram a consulta na auditoria.
+ * Excluir é EXCLUSÃO LÓGICA: o membro some das telas e o histórico de presenças é mantido.
+ */
+import { supabase } from "@/lib/supabase";
+import { mensagemDoErro } from "@/lib/erros";
+import {
+  COLUNAS_MEMBRO_PUBLICO,
+  type Cargo,
+  type Familia,
+  type Instrumento,
+  type MembroInsert,
+  type MembroPublico,
+} from "@/types/database";
+
+const MSG_CPF_DUPLICADO = "Já existe um membro cadastrado com este CPF.";
+
+export interface DadosMembros {
+  cargos: Cargo[];
+  instrumentos: Instrumento[];
+  familias: Familia[];
+  membros: MembroPublico[];
+}
+
+/** Busca cargos, instrumentos, famílias e membros em paralelo. Lança erro se qualquer consulta falhar. */
+export async function buscarDadosMembros(): Promise<DadosMembros> {
+  const [resCargos, resInstrumentos, resFamilias, resMembros] = await Promise.all([
+    supabase.from("cargos").select("*").order("nome", { ascending: true }),
+    supabase.from("instrumentos").select("*").order("nome", { ascending: true }),
+    supabase.from("familias").select("*").order("nome", { ascending: true }),
+    supabase.from("membros").select(COLUNAS_MEMBRO_PUBLICO).order("nome", { ascending: true }),
+  ]);
+
+  const erroBanco = resCargos.error ?? resInstrumentos.error ?? resFamilias.error ?? resMembros.error;
+  if (erroBanco) throw new Error(erroBanco.message);
+
+  return {
+    cargos: (resCargos.data ?? []) as Cargo[],
+    instrumentos: (resInstrumentos.data ?? []) as Instrumento[],
+    familias: (resFamilias.data ?? []) as Familia[],
+    // Cast duplo: com lista de colunas, o cliente (sem tipagem gerada) não infere a linha
+    membros: (resMembros.data ?? []) as unknown as MembroPublico[],
+  };
+}
+
+export async function criarMembro(dados: MembroInsert): Promise<void> {
+  const { error } = await supabase.from("membros").insert(dados);
+  if (error) {
+    throw new Error(mensagemDoErro(error, "Não foi possível cadastrar o membro.", MSG_CPF_DUPLICADO));
+  }
+}
+
+/** Campos que podem ser alterados na edição (o banco libera só estas colunas). */
+export interface DadosAtualizacaoMembro {
+  nome: string;
+  congregacao: string;
+  cargo_id: string;
+  data_nascimento: string | null;
+  instrumento_id: string | null;
+  status: string;
+  cidade: string | null;
+  bairro: string | null;
+  casa_oracao_id?: string | null; // a casa de oração escolhida (o banco ajusta o nome da congregação)
+  categoria?: string | null; // Oficializado, Culto Oficial ou RJM (Músico e Organista)
+  /** Só enviar quando o usuário tem a permissão membros.cpf (null = apagar o CPF). */
+  cpf?: string | null;
+}
+
+export async function atualizarMembro(id: string, dados: DadosAtualizacaoMembro): Promise<void> {
+  // .select("id") devolve as linhas alteradas: se o RLS negar, o update não dá erro, só não altera nada
+  const { data, error } = await supabase.from("membros").update(dados).eq("id", id).select("id");
+  if (error) {
+    throw new Error(
+      mensagemDoErro(error, "Não foi possível salvar as alterações do membro.", MSG_CPF_DUPLICADO)
+    );
+  }
+  if (!data || data.length === 0) {
+    throw new Error("Não foi possível salvar: você não tem permissão ou o membro não existe mais.");
+  }
+}
+
+/** Exclusão lógica (função do banco, que confere a permissão membros.excluir). */
+export async function excluirMembro(id: string): Promise<void> {
+  const { error } = await supabase.rpc("excluir_membro", { p_id: id });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível excluir o membro."));
+}
+
+/** CPF completo (permissão membros.cpf; a consulta fica registrada na auditoria). */
+export async function obterCpfMembro(id: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc("obter_cpf_membro", { p_id: id });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível consultar o CPF."));
+  return (data as string | null) ?? null;
+}
+
+/** Código do QR Code do membro (permissão membros.qr; a consulta fica registrada na auditoria). */
+export async function obterQrMembro(id: string): Promise<string> {
+  const { data, error } = await supabase.rpc("obter_qr_membro", { p_id: id });
+  if (error || typeof data !== "string") {
+    throw new Error(
+      error ? mensagemDoErro(error, "Não foi possível obter o QR Code.") : "Não foi possível obter o QR Code."
+    );
+  }
+  return data;
+}
+
+/** Substitui o QR Code (permissão membros.qr_revogar; justificativa obrigatória). Devolve o novo código. */
+export async function regenerarQrMembro(id: string, justificativa: string): Promise<string> {
+  const { data, error } = await supabase.rpc("regenerar_qr", { p_id: id, p_justificativa: justificativa });
+  if (error || typeof data !== "string") {
+    throw new Error(
+      error
+        ? mensagemDoErro(error, "Não foi possível substituir o QR Code.")
+        : "Não foi possível substituir o QR Code."
+    );
+  }
+  return data;
+}
+
+################ src/modules/painel/regras.ts
+/**
+ * SysMúsica — Regras puras do painel ao vivo (sem banco). Testadas em regras.test.ts.
+ * A contagem de verdade é feita no banco (função painel_ao_vivo); aqui ficam a montagem dos blocos para a tela,
+ * os percentuais, os formatos de data e hora e a regra do campo Categoria do membro.
+ */
+import type {
+  BlocoPainel,
+  BlocoResumo,
+  ContagemFamilia,
+  FamiliaResumo,
+  LinhaPainel,
+  TipoCategoria,
+} from "./tipos";
+
+// ---------- Atualização automática ----------
+
+/** Intervalos que o usuário pode escolher, em segundos. */
+export const INTERVALOS_SEGUNDOS = [5, 10, 15, 30, 60] as const;
+export const INTERVALO_PADRAO = 10;
+
+/** Devolve o intervalo se for um dos permitidos; senão, o padrão (10 s). */
+export function intervaloValido(valor: unknown): number {
+  const numero = typeof valor === "number" ? valor : Number(valor);
+  return (INTERVALOS_SEGUNDOS as readonly number[]).includes(numero) ? numero : INTERVALO_PADRAO;
+}
+
+// ---------- Percentuais e formatos ----------
+
+/** "27,7%": a parte sobre o total, com uma casa decimal e vírgula. Total zero dá "0,0%". */
+export function formatarPercentual(parte: number, total: number): string {
+  const valor = total > 0 ? (parte / total) * 100 : 0;
+  return `${valor.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+}
+
+const FUSO = "America/Sao_Paulo";
+
+/** Dia do evento no formato dd/mm/aaaa (fuso de Salvador). */
+export function formatarDiaDoEvento(iso: string): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: FUSO,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(iso));
+}
+
+/** Hora do evento: "09h" quando é em ponto, "09h30" nos demais casos (fuso de Salvador). */
+export function formatarHoraDoEvento(iso: string): string {
+  const [hora, minuto] = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: FUSO,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .format(new Date(iso))
+    .split(":");
+  return minuto === "00" ? `${hora}h` : `${hora}h${minuto}`;
+}
+
+/** "Atualizado às 10:46:12" (fuso de Salvador). */
+export function formatarHoraDaAtualizacao(data: Date): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: FUSO,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(data);
+}
+
+// ---------- Montagem dos blocos ----------
+
+export const ROTULO_BLOCO: Record<BlocoPainel, string> = {
+  MINISTERIO: "Ministério",
+  MUSICOS: "Músicos",
+  ORGANISTAS: "Organistas",
+};
+
+const ORDEM_BLOCOS: BlocoPainel[] = ["MINISTERIO", "MUSICOS", "ORGANISTAS"];
+
+/**
+ * Agrupa as linhas em Ministério, Músicos e Organistas, com o total de cada bloco.
+ * Linhas que não podem ser escolhidas na entrada (ex.: "Sem categoria") só aparecem se tiverem gente.
+ */
+export function agruparBlocos(linhas: LinhaPainel[]): BlocoResumo[] {
+  return ORDEM_BLOCOS.map((bloco) => {
+    const doBloco = linhas
+      .filter((linha) => linha.bloco === bloco && (linha.selecionavel || linha.qtd > 0))
+      .sort((a, b) => a.ordem - b.ordem);
+    return {
+      bloco,
+      rotulo: ROTULO_BLOCO[bloco],
+      total: doBloco.reduce((soma, linha) => soma + linha.qtd, 0),
+      linhas: doBloco,
+    };
+  });
+}
+
+const FAMILIAS_FIXAS = ["Cordas", "Madeiras", "Metais"];
+
+/**
+ * Famílias do bloco Instrumentos: Cordas, Madeiras e Metais sempre aparecem (mesmo com zero);
+ * outras (como Teclas, para o acordeom) só quando houver alguém. O percentual é sobre o total do bloco.
+ */
+export function montarFamilias(itens: ContagemFamilia[]): { total: number; familias: FamiliaResumo[] } {
+  const total = itens.reduce((soma, item) => soma + item.qtd, 0);
+  const quantidade = (nome: string) => itens.find((item) => item.familia === nome)?.qtd ?? 0;
+
+  const extras = itens
+    .filter((item) => !FAMILIAS_FIXAS.includes(item.familia) && item.qtd > 0)
+    .map((item) => item.familia)
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  const familias = [...FAMILIAS_FIXAS, ...extras].map((nome) => ({
+    nome,
+    qtd: quantidade(nome),
+    percentual: formatarPercentual(quantidade(nome), total),
+  }));
+  return { total, familias };
+}
+
+// ---------- Categoria do membro (Músico e Organista) ----------
+
+export const CATEGORIAS = [
+  { valor: "OFICIALIZADO", musico: "Oficializado", organista: "Oficializada" },
+  { valor: "CULTO_OFICIAL", musico: "Culto Oficial", organista: "Culto Oficial" },
+  { valor: "RJM", musico: "RJM", organista: "RJM" },
+] as const;
+
+function semAcento(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/** O cargo usa Categoria? Só Músico e Organista (as demais pessoas contam pelo cargo). */
+export function cargoUsaCategoria(nomeCargo: string | undefined | null): TipoCategoria | null {
+  if (!nomeCargo) return null;
+  const nome = semAcento(nomeCargo);
+  if (nome.startsWith("musico")) return "musico";
+  if (nome.startsWith("organista")) return "organista";
+  return null;
+}
+
+/** Texto da categoria para o tipo de cargo (a organista é "Oficializada", no feminino). */
+export function rotuloDaCategoria(valor: string | null | undefined, tipo: TipoCategoria): string {
+  const encontrada = CATEGORIAS.find((categoria) => categoria.valor === valor);
+  return encontrada ? encontrada[tipo] : "Sem categoria";
+}
+
+/** Músico e Organista precisam de categoria; devolve a mensagem de erro ou null. O banco só aceita os valores da lista. */
+export function validarCategoria(nomeCargo: string | undefined | null, categoria: string): string | null {
+  const tipo = cargoUsaCategoria(nomeCargo);
+  if (!tipo) return null;
+  if (!CATEGORIAS.some((item) => item.valor === categoria)) {
+    return `Escolha a categoria (${CATEGORIAS.map((item) => item[tipo]).join(", ")}).`;
+  }
+  return null;
+}
+
+################ src/modules/instrumentos/selecao.ts
+/**
+ * SysMúsica — Regras puras do seletor de instrumento (sem banco). Testadas em selecao.test.ts.
+ * O mesmo seletor é usado no cadastro de membro e no cadastro de visitante, para a escolha ser sempre
+ * igual: lista suspensa agrupada por família, e a família aparece sozinha pelo instrumento escolhido.
+ */
+
+export interface InstrumentoOpcao {
+  id: string;
+  nome: string;
+  familia_id: string | null;
+}
+
+export interface FamiliaOpcao {
+  id: string;
+  nome: string;
+}
+
+export interface GrupoInstrumentos {
+  familiaId: string | null; // nulo = instrumentos sem família
+  rotulo: string;
+  instrumentos: InstrumentoOpcao[];
+}
+
+const ROTULO_SEM_FAMILIA = "Sem família definida";
+
+// Ordem natural em português
+const porNome = (a: { nome: string }, b: { nome: string }) => a.nome.localeCompare(b.nome, "pt-BR", { numeric: true });
+
+/** Agrupa os instrumentos por família (famílias em ordem de nome; os sem família vão para o fim). */
+export function agruparInstrumentosPorFamilia(
+  instrumentos: InstrumentoOpcao[],
+  familias: FamiliaOpcao[]
+): GrupoInstrumentos[] {
+  const conhecidas = new Set(familias.map((familia) => familia.id));
+  const porFamilia = new Map<string, InstrumentoOpcao[]>();
+  const semFamilia: InstrumentoOpcao[] = [];
+
+  for (const instrumento of instrumentos) {
+    if (instrumento.familia_id && conhecidas.has(instrumento.familia_id)) {
+      porFamilia.set(instrumento.familia_id, [...(porFamilia.get(instrumento.familia_id) ?? []), instrumento]);
+    } else {
+      semFamilia.push(instrumento);
+    }
+  }
+
+  const grupos: GrupoInstrumentos[] = [...familias]
+    .filter((familia) => porFamilia.has(familia.id))
+    .sort(porNome)
+    .map((familia) => ({
+      familiaId: familia.id,
+      rotulo: familia.nome,
+      instrumentos: [...(porFamilia.get(familia.id) ?? [])].sort(porNome),
+    }));
+
+  if (semFamilia.length > 0) {
+    grupos.push({ familiaId: null, rotulo: ROTULO_SEM_FAMILIA, instrumentos: [...semFamilia].sort(porNome) });
+  }
+  return grupos;
+}
+
+/** Nome da família do instrumento escolhido; nulo se não houver instrumento ou se ele estiver sem família. */
+export function nomeDaFamiliaDoInstrumento(
+  instrumentoId: string,
+  instrumentos: InstrumentoOpcao[],
+  familias: FamiliaOpcao[]
+): string | null {
+  const instrumento = instrumentos.find((item) => item.id === instrumentoId);
+  if (!instrumento?.familia_id) return null;
+  return familias.find((familia) => familia.id === instrumento.familia_id)?.nome ?? null;
+}
+
+/**
+ * Regra do instrumento obrigatório: devolve a mensagem de erro ou null.
+ * (O banco confere de novo: a tela é só a resposta rápida.)
+ */
+export function validarInstrumentoDoCargo(
+  exige: boolean,
+  instrumentoId: string,
+  nomeCargo: string | undefined
+): string | null {
+  if (exige && !instrumentoId) {
+    return `O cargo ${nomeCargo ?? "escolhido"} exige o instrumento. Escolha o instrumento na lista.`;
+  }
+  return null;
+}
+
+################ src/modules/membros/components/CampoFoto.tsx
+"use client";
+
+/**
+ * SysMúsica — Campo de fotografia: "Tirar foto" e "Escolher da galeria", com pré-visualização.
+ * No celular, "Tirar foto" abre a câmera do aparelho; no computador abre o seletor de arquivos.
+ * A imagem é reduzida e convertida para JPEG no navegador (leve e rápida de enviar). O arquivo só é
+ * enviado quando o formulário que usa este campo salvar. Sem foto nova, mostra a foto atual (se houver).
+ */
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { Camera, ImagePlus, Trash2 } from "lucide-react";
+import { prepararFoto } from "../fotoImagem";
+import FotoMembro from "./FotoMembro";
+
+interface CampoFotoProps {
+  nome: string; // para o texto alternativo da imagem
+  fotoAtualCaminho?: string | null; // foto já cadastrada (edição)
+  obrigatoria?: boolean;
+  onChange: (foto: Blob | null) => void; // a foto nova já preparada, ou nulo ao remover a escolha
+  disabled?: boolean;
+}
+
+const classeBotao =
+  "inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium " +
+  "text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60";
+
+export default function CampoFoto({
+  nome,
+  fotoAtualCaminho = null,
+  obrigatoria = false,
+  onChange,
+  disabled = false,
+}: CampoFotoProps) {
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galeriaRef = useRef<HTMLInputElement>(null);
+  const [previa, setPrevia] = useState<string | null>(null); // endereço temporário da foto nova
+  const [processando, setProcessando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  // Libera o endereço temporário da pré-visualização quando ela troca ou o campo sai da tela
+  useEffect(() => {
+    return () => {
+      if (previa) URL.revokeObjectURL(previa);
+    };
+  }, [previa]);
+
+  async function aoEscolher(evento: ChangeEvent<HTMLInputElement>) {
+    const arquivo = evento.target.files?.[0];
+    evento.target.value = ""; // permite escolher o mesmo arquivo de novo
+    if (!arquivo) return;
+
+    setErro(null);
+    setProcessando(true);
+    try {
+      const imagem = await prepararFoto(arquivo);
+      setPrevia(URL.createObjectURL(imagem));
+      onChange(imagem);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível preparar a imagem.");
+    } finally {
+      setProcessando(false);
+    }
+  }
+
+  function removerEscolha() {
+    setPrevia(null);
+    onChange(null);
+  }
+
+  const bloqueado = disabled || processando;
+
+  return (
+    <div className="space-y-3">
+      {/* Câmera (celular) e galeria: seletores escondidos, acionados pelos botões abaixo */}
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(e) => void aoEscolher(e)}
+      />
+      <input
+        ref={galeriaRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(e) => void aoEscolher(e)}
+      />
+
+      <div className="flex items-start gap-4">
+        {previa ? (
+          <div
+            role="img"
+            aria-label={`Nova fotografia de ${nome}`}
+            style={{ backgroundImage: `url(${previa})` }}
+            className="h-44 w-36 shrink-0 rounded-xl bg-slate-100 bg-cover bg-center"
+          />
+        ) : (
+          <FotoMembro caminho={fotoAtualCaminho} nome={nome} tamanho="grande" />
+        )}
+
+        <div className="flex flex-col gap-2">
+          <button type="button" className={classeBotao} onClick={() => cameraRef.current?.click()} disabled={bloqueado}>
+            <Camera className="h-4 w-4" aria-hidden="true" />
+            Tirar foto
+          </button>
+          <button type="button" className={classeBotao} onClick={() => galeriaRef.current?.click()} disabled={bloqueado}>
+            <ImagePlus className="h-4 w-4" aria-hidden="true" />
+            Escolher da galeria
+          </button>
+          {previa && (
+            <button type="button" className={classeBotao} onClick={removerEscolha} disabled={bloqueado}>
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              Remover a nova foto
+            </button>
+          )}
+        </div>
+      </div>
+
+      {processando && <p className="text-xs text-slate-500">Preparando a imagem...</p>}
+      {erro && (
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erro}
+        </p>
+      )}
+      <p className="text-xs text-slate-500">
+        {obrigatoria ? "A fotografia é obrigatória: ela identifica a pessoa na portaria. " : ""}
+        Foto de rosto, de frente e com boa luz. A imagem é reduzida antes de ser enviada.
+      </p>
+    </div>
+  );
+}
+
+################ USOS DE Examinadora / Instrutor
+src/modules/eventos/regras.test.ts:14:      "Reunião Geral para Músicos, Organistas, Examinadoras, Instrutores (as), Encarregados Locais e Regionais",
+src/modules/eventos/regras.test.ts:15:      "Reunião Geral para Examinadoras, Encarregados Locais e Regionais",
+src/modules/eventos/regras.test.ts:16:      "Reunião Geral para Instrutores (as), Examinadoras, Encarregados Locais e Regionais",
+src/modules/painel/regras.test.ts:121:    expect(cargoUsaCategoria("Examinadora")).toBeNull();
+supabase/migrations/0001_baseline.sql:44:  ('Instrutor',                        true),
+supabase/migrations/0001_baseline.sql:47:  ('Examinadora',                      true),
+supabase/migrations/0036_relatorio_presenca_portaria.sql:3:-- agrupada pelas mesmas linhas do Painel ao vivo (Ancião, Oficializado, Examinadora...), com subtotais.
+supabase/migrations/0028_portaria_toca_avulsa.sql:5:--      p_instrumento_id. O banco confere: cargos que perguntam (Cooperadores, Encarregados, Instrutor,
+supabase/migrations/0038_cadastro_musical.sql:23: where public.normalizar_texto(nome) in ('encarregado regional', 'encarregado local', 'examinadora');
+supabase/migrations/0004_cadastros.sql:35:  ('Reunião Geral para Músicos, Organistas, Examinadoras, Instrutores (as), Encarregados Locais e Regionais'),
+supabase/migrations/0004_cadastros.sql:36:  ('Reunião Geral para Examinadoras, Encarregados Locais e Regionais'),
+supabase/migrations/0004_cadastros.sql:37:  ('Reunião Geral para Instrutores (as), Examinadoras, Encarregados Locais e Regionais')
+supabase/migrations/0026_painel_ao_vivo.sql:95:  ('MUS_INSTRUTOR',     'MUSICOS',    'Instrutor',             130, true,  false, 'LIVRE',  true),
+supabase/migrations/0026_painel_ao_vivo.sql:102:  ('ORG_EXAMINADORA',   'ORGANISTAS', 'Examinadora',           210, false, false, 'ORGAO',  true),
+supabase/migrations/0026_painel_ao_vivo.sql:103:  ('ORG_INSTRUTORA',    'ORGANISTAS', 'Instrutora',            220, false, false, 'ORGAO',  true),
+supabase/migrations/0026_painel_ao_vivo.sql:136:    when t.c like 'examinadora%' then 'ORG_EXAMINADORA'
+supabase/migrations/0026_painel_ao_vivo.sql:137:    when t.c like 'instrutor%' then
+supabase/migrations/0026_painel_ao_vivo.sql:138:      case when public.instrumento_e_orgao(p_instrumento) then 'ORG_INSTRUTORA' else 'MUS_INSTRUTOR' end
+supabase/migrations/0026_painel_ao_vivo.sql:257:      ('Instrutor (a)', null, 'Saxofone Alto', 'MUS_INSTRUTOR'),
+supabase/migrations/0026_painel_ao_vivo.sql:258:      ('Instrutor (a)', null, 'Orgão Eletrônico', 'ORG_INSTRUTORA'),
+supabase/migrations/0026_painel_ao_vivo.sql:268:      ('Examinadora', null, null, 'ORG_EXAMINADORA'),

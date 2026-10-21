@@ -18,13 +18,18 @@
  *  - "Status do cargo" (Oficializado / Culto Oficial / RJM) é o campo Categoria; outros cargos são Oficializado.
  *  - Os campos obrigatórios (*) valem no cadastro novo e em quem já tem o cadastro preenchido.
  *
+ * MIGRAÇÃO 0040: no cadastro completo também são obrigatórios CPF, data de nascimento, estado civil, sexo, instrumento
+ *      (nos cargos que usam instrumento), Batizado (Sim/Não; sendo Sim, a data do batismo) e a frente e o verso do
+ *      documento de identificação (armazenamento privado). Organista, Examinadora, Instrutor e Instrutora só aceitam
+ *      o instrumento Órgão (cargos.somente_orgao). Ao digitar o CEP, o endereço é consultado online (ViaCEP).
+ *
  * Instrumento: lista suspensa agrupada por família, igual em todo o sistema (só instrumentos cadastrados).
  *  - O campo só aparece para cargos com permite_instrumento = true.
  *  - É OBRIGATÓRIO nos cargos que exigem instrumento (o Músico); o banco também recusa sem ele.
  *  - A FAMÍLIA é automática e somente leitura (vem do cadastro do instrumento). Instrumento novo e
  *    correção de família: tela Instrumentos e famílias.
  */
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import Button from "@/components/ui/Button";
 import { formatarCpf, limparCpf, validarCpf } from "@/lib/cpf";
 import SeletorInstrumento, { FamiliaAutomatica } from "@/modules/instrumentos/components/SeletorInstrumento";
@@ -33,18 +38,23 @@ import { atualizarMembro, criarMembro } from "@/modules/membros/services/membros
 import { CATEGORIAS, cargoUsaCategoria, validarCategoria } from "@/modules/painel/regras";
 import SeletorCasaOracao from "@/modules/organizacao/components/SeletorCasaOracao";
 import CampoFoto from "@/modules/membros/components/CampoFoto";
+import CampoDocumento from "@/modules/membros/components/CampoDocumento";
 import FotoMembro from "@/modules/membros/components/FotoMembro";
 import { descartarFoto, enviarFoto, removerFoto, subirFotoNova } from "@/modules/membros/services/fotos";
+import { buscarEnderecoPorCep } from "@/modules/membros/services/cep";
+import { descartarDocumentos, subirDocumento } from "@/modules/membros/services/documentos";
 import {
   CADASTRO_VAZIO,
   ESTADOS_CIVIS,
   SEXOS,
   UFS,
   cargoExigeCartao,
+  cargoSomenteOrgao,
   cargosDoCadastro,
   formatarCep,
   formatarTelefone,
   formatarWhatsapp,
+  instrumentosDoCargo,
   somenteDigitos,
   temAlgumDado,
   validarCadastro,
@@ -67,6 +77,7 @@ interface FormularioMembroProps {
   cadastroInicial: CadastroMusical | null; // dados pessoais já gravados (só na edição; null = ainda sem cadastro)
   podeCpf: boolean; // permissão membros.cpf
   podeFoto: boolean; // permissão membros.foto (trocar a fotografia de um membro já cadastrado)
+  podeDocumento: boolean; // permissão membros.cpf (ver o documento de identificação já anexado)
   cargos: Cargo[];
   instrumentos: Instrumento[];
   familias: Familia[];
@@ -91,6 +102,7 @@ export default function FormularioMembro({
   cadastroInicial,
   podeCpf,
   podeFoto,
+  podeDocumento,
   cargos,
   instrumentos,
   familias,
@@ -114,6 +126,10 @@ export default function FormularioMembro({
   const [categoria, setCategoria] = useState(membro?.categoria ?? ""); // Oficializado, Culto Oficial ou RJM
   const [status, setStatus] = useState(membro?.status ?? "Ativo");
   const [foto, setFoto] = useState<Blob | null>(null); // foto nova já preparada (obrigatória no cadastro novo)
+  const [docFrente, setDocFrente] = useState<Blob | null>(null); // imagem nova da frente do documento
+  const [docVerso, setDocVerso] = useState<Blob | null>(null); // imagem nova do verso do documento
+  const [statusCep, setStatusCep] = useState<StatusCep>(""); // andamento da consulta do endereço pelo CEP
+  const ultimoCepConsultado = useRef(""); // evita consultar o mesmo CEP de novo e descarta resposta atrasada
   const [cadastro, setCadastro] = useState<CadastroMusical>(cadastroInicial ?? CADASTRO_VAZIO); // dados pessoais
   const [confirmandoRemocaoFoto, setConfirmandoRemocaoFoto] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -134,12 +150,23 @@ export default function FormularioMembro({
   const exigeCartao = cargoExigeCartao(cargoSelecionado as (Cargo & { exige_cartao?: boolean }) | undefined);
   // Campos obrigatórios (*): cadastro novo, ou edição de quem já tem o cadastro preenchido (ou começou a preencher)
   const completo = !editando || cadastroInicial !== null || temAlgumDado(cadastro);
+  // Cargo travado no Órgão (Organista, Examinadora, Instrutor, Instrutora): só os instrumentos Órgão aparecem
+  const somenteOrgao = cargoSomenteOrgao(cargoSelecionado);
+  const instrumentosDisponiveis = instrumentosDoCargo(instrumentos, somenteOrgao);
+  // O instrumento é obrigatório nos cargos que o usam, no cadastro completo (e sempre nos cargos que exigem)
+  const instrumentoObrigatorio = permiteInstrumento && (exigeInstrumento || completo);
 
   // Ao trocar de cargo, limpa o instrumento se o novo cargo não usar instrumento
   function trocarCargo(novoCargoId: string) {
     setCargoId(novoCargoId);
     const novoCargo = cargos.find((cargo) => cargo.id === novoCargoId);
-    if (!novoCargo?.permite_instrumento) setInstrumentoId("");
+    if (!novoCargo?.permite_instrumento) {
+      setInstrumentoId("");
+    } else if (cargoSomenteOrgao(novoCargo)) {
+      // Cargo travado no Órgão: escolhe o Órgão sozinho (se só houver um) e tira um instrumento que não seja Órgão
+      const orgaos = instrumentosDoCargo(instrumentos, true);
+      setInstrumentoId((atual) => (orgaos.some((item) => item.id === atual) ? atual : orgaos.length === 1 ? orgaos[0].id : ""));
+    }
     if (!cargoUsaCategoria(novoCargo?.nome)) setCategoria("");
   }
 
@@ -155,6 +182,42 @@ export default function FormularioMembro({
       tem_whatsapp: valor,
       whatsapp: valor === "sim" && !atual.whatsapp ? `${atual.ddd}${atual.telefone}` : atual.whatsapp,
     }));
+  }
+
+  // "Batizado? Não" apaga a data do batismo (só quem é batizado tem data)
+  function escolherBatizado(valor: SimNao) {
+    setCadastro((atual) => ({ ...atual, batizado: valor, data_batismo: valor === "sim" ? atual.data_batismo : "" }));
+  }
+
+  // CEP: ao completar os 8 números, consulta o endereço online (ViaCEP) e preenche rua, bairro, cidade, UF e
+  // complemento. Tudo continua editável; se a consulta falhar, a pessoa digita o endereço normalmente.
+  async function mudarCep(valor: string) {
+    const digitos = somenteDigitos(valor, 8);
+    mudar("cep", digitos);
+    if (digitos.length < 8) {
+      ultimoCepConsultado.current = "";
+      setStatusCep("");
+      return;
+    }
+    if (digitos === ultimoCepConsultado.current) return;
+    ultimoCepConsultado.current = digitos;
+    setStatusCep("buscando");
+    const resultado = await buscarEnderecoPorCep(digitos);
+    if (ultimoCepConsultado.current !== digitos) return; // o CEP mudou enquanto a consulta andava
+    if (resultado.tipo !== "ok") {
+      setStatusCep(resultado.tipo);
+      return;
+    }
+    const achado = resultado.endereco;
+    setCadastro((atual) => ({
+      ...atual,
+      endereco: achado.endereco || atual.endereco,
+      complemento: achado.complemento || atual.complemento,
+      uf: achado.uf || atual.uf,
+    }));
+    if (achado.cidade) setCidade(achado.cidade);
+    if (achado.bairro) setBairro(achado.bairro);
+    setStatusCep("encontrado");
   }
 
   // Remove a fotografia atual (só na edição, com a permissão de fotografia, depois de confirmar)
@@ -202,8 +265,30 @@ export default function FormularioMembro({
       return setErroForm("A fotografia é obrigatória. Tire a foto ou escolha uma imagem.");
     }
 
+    // Cargo travado no Órgão: o instrumento precisa ser um dos Órgãos (o banco confere de novo)
+    if (somenteOrgao && instrumentoId && !instrumentosDisponiveis.some((item) => item.id === instrumentoId)) {
+      return setErroForm(`O cargo ${cargoSelecionado?.nome ?? "escolhido"} só pode usar o instrumento Órgão.`);
+    }
+
+    // O CPF é obrigatório no cadastro novo, mas só quem tem a permissão CPF consegue preenchê-lo
+    if (!editando && !podeCpf) {
+      return setErroForm("O CPF é obrigatório e o seu perfil não tem a permissão CPF. Peça a um administrador para liberá-la.");
+    }
+
     // Dados pessoais do Cadastro Musical (o banco confere tudo de novo)
-    const erroCadastro = validarCadastro(cadastro, { completo, exigeCartao, cidade, bairro });
+    const erroCadastro = validarCadastro(cadastro, {
+      completo,
+      exigeCartao,
+      cidade,
+      bairro,
+      cpf: cpfDigitos,
+      cpfObrigatorio: completo && podeCpf,
+      dataNascimento,
+      instrumentoId: permiteInstrumento ? instrumentoId : "",
+      instrumentoObrigatorio,
+      temDocumentoFrente: docFrente !== null || cadastro.documento_frente_path !== "",
+      temDocumentoVerso: docVerso !== null || cadastro.documento_verso_path !== "",
+    });
     if (erroCadastro) return setErroForm(erroCadastro);
 
     setSalvando(true);
@@ -229,12 +314,52 @@ export default function FormularioMembro({
         // Foto nova (opcional na edição): só quem tem a permissão de fotografia a troca
         if (foto && podeFoto) await enviarFoto(membro.id, foto);
         // Dados pessoais: depois do cargo, porque o banco confere o cartão pelo cargo atual do membro
-        if (completo) await salvarCadastroMusical(membro.id, cadastro);
+        if (completo) {
+          const dadosCadastro = { ...cadastro };
+          const docsNovos: string[] = [];
+          try {
+            // Documento novo (opcional na edição se já houver um anexado): sobe para a pasta do membro
+            if (docFrente) {
+              dadosCadastro.documento_frente_path = await subirDocumento(membro.id, "frente", docFrente);
+              docsNovos.push(dadosCadastro.documento_frente_path);
+            }
+            if (docVerso) {
+              dadosCadastro.documento_verso_path = await subirDocumento(membro.id, "verso", docVerso);
+              docsNovos.push(dadosCadastro.documento_verso_path);
+            }
+            await salvarCadastroMusical(membro.id, dadosCadastro);
+          } catch (e) {
+            await descartarDocumentos(docsNovos); // não deixa arquivo solto se o cadastro não foi salvo
+            throw e;
+          }
+          // Documento trocado: apaga o arquivo antigo (se não conseguir, ele só fica sem uso)
+          await descartarDocumentos([
+            docFrente ? cadastro.documento_frente_path : "",
+            docVerso ? cadastro.documento_verso_path : "",
+          ]);
+        }
       } else {
         // Cadastro novo: o identificador é gerado aqui para a foto subir para a pasta do próprio membro
         // antes do cadastro; o banco confere o arquivo e recusa o cadastro sem foto.
         const novoId = crypto.randomUUID();
         const caminho = await subirFotoNova(novoId, foto as Blob);
+        // Documento (frente e verso): sobem antes, para a pasta do próprio membro; o banco confere os arquivos ao salvar
+        const cadastroNovo = { ...cadastro };
+        const docsNovos: string[] = [];
+        try {
+          if (docFrente) {
+            cadastroNovo.documento_frente_path = await subirDocumento(novoId, "frente", docFrente);
+            docsNovos.push(cadastroNovo.documento_frente_path);
+          }
+          if (docVerso) {
+            cadastroNovo.documento_verso_path = await subirDocumento(novoId, "verso", docVerso);
+            docsNovos.push(cadastroNovo.documento_verso_path);
+          }
+        } catch (e) {
+          await descartarFoto(caminho);
+          await descartarDocumentos(docsNovos);
+          throw e;
+        }
         try {
           await criarMembro({
             ...dados,
@@ -244,13 +369,15 @@ export default function FormularioMembro({
           });
         } catch (e) {
           await descartarFoto(caminho); // o cadastro falhou: não deixa a foto solta
+          await descartarDocumentos(docsNovos);
           throw e;
         }
         try {
-          await salvarCadastroMusical(novoId, cadastro);
+          await salvarCadastroMusical(novoId, cadastroNovo);
         } catch (e) {
           // O membro já existe: fecha o formulário (evita cadastrar duas vezes) e avisa o que faltou
           const motivo = e instanceof Error ? e.message : "erro desconhecido";
+          await descartarDocumentos(docsNovos); // os documentos precisarão ser anexados de novo na edição
           await onSalvo(
             `Membro "${dados.nome}" cadastrado, mas os dados pessoais NÃO foram salvos (${motivo}). ` +
               "Abra Editar e preencha de novo."
@@ -379,6 +506,7 @@ export default function FormularioMembro({
           <Campo
             id="cpf"
             rotulo="CPF"
+            obrigatorio={completo}
             dica="Evita cadastros duplicados. O CPF é protegido: só quem tem permissão o vê por completo."
           >
             <input
@@ -395,7 +523,15 @@ export default function FormularioMembro({
           </Campo>
         )}
 
-        <Campo id="data_nascimento" rotulo="Data de nascimento">
+        {/* Sem a permissão CPF não dá para preencher o CPF obrigatório de um cadastro novo */}
+        {!podeCpf && !editando && (
+          <p role="alert" className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            O CPF é obrigatório no cadastro e o seu perfil não tem a permissão CPF. Peça a um administrador para liberá-la
+            em Administração &gt; Grupos de acesso.
+          </p>
+        )}
+
+        <Campo id="data_nascimento" rotulo="Data de nascimento" obrigatorio={completo}>
           <input
             id="data_nascimento"
             type="date"
@@ -408,7 +544,7 @@ export default function FormularioMembro({
         </Campo>
 
         <div className="grid grid-cols-2 gap-3">
-          <Campo id="estado_civil" rotulo="Estado civil">
+          <Campo id="estado_civil" rotulo="Estado civil" obrigatorio={completo}>
             <select
               id="estado_civil"
               value={cadastro.estado_civil}
@@ -416,7 +552,7 @@ export default function FormularioMembro({
               disabled={salvando}
               className={classeInput}
             >
-              <option value="">—</option>
+              <option value="">{rotuloSimNao(completo)}</option>
               {ESTADOS_CIVIS.map((item) => (
                 <option key={item} value={item}>
                   {item}
@@ -424,7 +560,7 @@ export default function FormularioMembro({
               ))}
             </select>
           </Campo>
-          <Campo id="sexo" rotulo="Sexo">
+          <Campo id="sexo" rotulo="Sexo" obrigatorio={completo}>
             <select
               id="sexo"
               value={cadastro.sexo}
@@ -432,7 +568,7 @@ export default function FormularioMembro({
               disabled={salvando}
               className={classeInput}
             >
-              <option value="">—</option>
+              <option value="">{rotuloSimNao(completo)}</option>
               {SEXOS.map((item) => (
                 <option key={item} value={item}>
                   {item}
@@ -513,17 +649,23 @@ export default function FormularioMembro({
             <Campo
               id="instrumento"
               rotulo="Instrumento"
-              obrigatorio={exigeInstrumento}
-              dica="Escolha na lista. Para incluir um instrumento novo, cadastre em Instrumentos e famílias."
+              obrigatorio={instrumentoObrigatorio}
+              dica={
+                somenteOrgao
+                  ? instrumentosDisponiveis.length === 0
+                    ? "Este cargo só usa o instrumento Órgão, mas nenhum Órgão está cadastrado. Cadastre em Instrumentos e famílias."
+                    : "Este cargo só usa o instrumento Órgão (escolhido automaticamente)."
+                  : "Escolha na lista. Para incluir um instrumento novo, cadastre em Instrumentos e famílias."
+              }
             >
               <SeletorInstrumento
                 id="instrumento"
                 valor={instrumentoId}
                 onChange={setInstrumentoId}
-                instrumentos={instrumentos}
+                instrumentos={instrumentosDisponiveis}
                 familias={familias}
-                obrigatorio={exigeInstrumento}
-                disabled={salvando}
+                obrigatorio={instrumentoObrigatorio}
+                disabled={salvando || (somenteOrgao && instrumentosDisponiveis.length === 1)}
                 className={classeInput}
               />
             </Campo>
@@ -533,16 +675,18 @@ export default function FormularioMembro({
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Campo id="data_batismo" rotulo="Data de batismo">
-            <input
-              id="data_batismo"
-              type="date"
-              max={hoje}
-              value={cadastro.data_batismo}
-              onChange={(e) => mudar("data_batismo", e.target.value)}
+          <Campo id="batizado" rotulo="Batizado(a)?" obrigatorio={completo}>
+            <select
+              id="batizado"
+              value={cadastro.batizado}
+              onChange={(e) => escolherBatizado(e.target.value as SimNao)}
               disabled={salvando}
               className={classeInput}
-            />
+            >
+              <option value="">{rotuloSimNao(completo)}</option>
+              <option value="sim">Sim</option>
+              <option value="nao">Não</option>
+            </select>
           </Campo>
           <Campo id="selado" rotulo="Selado(a)?" obrigatorio={completo}>
             <select
@@ -558,6 +702,21 @@ export default function FormularioMembro({
             </select>
           </Campo>
         </div>
+
+        {/* Data do batismo: só aparece (e é obrigatória) para quem é batizado */}
+        {cadastro.batizado === "sim" && (
+          <Campo id="data_batismo" rotulo="Data do batismo" obrigatorio>
+            <input
+              id="data_batismo"
+              type="date"
+              max={hoje}
+              value={cadastro.data_batismo}
+              onChange={(e) => mudar("data_batismo", e.target.value)}
+              disabled={salvando}
+              className={classeInput}
+            />
+          </Campo>
+        )}
       </Secao>
 
       {/* ---------- Cartão de identificação (só para os cargos marcados em cargos.exige_cartao) ---------- */}
@@ -623,6 +782,32 @@ export default function FormularioMembro({
           </div>
         </Secao>
       )}
+
+      {/* ---------- Documento de identificação (frente e verso; armazenamento privado) ---------- */}
+      <Secao titulo="Documento de identificação">
+        <p className="text-xs text-slate-500">
+          Anexe uma foto da frente e uma do verso do documento. Os arquivos ficam em armazenamento privado: só quem tem a
+          permissão CPF consegue vê-los.
+        </p>
+        <CampoDocumento
+          id="doc-frente"
+          rotulo="Frente do documento"
+          obrigatorio={completo}
+          caminhoAtual={cadastro.documento_frente_path || null}
+          podeVer={podeDocumento}
+          onChange={setDocFrente}
+          disabled={salvando}
+        />
+        <CampoDocumento
+          id="doc-verso"
+          rotulo="Verso do documento"
+          obrigatorio={completo}
+          caminhoAtual={cadastro.documento_verso_path || null}
+          podeVer={podeDocumento}
+          onChange={setDocVerso}
+          disabled={salvando}
+        />
+      </Secao>
 
       {/* ---------- Contato ---------- */}
       <Secao titulo="Contato">
@@ -705,14 +890,14 @@ export default function FormularioMembro({
       {/* ---------- Endereço ---------- */}
       <Secao titulo="Endereço">
         <div className="grid grid-cols-2 gap-3">
-          <Campo id="cep" rotulo="CEP" obrigatorio={completo}>
+          <Campo id="cep" rotulo="CEP" obrigatorio={completo} dica={textoDoStatusCep(statusCep)}>
             <input
               id="cep"
               type="text"
               inputMode="numeric"
               autoComplete="off"
               value={formatarCep(cadastro.cep)}
-              onChange={(e) => mudar("cep", somenteDigitos(e.target.value, 8))}
+              onChange={(e) => void mudarCep(e.target.value)}
               disabled={salvando}
               placeholder="00000-000"
               className={classeInput}
@@ -860,6 +1045,24 @@ export default function FormularioMembro({
       </Button>
     </form>
   );
+}
+
+/** Andamento da consulta de endereço pelo CEP ("" = nada a mostrar). */
+type StatusCep = "" | "buscando" | "encontrado" | "nao_encontrado" | "indisponivel";
+
+function textoDoStatusCep(status: StatusCep): string | undefined {
+  switch (status) {
+    case "buscando":
+      return "Buscando o endereço...";
+    case "encontrado":
+      return "Endereço preenchido pelo CEP. Confira e complete o número.";
+    case "nao_encontrado":
+      return "CEP não encontrado. Confira os números ou preencha o endereço à mão.";
+    case "indisponivel":
+      return "Não foi possível consultar o CEP agora. Preencha o endereço à mão.";
+    default:
+      return undefined;
+  }
 }
 
 /** Bloco do formulário com título (agrupa os campos por assunto). */
