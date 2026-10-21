@@ -6,8 +6,8 @@
 --   * Bucket PRIVADO documentos-membros (frente e verso do documento de identificação):
 --       - anexar / trocar / descartar: quem tem membros.criar ou membros.editar;
 --       - VER o documento (URL temporária): só quem tem a permissão membros.cpf.
---   * cargos.somente_orgao: cargos que só podem usar o instrumento Órgão (Organista, Examinadora, Instrutor,
---     Instrutora). O banco recusa outro instrumento (gatilho trg_membros_somente_orgao). Para mudar a lista:
+--   * cargos.somente_orgao: cargos que só podem usar o instrumento Órgão (Organista, Examinadora e Instrutora;
+--     o Instrutor continua com instrumento livre). O banco recusa outro instrumento (gatilho trg_membros_somente_orgao). Para mudar a lista:
 --         update public.cargos set somente_orgao = true|false where nome = '...';
 --   * Cargo "Instrutor (a)" vira "Instrutor" e é criado o cargo "Instrutora".
 --   * salvar_cadastro_musical passa a EXIGIR: CPF, data de nascimento, estado civil, sexo, batizado (e a data do
@@ -34,14 +34,20 @@ insert into public.cargos (nome, permite_instrumento, exige_instrumento, exige_c
 select 'Instrutora', true, true, false
  where not exists (select 1 from public.cargos x where x.nome = 'Instrutora');
 
--- Cargos travados no Órgão: o instrumento passa a ser obrigatório
+-- Cargos travados no Órgão (Organista, Examinadora e Instrutora): o instrumento passa a ser obrigatório
 update public.cargos
    set somente_orgao = true,
        permite_instrumento = true,
        exige_instrumento = true
  where public.normalizar_texto(nome) like 'organista%'
     or public.normalizar_texto(nome) like 'examinadora%'
-    or public.normalizar_texto(nome) like 'instrutor%';
+    or public.normalizar_texto(nome) like 'instrutora%';
+
+-- O Instrutor (masculino) NÃO é travado: toca qualquer instrumento (como era antes)
+update public.cargos
+   set somente_orgao = false,
+       exige_instrumento = false
+ where public.normalizar_texto(nome) = 'instrutor';
 
 -- Confere os membros que já existem: ninguém pode estar com instrumento diferente de Órgão nesses cargos
 do $$

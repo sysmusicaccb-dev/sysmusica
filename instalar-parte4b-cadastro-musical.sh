@@ -40,7 +40,7 @@ EDITS = [
  *
  * MIGRAÇÃO 0040: no cadastro completo também são obrigatórios CPF, data de nascimento, estado civil, sexo, instrumento
  *      (nos cargos que usam instrumento), Batizado (Sim/Não; sendo Sim, a data do batismo) e a frente e o verso do
- *      documento de identificação (armazenamento privado). Organista, Examinadora, Instrutor e Instrutora só aceitam
+ *      documento de identificação (armazenamento privado). Organista, Examinadora e Instrutora só aceitam
  *      o instrumento Órgão (cargos.somente_orgao). Ao digitar o CEP, o endereço é consultado online (ViaCEP).
 '''),
     ("src/components/FormularioMembro.tsx",
@@ -76,6 +76,7 @@ import { descartarDocumentos, subirDocumento } from "@/modules/membros/services/
      r'''  formatarWhatsapp,
   instrumentosDoCargo,
   somenteDigitos,
+  statusAutomaticoDoCargo,
 '''),
     ("src/components/FormularioMembro.tsx",
      r'''  podeFoto: boolean; // permissão membros.foto (trocar a fotografia de um membro já cadastrado)
@@ -104,7 +105,7 @@ import { descartarDocumentos, subirDocumento } from "@/modules/membros/services/
      r'''  const completo = !editando || cadastroInicial !== null || temAlgumDado(cadastro);
 ''',
      r'''  const completo = !editando || cadastroInicial !== null || temAlgumDado(cadastro);
-  // Cargo travado no Órgão (Organista, Examinadora, Instrutor, Instrutora): só os instrumentos Órgão aparecem
+  // Cargo travado no Órgão (Organista, Examinadora, Instrutora): só os instrumentos Órgão aparecem
   const somenteOrgao = cargoSomenteOrgao(cargoSelecionado);
   const instrumentosDisponiveis = instrumentosDoCargo(instrumentos, somenteOrgao);
   // O instrumento é obrigatório nos cargos que o usam, no cadastro completo (e sempre nos cargos que exigem)
@@ -429,6 +430,11 @@ import { descartarDocumentos, subirDocumento } from "@/modules/membros/services/
       {/* ---------- Contato ---------- */}
 '''),
     ("src/components/FormularioMembro.tsx",
+     r'''              Status do cargo: <strong>Oficializado</strong> (automático para este cargo).
+''',
+     r'''              Status do cargo: <strong>{statusAutomaticoDoCargo(cargoSelecionado.nome)}</strong> (automático para este cargo).
+'''),
+    ("src/components/FormularioMembro.tsx",
      r'''          <Campo id="cep" rotulo="CEP" obrigatorio={completo}>
 ''',
      r'''          <Campo id="cep" rotulo="CEP" obrigatorio={completo} dica={textoDoStatusCep(statusCep)}>
@@ -486,8 +492,8 @@ NOVOS = {
 --   * Bucket PRIVADO documentos-membros (frente e verso do documento de identificação):
 --       - anexar / trocar / descartar: quem tem membros.criar ou membros.editar;
 --       - VER o documento (URL temporária): só quem tem a permissão membros.cpf.
---   * cargos.somente_orgao: cargos que só podem usar o instrumento Órgão (Organista, Examinadora, Instrutor,
---     Instrutora). O banco recusa outro instrumento (gatilho trg_membros_somente_orgao). Para mudar a lista:
+--   * cargos.somente_orgao: cargos que só podem usar o instrumento Órgão (Organista, Examinadora e Instrutora;
+--     o Instrutor continua com instrumento livre). O banco recusa outro instrumento (gatilho trg_membros_somente_orgao). Para mudar a lista:
 --         update public.cargos set somente_orgao = true|false where nome = '...';
 --   * Cargo "Instrutor (a)" vira "Instrutor" e é criado o cargo "Instrutora".
 --   * salvar_cadastro_musical passa a EXIGIR: CPF, data de nascimento, estado civil, sexo, batizado (e a data do
@@ -514,14 +520,20 @@ insert into public.cargos (nome, permite_instrumento, exige_instrumento, exige_c
 select 'Instrutora', true, true, false
  where not exists (select 1 from public.cargos x where x.nome = 'Instrutora');
 
--- Cargos travados no Órgão: o instrumento passa a ser obrigatório
+-- Cargos travados no Órgão (Organista, Examinadora e Instrutora): o instrumento passa a ser obrigatório
 update public.cargos
    set somente_orgao = true,
        permite_instrumento = true,
        exige_instrumento = true
  where public.normalizar_texto(nome) like 'organista%'
     or public.normalizar_texto(nome) like 'examinadora%'
-    or public.normalizar_texto(nome) like 'instrutor%';
+    or public.normalizar_texto(nome) like 'instrutora%';
+
+-- O Instrutor (masculino) NÃO é travado: toca qualquer instrumento (como era antes)
+update public.cargos
+   set somente_orgao = false,
+       exige_instrumento = false
+ where public.normalizar_texto(nome) = 'instrutor';
 
 -- Confere os membros que já existem: ninguém pode estar com instrumento diferente de Órgão nesses cargos
 do $$
@@ -1219,9 +1231,9 @@ export const CARGOS_DO_CADASTRO = [
 const CARGOS_COM_CARTAO_PADRAO = ["encarregado regional", "encarregado local", "examinadora"];
 
 /** Cargos que só aceitam o instrumento Órgão enquanto a coluna cargos.somente_orgao não decide. */
-const CARGOS_SOMENTE_ORGAO_PADRAO = ["organista", "examinadora", "instrutor"];
+const CARGOS_SOMENTE_ORGAO_PADRAO = ["organista", "examinadora", "instrutora"];
 
-/** O cargo só pode usar o instrumento Órgão? (Organista, Examinadora, Instrutor e Instrutora.) */
+/** O cargo só pode usar o instrumento Órgão? (Organista, Examinadora e Instrutora; o Instrutor toca qualquer instrumento.) */
 export function cargoSomenteOrgao(cargo: CargoCadastro | null | undefined): boolean {
   if (!cargo) return false;
   if (typeof cargo.somente_orgao === "boolean") return cargo.somente_orgao;
@@ -1237,6 +1249,15 @@ export function instrumentoEOrgao(nome: string | null | undefined): boolean {
 /** Instrumentos que o cargo aceita: todos, ou só os Órgãos nos cargos travados. */
 export function instrumentosDoCargo<T extends { nome: string }>(instrumentos: T[], somenteOrgao: boolean): T[] {
   return somenteOrgao ? instrumentos.filter((instrumento) => instrumentoEOrgao(instrumento.nome)) : instrumentos;
+}
+
+/**
+ * Status do cargo mostrado quando ele não escolhe categoria (só Músico e Organista escolhem):
+ * toda Examinadora e toda Instrutora são oficializadas (no feminino); os demais cargos, "Oficializado".
+ */
+export function statusAutomaticoDoCargo(nomeCargo: string | null | undefined): string {
+  const nome = nomeCargo ? semAcento(nomeCargo) : "";
+  return nome.startsWith("examinadora") || nome.startsWith("instrutora") ? "Oficializada" : "Oficializado";
 }
 
 export function cargoEntraNoCadastro(nomeCargo: string | null | undefined): boolean {
@@ -1505,6 +1526,7 @@ import {
   instrumentosDoCargo,
   paraEnvioAoBanco,
   somenteDigitos,
+  statusAutomaticoDoCargo,
   temAlgumDado,
   validarCadastro,
   type CadastroMusical,
@@ -1578,10 +1600,11 @@ describe("instrumento Órgão", () => {
   it("cargos travados: usa a coluna do banco; sem ela, a lista padrão", () => {
     expect(cargoSomenteOrgao({ id: "1", nome: "Músico", somente_orgao: true })).toBe(true);
     expect(cargoSomenteOrgao({ id: "1", nome: "Organista", somente_orgao: false })).toBe(false);
-    for (const nome of ["Organista", "Examinadora", "Instrutor", "Instrutora", "Instrutor (a)"]) {
+    for (const nome of ["Organista", "Examinadora", "Instrutora"]) {
       expect(cargoSomenteOrgao({ id: "1", nome }), nome).toBe(true);
     }
-    for (const nome of ["Músico", "Encarregado Local", "Encarregado Regional"]) {
+    // o Instrutor (masculino) toca qualquer instrumento
+    for (const nome of ["Instrutor", "Instrutor (a)", "Músico", "Encarregado Local", "Encarregado Regional"]) {
       expect(cargoSomenteOrgao({ id: "1", nome }), nome).toBe(false);
     }
     expect(cargoSomenteOrgao(undefined)).toBe(false);
@@ -1598,6 +1621,16 @@ describe("instrumento Órgão", () => {
     const lista = [{ nome: "Violino" }, { nome: "Orgão Eletrônico" }, { nome: "Órgão de tubos" }];
     expect(instrumentosDoCargo(lista, true).map((i) => i.nome)).toEqual(["Orgão Eletrônico", "Órgão de tubos"]);
     expect(instrumentosDoCargo(lista, false)).toHaveLength(3);
+  });
+});
+
+describe("status automático do cargo", () => {
+  it("toda Examinadora e toda Instrutora são oficializadas; os demais, Oficializado", () => {
+    expect(statusAutomaticoDoCargo("Examinadora")).toBe("Oficializada");
+    expect(statusAutomaticoDoCargo("Instrutora")).toBe("Oficializada");
+    expect(statusAutomaticoDoCargo("Instrutor")).toBe("Oficializado");
+    expect(statusAutomaticoDoCargo("Encarregado Local")).toBe("Oficializado");
+    expect(statusAutomaticoDoCargo(undefined)).toBe("Oficializado");
   });
 });
 
