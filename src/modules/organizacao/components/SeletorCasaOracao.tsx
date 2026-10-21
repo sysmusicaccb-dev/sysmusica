@@ -31,7 +31,7 @@ export default function SeletorCasaOracao({
   const [nos, setNos] = useState<NoOrganizacao[] | null>(null); // nulo = ainda carregando
   const [erro, setErro] = useState<string | null>(null);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+   
   useEffect(() => {
     let cancelado = false;
     void listarOrganizacaoParaSelecao()
@@ -47,7 +47,7 @@ export default function SeletorCasaOracao({
       cancelado = true;
     };
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
   const grupos = useMemo(() => agruparCasasOracaoParaSelecao(nos ?? []), [nos]);
   const existe = grupos.some((grupo) => grupo.casasOracao.some((casaOracao) => casaOracao.id === valor));

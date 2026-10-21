@@ -94,7 +94,7 @@ export default function RelatoriosPage() {
   const [aviso, setAviso] = useState<string | null>(null);
 
   // Listas dos filtros (uma vez): organização, cargos, instrumentos e eventos que o usuário pode ver
-  /* eslint-disable react-hooks/set-state-in-effect */
+   
   useEffect(() => {
     let cancelado = false;
     void carregarOpcoesRelatorio()
@@ -108,7 +108,7 @@ export default function RelatoriosPage() {
       cancelado = true;
     };
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
   const disponiveis = useMemo(() => tiposDisponiveis(DEFINICOES_RELATORIO, pode), [pode]);
   const definicao = useMemo(

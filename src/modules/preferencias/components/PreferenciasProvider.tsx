@@ -68,7 +68,7 @@ export function PreferenciasProvider({ children, logado }: { children: ReactNode
   }, [preferencias, aparelhoEscuro]);
 
   // Depois do login, busca as preferências da conta (valem sobre as do aparelho)
-  /* eslint-disable react-hooks/set-state-in-effect */
+   
   useEffect(() => {
     if (!logado) return;
     let cancelado = false;
@@ -85,7 +85,7 @@ export function PreferenciasProvider({ children, logado }: { children: ReactNode
       cancelado = true;
     };
   }, [logado]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
   // Aplica na hora, guarda neste aparelho e tenta salvar na conta
   const definir = useCallback(

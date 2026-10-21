@@ -20,7 +20,7 @@ export default function FotoMembro({ caminho, nome, tamanho = "pequena" }: FotoM
   // Guarda junto o caminho a que a URL pertence (evita mostrar a foto de outro membro por um instante)
   const [carregada, setCarregada] = useState<{ caminho: string; url: string | null } | null>(null);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+   
   useEffect(() => {
     if (!caminho) return;
     let cancelado = false;
@@ -31,7 +31,7 @@ export default function FotoMembro({ caminho, nome, tamanho = "pequena" }: FotoM
       cancelado = true;
     };
   }, [caminho]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
   const url = caminho && carregada?.caminho === caminho ? carregada.url : null;
   const medidas = tamanho === "grande" ? "h-44 w-36" : "h-12 w-10";

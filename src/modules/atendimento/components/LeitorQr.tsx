@@ -39,7 +39,7 @@ export default function LeitorQr({ ativo, onLeitura }: LeitorQrProps) {
     aoLerRef.current = onLeitura;
   }, [ativo, onLeitura]);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+   
   useEffect(() => {
     let cancelado = false;
     let leitor: QrScanner | null = null;
@@ -91,7 +91,7 @@ export default function LeitorQr({ ativo, onLeitura }: LeitorQrProps) {
       leitor?.destroy();
     };
   }, [tentativa]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
   function reiniciar() {
     setSituacao("iniciando");

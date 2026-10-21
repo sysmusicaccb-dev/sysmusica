@@ -49,7 +49,7 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+   
   useEffect(() => {
     let cancelado = false;
     void Promise.all([listarOpcoesVisitante(), listarOrigensVisitante()])
@@ -70,7 +70,7 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
       cancelado = true;
     };
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
   const cargo = opcoes?.cargos.find((item) => item.id === cargoId);
   const exigeInstrumento = cargo?.exige_instrumento === true;

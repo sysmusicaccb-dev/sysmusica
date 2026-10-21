@@ -51,7 +51,7 @@ export default function FormularioUsuario({ usuario, grupos, meuId, onSalvo }: F
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+   
   useEffect(() => {
     if (!usuario) return;
     let cancelado = false;
@@ -70,7 +70,7 @@ export default function FormularioUsuario({ usuario, grupos, meuId, onSalvo }: F
       cancelado = true;
     };
   }, [usuario]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
   // Só grupos ativos podem ser escolhidos (e os que o usuário já tem, mesmo inativos, continuam visíveis)
   const gruposDisponiveis = grupos.filter((grupo) => grupo.ativo || gruposEscolhidos.includes(grupo.id));
