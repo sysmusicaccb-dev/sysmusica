@@ -80,7 +80,7 @@ export default function PainelGraficos({ dados }: { dados: DadosGraficos }) {
             vazio="Nenhum membro com instrumento cadastrado."
           />
         </Card>
-        <Card titulo="Membros por congregação" descricao="As congregações com mais membros.">
+        <Card titulo="Membros por Casa de Oração" descricao="As Casas de Oração com mais membros.">
           <GraficoBarras dados={dados.porCongregacao} vazio="Nenhum membro cadastrado ainda." />
         </Card>
       </div>

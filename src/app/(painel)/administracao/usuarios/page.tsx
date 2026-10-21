@@ -141,7 +141,7 @@ export default function UsuariosPage() {
           acoes={
             pode("usuarios.criar") ? (
               <Button icone={Plus} onClick={() => setPainel({ tipo: "novo" })} disabled={carregando || !!erro}>
-                Novo usuário
+                Adicionar
               </Button>
             ) : undefined
           }
@@ -158,7 +158,7 @@ export default function UsuariosPage() {
         ) : erro ? (
           <ErrorState titulo="Não foi possível carregar os usuários." mensagem={erro} onTentarNovamente={tentarNovamente} />
         ) : usuarios.length === 0 ? (
-          <EmptyState titulo="Nenhum usuário cadastrado." descricao="Clique em “Novo usuário” para criar o primeiro." />
+          <EmptyState titulo="Nenhum usuário cadastrado." descricao="Clique em “Adicionar” para criar o primeiro." />
         ) : (
           <>
             {erroStatus && !alvoStatus && (

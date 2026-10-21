@@ -115,7 +115,7 @@ export default function EventosPage() {
   const textosVazios: Record<AbaEvento, { titulo: string; descricao: string }> = {
     proximos: {
       titulo: "Nenhum evento em andamento ou agendado.",
-      descricao: "Clique em “Novo evento” para cadastrar o próximo. Os eventos já encerrados estão na aba Encerrados.",
+      descricao: "Clique em “Adicionar” para cadastrar o próximo. Os eventos já encerrados estão na aba Encerrados.",
     },
     encerrados: {
       titulo: "Nenhum evento encerrado recentemente.",
@@ -138,7 +138,7 @@ export default function EventosPage() {
           acoes={
             pode("eventos.criar") ? (
               <Button icone={Plus} onClick={() => setPainel({ tipo: "novo" })} disabled={carregando || !!erro}>
-                Novo evento
+                Adicionar
               </Button>
             ) : undefined
           }

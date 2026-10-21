@@ -105,7 +105,7 @@ export default function GruposPage() {
           acoes={
             pode("grupos.criar") ? (
               <Button icone={Plus} onClick={() => setPainel({ tipo: "novo" })} disabled={carregando || !!erro}>
-                Novo grupo
+                Adicionar
               </Button>
             ) : undefined
           }
@@ -121,7 +121,7 @@ export default function GruposPage() {
         ) : erro ? (
           <ErrorState titulo="Não foi possível carregar os grupos." mensagem={erro} onTentarNovamente={tentarNovamente} />
         ) : grupos.length === 0 ? (
-          <EmptyState titulo="Nenhum grupo cadastrado." descricao="Clique em “Novo grupo” para criar o primeiro." />
+          <EmptyState titulo="Nenhum grupo cadastrado." descricao="Clique em “Adicionar” para criar o primeiro." />
         ) : (
           <TabelaGrupos
             grupos={grupos}

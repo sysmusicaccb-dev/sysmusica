@@ -48,7 +48,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
   {
     titulo: "Cadastros",
     itens: [
-      { href: "/membros", rotulo: "Membros", icone: Users, permissao: "membros.visualizar" },
+      { href: "/membros", rotulo: "Músicos / Organistas", icone: Users, permissao: "membros.visualizar" },
       { href: "/eventos", rotulo: "Eventos", icone: CalendarDays, permissao: "eventos.visualizar" },
       {
         href: "/instrumentos",

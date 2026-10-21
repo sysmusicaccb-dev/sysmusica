@@ -9,7 +9,7 @@
  * (instrumento -> familia_id), então corrigir a família de um instrumento atualiza todos os membros.
  *
  * Responsividade:
- *  - telas >= 768px: colunas Nome, Cargo, Instrumento, Família, Congregação e Status;
+ *  - telas >= 768px: colunas Nome, Cargo, Instrumento, Família, Casa de Oração e Status;
  *  - telas menores: apenas Nome (com os demais dados em uma linha abaixo) e Status.
  *
  * Trata quatro cenários: carregando, erro, nenhum membro cadastrado e tabela com dados.
@@ -112,7 +112,7 @@ export default function ListaMembros({
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
         <p className="font-medium text-slate-700">Nenhum membro cadastrado ainda.</p>
-        <p className="mt-1 text-sm text-slate-500">Clique em “Novo membro” para cadastrar o primeiro.</p>
+        <p className="mt-1 text-sm text-slate-500">Clique em “Adicionar” para cadastrar o primeiro.</p>
       </div>
     );
   }
@@ -239,7 +239,7 @@ export default function ListaMembros({
                 Família
               </th>
               <th scope="col" className={classeCabecalho + " hidden md:table-cell"}>
-                Congregação
+                Casa de Oração
               </th>
               <th scope="col" className={classeCabecalho}>
                 Status

@@ -8,7 +8,7 @@ import { CalendarPlus, ClipboardCheck, UserPlus, type LucideIcon } from "lucide-
 import Card from "@/components/ui/Card";
 
 const ATALHOS: { href: string; rotulo: string; descricao: string; icone: LucideIcon }[] = [
-  { href: "/membros", rotulo: "Cadastrar membro", descricao: "Novo membro, cargo e instrumento", icone: UserPlus },
+  { href: "/membros", rotulo: "Cadastrar músico / organista", descricao: "Cargo, instrumento e Casa de Oração", icone: UserPlus },
   { href: "/eventos", rotulo: "Cadastrar evento", descricao: "Ensaio, culto ou outro evento", icone: CalendarPlus },
   { href: "/portaria", rotulo: "Portaria", descricao: "Registrar a entrada dos membros no evento", icone: ClipboardCheck },
 ];

@@ -58,7 +58,7 @@ export default function CartaoConferencia({
   const dados: { rotulo: string; valor: string | null }[] = [
     { rotulo: "Cargo", valor: membro.cargo },
     { rotulo: "Instrumento", valor: membro.instrumento },
-    { rotulo: "Congregação", valor: membro.congregacao },
+    { rotulo: "Casa de Oração", valor: membro.congregacao },
     { rotulo: "Localidade", valor: [membro.bairro, membro.cidade].filter(Boolean).join(", ") || null },
     { rotulo: "Conta no painel como", valor: info?.linha_rotulo ?? null },
   ];

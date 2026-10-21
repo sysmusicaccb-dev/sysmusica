@@ -164,14 +164,14 @@ export default function MembrosPage() {
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <PageHeader
-          titulo="Membros"
+          titulo="Músicos / Organistas"
           descricao={`Cadastre e acompanhe os membros do SysMúsica.${
             !carregando && !erro ? ` ${membros.length} cadastrado(s).` : ""
           }`}
           acoes={
             pode("membros.criar") ? (
               <Button icone={Plus} onClick={() => setPainel({ tipo: "novo" })} disabled={carregando || !!erro}>
-                Novo membro
+                Adicionar
               </Button>
             ) : undefined
           }

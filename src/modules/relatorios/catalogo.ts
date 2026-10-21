@@ -16,7 +16,7 @@ export const DEFINICOES_RELATORIO: DefinicaoRelatorio[] = [
       { id: "membro", rotulo: "Membro", padrao: true },
       { id: "cargo", rotulo: "Cargo", padrao: true },
       { id: "instrumento", rotulo: "Instrumento", padrao: true },
-      { id: "membro_casa_oracao", rotulo: "Congregação do membro", padrao: true },
+      { id: "membro_casa_oracao", rotulo: "Casa de Oração do membro", padrao: true },
       { id: "status", rotulo: "Situação", padrao: true },
       { id: "entrada", rotulo: "Entrada", padrao: true },
       { id: "saida", rotulo: "Saída", padrao: false },

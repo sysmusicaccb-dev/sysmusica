@@ -153,7 +153,7 @@ export default function OrganizacaoPage() {
           acoes={
             podeCriar ? (
               <Button icone={Plus} onClick={() => abrirNovo("ESTADO", null)} disabled={carregando || !!erro}>
-                Novo estado
+                Adicionar
               </Button>
             ) : undefined
           }
@@ -177,7 +177,7 @@ export default function OrganizacaoPage() {
         ) : nos.length === 0 ? (
           <EmptyState
             titulo="Nenhum item cadastrado."
-            descricao={podeCriar ? "Clique em “Novo estado” para começar." : "A estrutura ainda não foi cadastrada."}
+            descricao={podeCriar ? "Clique em “Adicionar” para começar." : "A estrutura ainda não foi cadastrada."}
           />
         ) : (
           <ArvoreOrganizacao

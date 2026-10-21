@@ -77,7 +77,7 @@ const ROTULO_ENTIDADE: Record<string, string> = {
 
 const ROTULO_CAMPO: Record<string, string> = {
   nome: "Nome",
-  congregacao: "Congregação",
+  congregacao: "Casa de Oração",
   cargo_id: "Cargo",
   data_nascimento: "Data de nascimento",
   instrumento_id: "Instrumento",

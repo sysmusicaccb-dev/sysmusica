@@ -109,7 +109,7 @@ export default function ListaEventos({
     return (
       <EmptyState
         titulo={tituloVazio ?? "Nenhum evento cadastrado ainda."}
-        descricao={descricaoVazia ?? "Clique em “Novo evento” para cadastrar o primeiro."}
+        descricao={descricaoVazia ?? "Clique em “Adicionar” para cadastrar o primeiro."}
       />
     );
   }

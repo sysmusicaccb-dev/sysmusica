@@ -104,7 +104,7 @@ export default function InstrumentosPage() {
           acoes={
             pode("instrumentos.criar") ? (
               <Button icone={Plus} onClick={() => setPainel({ tipo: "novo" })} disabled={carregando || !!erro}>
-                Novo instrumento
+                Adicionar
               </Button>
             ) : undefined
           }
@@ -127,7 +127,7 @@ export default function InstrumentosPage() {
         ) : instrumentos.length === 0 ? (
           <EmptyState
             titulo="Nenhum instrumento cadastrado ainda."
-            descricao="Clique em “Novo instrumento” ou cadastre um membro com instrumento."
+            descricao="Clique em “Adicionar” ou cadastre um músico ou organista com instrumento."
           />
         ) : (
           <TabelaInstrumentos

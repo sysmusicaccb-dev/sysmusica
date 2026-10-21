@@ -260,7 +260,7 @@ export default function PortariasPage() {
               <>
                 {cota && <CotaPortariasIndicador cota={cota} />}
                 <Button icone={Plus} onClick={() => setPainel({ tipo: "nova" })} disabled={carregando || !!erro}>
-                  Nova portaria
+                  Adicionar
                 </Button>
               </>
             ) : undefined
@@ -316,7 +316,7 @@ export default function PortariasPage() {
               aba === "historico"
                 ? "As portarias de eventos já encerrados ficam guardadas aqui."
                 : podeCriar
-                ? "Clique em “Nova portaria” para solicitar a portaria de um evento."
+                ? "Clique em “Adicionar” para solicitar a portaria de um evento."
                 : "Quando houver portarias na sua abrangência, elas aparecem aqui."
             }
           />
