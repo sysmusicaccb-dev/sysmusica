@@ -1,0 +1,163 @@
+=== GIT ===
+## main...origin/main
+?? diag-auditoria.txt
+0c01774 Menu: Cadastros Pendentes vira Cadastros
+5e031af Cadastros Pendentes: prazo dos pedidos configurável
+87f433f Parte 9-B: alerta de vencimento do cartão de identificação
+a62b9b7 Menu: Usuários e Grupos
+d9cda34 Usuários e Grupos e Permissões em um item só, com abas
+=== VERSOES ===
+v24.21.0
+11.19.0
+=== VERCEL.JSON ===
+{
+  "crons": [
+    { "path": "/api/cron/backup", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/conferir", "schedule": "0 18 * * *" }
+  ]
+}
+=== ENV (só nomes, sem valores) ===
+.env.local
+=== USO DE process.env NO CÓDIGO ===
+      6 process.env.NEXT_PUBLIC_SUPABASE_URL
+      6 process.env.BACKUP_CHAVE
+      4 process.env.SUPABASE_SERVICE_ROLE_KEY
+      4 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      2 process.env.CADASTRO_PUBLICO_SALT
+      1 process.env.TURNSTILE_SECRET_KEY
+      1 process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+      1 process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+      1 process.env.NEXT_PUBLIC_CONTATO_PRIVACIDADE
+      1 process.env.CRON_SECRET
+=== ROTAS API ===
+src/app/api/admin/usuarios/[id]/senha/route.ts
+src/app/api/admin/usuarios/route.ts
+src/app/api/backup/[id]/baixar/route.ts
+src/app/api/backup/[id]/route.ts
+src/app/api/backup/[id]/verificar/route.ts
+src/app/api/backup/agendamento/executar/route.ts
+src/app/api/backup/agendamento/route.ts
+src/app/api/backup/configuracao/destinatarios/[id]/route.ts
+src/app/api/backup/configuracao/destinatarios/route.ts
+src/app/api/backup/configuracao/route.ts
+src/app/api/backup/configuracao/telegram-chats/route.ts
+src/app/api/backup/configuracao/testar/route.ts
+src/app/api/backup/destinos/enviar/route.ts
+src/app/api/backup/destinos/route.ts
+src/app/api/backup/destinos/testar/route.ts
+src/app/api/backup/restauracao/aplicar/route.ts
+src/app/api/backup/restauracao/comparar/route.ts
+src/app/api/backup/route.ts
+src/app/api/cadastro-publico/enviar/route.ts
+src/app/api/cadastro-publico/iniciar/route.ts
+src/app/api/cadastros/[id]/aprovar/route.ts
+src/app/api/cadastros/[id]/arquivos/route.ts
+src/app/api/cron/backup/route.ts
+src/app/api/cron/conferir/route.ts
+=== ROTAS API SEM CHECAGEM DE AUTH/SEGREDO (revisar) ===
+src/app/api/backup/restauracao/aplicar/route.ts
+src/app/api/backup/restauracao/comparar/route.ts
+src/app/api/backup/destinos/enviar/route.ts
+src/app/api/backup/destinos/testar/route.ts
+src/app/api/backup/destinos/route.ts
+src/app/api/backup/agendamento/executar/route.ts
+src/app/api/backup/agendamento/route.ts
+src/app/api/backup/route.ts
+src/app/api/backup/[id]/route.ts
+src/app/api/backup/[id]/baixar/route.ts
+src/app/api/backup/[id]/verificar/route.ts
+src/app/api/backup/configuracao/telegram-chats/route.ts
+src/app/api/backup/configuracao/testar/route.ts
+src/app/api/backup/configuracao/route.ts
+src/app/api/backup/configuracao/destinatarios/route.ts
+src/app/api/backup/configuracao/destinatarios/[id]/route.ts
+=== SERVICE ROLE FORA DO SERVIDOR ===
+src/app/api/cadastro-publico/enviar/route.ts
+src/app/api/cadastro-publico/iniciar/route.ts
+src/modules/administracao/server/clienteAdmin.ts
+src/modules/backup/server/clienteAdmin.ts
+=== 'use client' IMPORTANDO MODULO SERVER ===
+=== ARQUIVOS MAIORES (linhas) ===
+  34776 total
+   1110 src/components/FormularioMembro.tsx
+    630 src/modules/relatorios/regras.ts
+    484 src/modules/backup/server/operacoes.ts
+    453 src/modules/cadastroPublico/components/FormularioPublico.tsx
+    438 src/app/(painel)/administracao/backup/notificacoes/page.tsx
+    432 src/app/(painel)/relatorios/page.tsx
+    431 src/components/ListaMembros.tsx
+    424 src/modules/atendimento/components/AtendimentoPortaria.tsx
+    418 src/modules/backup/server/destinos.ts
+    416 src/app/(painel)/portarias/page.tsx
+    392 src/modules/atendimento/components/FormularioVisitante.tsx
+    387 src/modules/backup/server/configuracao.ts
+    385 src/modules/membros/cadastroMusical.ts
+    385 src/modules/backup/regras.ts
+=== TODO/FIXME/console.log ===
+src/app/(painel)/cadastros-pendentes/page.tsx:37:  { valor: "TODOS", rotulo: "Todos" },
+src/app/(painel)/administracao/auditoria/page.tsx:134:  // Imprime ou exporta TODOS os registros do filtro (até o limite). Antes, registra o uso na auditoria.
+src/app/(painel)/cartoes/page.tsx:22:  { valor: "TODOS", rotulo: "Todos" },
+src/app/(painel)/cartoes/page.tsx:30:  const [filtro, setFiltro] = useState<FiltroCartao>("TODOS");
+src/modules/cadastrosPendentes/tipos.ts:6:export type FiltroStatus = "PENDENTE" | "APROVADO" | "REJEITADO" | "EXPIRADO" | "TODOS";
+src/modules/hinos/components/TabelaHinos.tsx:13:type Filtro = "TODOS" | "HINO" | "CORO";
+src/modules/hinos/components/TabelaHinos.tsx:27:  { valor: "TODOS", rotulo: "Todos" },
+src/modules/hinos/components/TabelaHinos.tsx:35:  const [filtro, setFiltro] = useState<Filtro>("TODOS");
+src/modules/hinos/components/TabelaHinos.tsx:40:    () => filtrarHinos(filtro === "TODOS" ? hinos : hinos.filter((h) => h.categoria === filtro), busca),
+src/modules/administracao/services/acesso.ts:178:/** Salva nome, situação e TODOS os grupos do usuário de uma vez (o banco confere as regras). */
+src/modules/cartoes/regras.test.ts:39:  it("TODOS mantém tudo; os demais filtram pela situação", () => {
+src/modules/cartoes/regras.test.ts:40:    expect(filtrarCartoes(itens, "TODOS")).toHaveLength(4);
+src/modules/cartoes/regras.test.ts:46:    expect(contarSituacoes(itens)).toEqual({ TODOS: 4, VENCIDO: 1, A_VENCER: 2, SEM_VALIDADE: 1 });
+src/modules/cartoes/regras.ts:46:  return filtro === "TODOS" ? itens : itens.filter((item) => item.situacao === filtro);
+src/modules/cartoes/regras.ts:51:  const total: Record<FiltroCartao, number> = { TODOS: itens.length, VENCIDO: 0, A_VENCER: 0, SEM_VALIDADE: 0 };
+src/modules/cartoes/tipos.ts:8:export type FiltroCartao = "TODOS" | SituacaoCartao;
+=== any / ts-ignore ===
+32
+=== MIGRATIONS ===
+0039_organizacao_rrm_ra_adm.sql
+0040_cadastro_musical_obrigatorios.sql
+0041_dados_do_ensaio_hinos.sql
+0042_cadastro_publico.sql
+0043_casa_nao_cadastrada.sql
+0044_cartoes_a_vencer.sql
+0045_prazo_cadastros_pendentes.sql
+LEIA-ME.md
+46
+=== TESTES ===
+61
+=== TSC ===
+tsc saiu com: 0
+=== LINT ===
+  34:3  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect')
+
+/workspaces/sysmusica/sysmusica/src/modules/preferencias/components/PreferenciasProvider.tsx
+  71:3  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect')
+
+✖ 7 problems (0 errors, 7 warnings)
+  0 errors and 7 warnings potentially fixable with the `--fix` option.
+
+=== VITEST ===
+[2m Test Files [22m [1m[32m61 passed[39m[22m[90m (61)[39m
+[2m      Tests [22m [1m[32m599 passed[39m[22m[90m (599)[39m
+[2m   Start at [22m 21:21:28
+[2m   Duration [22m 12.23s[2m (tests 47%, import 29%, transform 18%, worker 6%)[22m
+
+[2m    Isolate [22m [33m61 workers spawned[39m[2m · ~115ms startup each (spawn + environment, per file)[22m
+[2m            [22m [2mat least ~6.88s faster with [22m[33misolate: false[39m[2m — reuses workers across files instead of one per file[22m
+
+=== NPM AUDIT ===
+found 0 vulnerabilities
+=== DESATUALIZADOS ===
+Package                Current   Wanted   Latest  Location                            Depended by
+@supabase/supabase-js  2.117.3  2.118.0  2.118.0  node_modules/@supabase/supabase-js  sysmusica
+@types/node            24.19.2  24.19.2   26.6.5  node_modules/@types/node            sysmusica
+eslint                  9.39.5   9.39.5  10.13.0  node_modules/eslint                 sysmusica
+eslint-config-next      16.4.0   16.4.0   16.4.2  node_modules/eslint-config-next     sysmusica
+lucide-react            1.59.0   1.61.0   1.61.0  node_modules/lucide-react           sysmusica
+next                    16.4.0   16.4.0   16.4.2  node_modules/next                   sysmusica
+nodemailer              10.1.6   10.2.0   10.2.0  node_modules/nodemailer             sysmusica
+react                   19.3.0   19.3.0   19.3.1  node_modules/react                  sysmusica
+react-dom               19.3.0   19.3.0   19.3.1  node_modules/react-dom              sysmusica
+typescript               5.9.3    5.9.3    7.0.2  node_modules/typescript             sysmusica
+=== HEADERS DE SEGURANCA (next.config / middleware) ===
+next.config.ts
+=== BACKUP: TABELAS COBERTAS NO CODIGO ===
