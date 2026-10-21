@@ -14,7 +14,7 @@ import { Music, X } from "lucide-react";
 import LogoMarca from "@/components/ui/LogoMarca";
 import { cn } from "@/lib/cn";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
-import { GRUPOS_MENU, filtrarMenu, itemAtivo } from "./navegacao";
+import { GRUPOS_MENU, filtrarMenu, itemMenuAtivo } from "./navegacao";
 
 interface SidebarProps {
   recolhida: boolean; // desktop: mostra só os ícones
@@ -103,7 +103,7 @@ export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
               )}
               <ul className="space-y-1">
                 {grupo.itens.map((item) => {
-                  const ativo = itemAtivo(item.href, caminho);
+                  const ativo = itemMenuAtivo(item, caminho);
                   const Icone = item.icone;
 
                   return (

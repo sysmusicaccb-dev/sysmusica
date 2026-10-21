@@ -31,6 +31,8 @@ export interface ItemMenu {
   icone: LucideIcon;
   permissao: CodigoPermissao; // quem não tem esta permissão não vê o item
   qualquer?: CodigoPermissao[]; // ...a não ser que tenha QUALQUER uma destas
+  ocultoSe?: CodigoPermissao; // o item SOME do menu para quem tem esta permissão (acessa por aba de outro item)
+  tambemAtivoEm?: string[]; // rotas que também deixam este item marcado no menu (ex.: abas de Eventos)
 }
 
 export interface GrupoMenu {
@@ -49,7 +51,14 @@ export const GRUPOS_MENU: GrupoMenu[] = [
     titulo: "Cadastros",
     itens: [
       { href: "/membros", rotulo: "Músicos / Organistas", icone: Users, permissao: "membros.visualizar" },
-      { href: "/eventos", rotulo: "Eventos", icone: CalendarDays, permissao: "eventos.visualizar" },
+      {
+        href: "/eventos",
+        rotulo: "Eventos",
+        icone: CalendarDays,
+        permissao: "eventos.visualizar",
+        // Gestão de portarias e Portaria são ABAS dentro de Eventos: o item continua marcado nessas telas
+        tambemAtivoEm: ["/portarias", "/portaria"],
+      },
       {
         href: "/instrumentos",
         rotulo: "Instrumentos e famílias",
@@ -67,8 +76,15 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         icone: ClipboardList,
         permissao: "portarias.visualizar",
         qualquer: ["portarias.criar", "portarias.aprovar"],
+        ocultoSe: "eventos.visualizar", // quem vê Eventos acessa por aba; os demais mantêm o item
       },
-      { href: "/portaria", rotulo: "Portaria", icone: DoorOpen, permissao: "portaria.visualizar" },
+      {
+        href: "/portaria",
+        rotulo: "Portaria",
+        icone: DoorOpen,
+        permissao: "portaria.visualizar",
+        ocultoSe: "eventos.visualizar", // quem vê Eventos acessa por aba; quem só tem Portaria continua vendo só este item
+      },
       { href: "/painel-ao-vivo", rotulo: "Painel ao vivo", icone: Activity, permissao: "painel.visualizar" },
       { href: "/relatorios", rotulo: "Relatórios", icone: FileText, permissao: "relatorios.visualizar" },
       { href: "/fotografias", rotulo: "Fotografias", icone: Camera, permissao: "membros.foto" },
@@ -113,6 +129,8 @@ export const GRUPOS_MENU: GrupoMenu[] = [
 
 /** O usuário pode ver o item? (a permissão principal ou qualquer uma das alternativas) */
 function itemPermitido(item: ItemMenu, pode: (permissao: CodigoPermissao) => boolean): boolean {
+  // Itens que viraram aba de outro item somem do menu de quem já tem esse outro item
+  if (item.ocultoSe && pode(item.ocultoSe)) return false;
   return pode(item.permissao) || (item.qualquer ?? []).some((permissao) => pode(permissao));
 }
 
@@ -140,6 +158,11 @@ export function primeiraRotaPermitida(pode: (permissao: CodigoPermissao) => bool
 export function itemAtivo(href: string, caminho: string): boolean {
   if (href === "/") return caminho === "/";
   return caminho === href || caminho.startsWith(`${href}/`);
+}
+
+/** O item do menu está ativo? Vale a rota dele e as rotas das suas abas (ex.: Eventos > Portaria). */
+export function itemMenuAtivo(item: ItemMenu, caminho: string): boolean {
+  return itemAtivo(item.href, caminho) || (item.tambemAtivoEm ?? []).some((rota) => itemAtivo(rota, caminho));
 }
 
 export interface Migalha {

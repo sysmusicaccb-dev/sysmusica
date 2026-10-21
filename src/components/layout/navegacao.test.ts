@@ -3,6 +3,7 @@ import {
   GRUPOS_MENU,
   filtrarMenu,
   itemAtivo,
+  itemMenuAtivo,
   migalhasVisiveis,
   montarMigalhas,
   primeiraRotaPermitida,
@@ -172,5 +173,34 @@ describe("Gestão de portarias no menu", () => {
 
   it("quem só tem a permissão de backup vê apenas Backup", () => {
     expect(hrefs(["backup.visualizar"])).toEqual(["/administracao/backup"]);
+  });
+});
+
+describe("Gestão de portarias e Portaria como abas de Eventos", () => {
+  const hrefsDe = (pode: ReturnType<typeof criarPode>) =>
+    filtrarMenu(GRUPOS_MENU, pode).flatMap((grupo) => grupo.itens.map((item) => item.href));
+
+  it("quem vê Eventos acessa Gestão de portarias e Portaria pelas abas, sem itens soltos no menu", () => {
+    const pode = criarPode(["eventos.visualizar", "portarias.visualizar", "portaria.visualizar"]);
+    expect(hrefsDe(pode)).toEqual(["/eventos"]);
+  });
+
+  it("quem NÃO vê Eventos continua com os itens próprios no menu", () => {
+    expect(hrefsDe(criarPode(["portarias.visualizar", "portaria.visualizar"]))).toEqual(["/portarias", "/portaria"]);
+    expect(hrefsDe(criarPode(["portaria.visualizar", "portaria.registrar"]))).toEqual(["/portaria"]);
+  });
+
+  it("o item Eventos fica marcado nas telas das abas e não nas demais", () => {
+    const eventos = GRUPOS_MENU.flatMap((grupo) => grupo.itens).find((item) => item.href === "/eventos");
+    expect(eventos).toBeDefined();
+    if (!eventos) return;
+    for (const caminho of ["/eventos", "/portarias", "/portaria", "/portaria/registros"]) {
+      expect(itemMenuAtivo(eventos, caminho), caminho).toBe(true);
+    }
+    expect(itemMenuAtivo(eventos, "/membros")).toBe(false);
+  });
+
+  it("a primeira tela de quem vê Eventos e Portaria continua sendo Eventos", () => {
+    expect(primeiraRotaPermitida(criarPode(["eventos.visualizar", "portaria.visualizar"]))).toBe("/eventos");
   });
 });
