@@ -25,6 +25,9 @@ import ErrorState from "@/components/ui/ErrorState";
 import Notificacao from "@/components/ui/Notificacao";
 import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
+import { Settings } from "lucide-react";
+import Button from "@/components/ui/Button";
+import ConfigurarPrazo from "@/modules/cadastrosPendentes/components/ConfigurarPrazo";
 
 const FILTROS: { valor: FiltroStatus; rotulo: string }[] = [
   { valor: "PENDENTE", rotulo: "Pendentes" },
@@ -48,6 +51,7 @@ export default function CadastrosPendentesPage() {
   const [processando, setProcessando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [casaEscolhida, setCasaEscolhida] = useState(""); // casa escolhida ao aprovar um pedido com casa digitada
+  const [configAberta, setConfigAberta] = useState(false); // painel "Prazo dos pedidos" (engrenagem)
 
   const carregar = useCallback(async (status: FiltroStatus) => {
     try {
@@ -129,6 +133,14 @@ export default function CadastrosPendentesPage() {
         <PageHeader
           titulo="Cadastros Pendentes"
           descricao="Cadastros enviados pelo link público. Nada entra no sistema sem a sua aprovação."
+          acoes={
+            // Só quem tem a permissão cadastros.configurar (Administrador) vê o botão do prazo dos pedidos
+            pode("cadastros.configurar") ? (
+              <Button variante="secundario" icone={Settings} onClick={() => setConfigAberta(true)}>
+                Prazo dos pedidos
+              </Button>
+            ) : undefined
+          }
         />
 
         <div role="group" aria-label="Filtrar por situação" className="mb-4 flex flex-wrap gap-1">
@@ -194,6 +206,24 @@ export default function CadastrosPendentesPage() {
             onRecusar={() => {
               setErroDecisao(null);
               setConfirmando("recusar");
+            }}
+          />
+        )}
+      </Drawer>
+
+      {/* Painel lateral: prazo (em dias) que um pedido pode esperar antes de vencer */}
+      <Drawer
+        aberto={configAberta}
+        onFechar={() => setConfigAberta(false)}
+        titulo="Prazo dos pedidos"
+        descricao="Por quantos dias um cadastro pode esperar a sua análise antes de vencer."
+      >
+        {configAberta && (
+          <ConfigurarPrazo
+            onSalvo={(mensagem) => {
+              setConfigAberta(false);
+              setAviso(mensagem);
+              void carregar(filtro); // os vencimentos mostrados na lista mudaram
             }}
           />
         )}

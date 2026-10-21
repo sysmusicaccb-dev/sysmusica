@@ -69,6 +69,7 @@ export const CATALOGO_PERMISSOES = [
   { codigo: "cadastros.visualizar", modulo: "Cadastros pendentes", acao: "Visualizar" },
   { codigo: "cadastros.aprovar", modulo: "Cadastros pendentes", acao: "Aprovar" },
   { codigo: "cartoes.visualizar", modulo: "Cartões", acao: "Visualizar" },
+  { codigo: "cadastros.configurar", modulo: "Cadastros pendentes", acao: "Configurar" },
 ] as const;
 
 export type CodigoPermissao = (typeof CATALOGO_PERMISSOES)[number]["codigo"];
