@@ -55,7 +55,7 @@ export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
           <Link
             href="/"
             onClick={onFechar}
-            title="SysMúsica — Dashboard"
+            title="Sysmusica — Dashboard"
             className="flex min-w-0 items-center gap-3"
           >
             {/* Menu aberto: logomarca da CCB; recolhido (só no desktop): o ícone compacto */}
@@ -75,7 +75,7 @@ export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
                 recolhida && "lg:hidden"
               )}
             >
-              SysMúsica
+              Sysmusica
             </span>
           </Link>
 

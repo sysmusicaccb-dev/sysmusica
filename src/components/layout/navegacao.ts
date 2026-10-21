@@ -53,7 +53,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
   {
     titulo: "Cadastros",
     itens: [
-      { href: "/membros", rotulo: "Músicos / Organistas", icone: Users, permissao: "membros.visualizar" },
+      { href: "/membros", rotulo: "Músicos e Organistas", icone: Users, permissao: "membros.visualizar" },
       {
         href: "/eventos",
         rotulo: "Eventos",
@@ -64,7 +64,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
       },
       {
         href: "/instrumentos",
-        rotulo: "Instrumentos e famílias",
+        rotulo: "Instrumentos e Famílias",
         icone: Guitar,
         permissao: "instrumentos.visualizar",
       },
@@ -77,7 +77,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
       },
       { href: "/hinos", rotulo: "Hinos", icone: Music2, permissao: "hinos.visualizar" },
       // Fila de cadastros enviados pelo link público (/cadastro); o número pendente aparece no menu (Sidebar)
-      { href: "/cadastros-pendentes", rotulo: "Cadastros pendentes", icone: Inbox, permissao: "cadastros.visualizar" },
+      { href: "/cadastros-pendentes", rotulo: "Cadastros Pendentes", icone: Inbox, permissao: "cadastros.visualizar" },
     ],
   },
   {
@@ -85,7 +85,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
     itens: [
       {
         href: "/portarias",
-        rotulo: "Gestão de portarias",
+        rotulo: "Gestão de Portarias",
         icone: ClipboardList,
         permissao: "portarias.visualizar",
         qualquer: ["portarias.criar", "portarias.aprovar"],
@@ -105,7 +105,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         permissao: "ensaio.visualizar",
         qualquer: ["ensaio.registrar"], // quem só preenche (sem ver) também acessa
       },
-      { href: "/painel-ao-vivo", rotulo: "Painel ao vivo", icone: Activity, permissao: "painel.visualizar" },
+      { href: "/painel-ao-vivo", rotulo: "Painel ao Vivo", icone: Activity, permissao: "painel.visualizar" },
       { href: "/relatorios", rotulo: "Relatórios", icone: FileText, permissao: "relatorios.visualizar" },
     ],
   },
@@ -138,7 +138,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
       },
       {
         href: "/administracao/grupos",
-        rotulo: "Grupos e permissões",
+        rotulo: "Grupos e Permissões",
         icone: ShieldCheck,
         permissao: "grupos.visualizar",
       },

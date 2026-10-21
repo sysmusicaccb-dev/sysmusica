@@ -40,7 +40,7 @@ describe("montarMigalhas", () => {
     expect(montarMigalhas("/membros")).toEqual([
       { rotulo: "Início", href: "/" },
       { rotulo: "Cadastros" },
-      { rotulo: "Músicos / Organistas" },
+      { rotulo: "Músicos e Organistas" },
     ]);
     expect(montarMigalhas("/portaria")).toEqual([
       { rotulo: "Início", href: "/" },

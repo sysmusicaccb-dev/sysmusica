@@ -9,14 +9,14 @@ describe("abasDeEventos", () => {
   it("quem tem tudo vê as três abas, na ordem Eventos, Gestão de portarias, Portaria", () => {
     expect(rotulos(["eventos.visualizar", "portarias.visualizar", "portaria.visualizar"])).toEqual([
       "Eventos",
-      "Gestão de portarias",
+      "Gestão de Portarias",
       "Portaria",
     ]);
   });
 
   it("a aba de Gestão de portarias aparece para quem só cria ou só aprova", () => {
-    expect(rotulos(["eventos.visualizar", "portarias.criar"])).toEqual(["Eventos", "Gestão de portarias"]);
-    expect(rotulos(["eventos.visualizar", "portarias.aprovar"])).toEqual(["Eventos", "Gestão de portarias"]);
+    expect(rotulos(["eventos.visualizar", "portarias.criar"])).toEqual(["Eventos", "Gestão de Portarias"]);
+    expect(rotulos(["eventos.visualizar", "portarias.aprovar"])).toEqual(["Eventos", "Gestão de Portarias"]);
   });
 
   it("só Eventos + Portaria mostra duas abas", () => {
@@ -31,7 +31,7 @@ describe("abasDeEventos", () => {
     expect(rotulos(["eventos.visualizar", "tipoevento.visualizar"])).toEqual(["Eventos", "Tipo do Evento"]);
     expect(
       rotulos(["eventos.visualizar", "tipoevento.visualizar", "portarias.visualizar", "portaria.visualizar"])
-    ).toEqual(["Eventos", "Tipo do Evento", "Gestão de portarias", "Portaria"]);
+    ).toEqual(["Eventos", "Tipo do Evento", "Gestão de Portarias", "Portaria"]);
   });
 
   it("sem a permissão de Tipo do Evento a aba não aparece; sem Eventos não há barra", () => {

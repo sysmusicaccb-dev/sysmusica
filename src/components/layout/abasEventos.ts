@@ -19,7 +19,7 @@ export function abasDeEventos(pode: (permissao: CodigoPermissao) => boolean): Ab
   if (pode("tipoevento.visualizar")) abas.push({ href: "/tipos-evento", rotulo: "Tipo do Evento" });
   // Mesma regra do layout de /portarias: visualiza, cria ou aprova
   if (pode("portarias.visualizar") || pode("portarias.criar") || pode("portarias.aprovar")) {
-    abas.push({ href: "/portarias", rotulo: "Gestão de portarias" });
+    abas.push({ href: "/portarias", rotulo: "Gestão de Portarias" });
   }
   if (pode("portaria.visualizar")) abas.push({ href: "/portaria", rotulo: "Portaria" });
 
