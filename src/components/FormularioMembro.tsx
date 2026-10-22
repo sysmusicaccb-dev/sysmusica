@@ -42,6 +42,7 @@ import CampoDocumento from "@/modules/membros/components/CampoDocumento";
 import FotoMembro from "@/modules/membros/components/FotoMembro";
 import { descartarFoto, enviarFoto, removerFoto, subirFotoNova } from "@/modules/membros/services/fotos";
 import { buscarEnderecoPorCep } from "@/modules/membros/services/cep";
+import { avisoBatismoDeMenor, aplicarRegrasDoCargo, regrasDoCargo } from "@/modules/membros/regrasCargo";
 import { descartarDocumentos, subirDocumento } from "@/modules/membros/services/documentos";
 import {
   CADASTRO_VAZIO,
@@ -130,7 +131,7 @@ export default function FormularioMembro({
   const [docVerso, setDocVerso] = useState<Blob | null>(null); // imagem nova do verso do documento
   const [statusCep, setStatusCep] = useState<StatusCep>(""); // andamento da consulta do endereço pelo CEP
   const ultimoCepConsultado = useRef(""); // evita consultar o mesmo CEP de novo e descarta resposta atrasada
-  const [cadastro, setCadastro] = useState<CadastroMusical>(cadastroInicial ?? CADASTRO_VAZIO); // dados pessoais
+  const [cadastroBruto, setCadastro] = useState<CadastroMusical>(cadastroInicial ?? CADASTRO_VAZIO); // dados pessoais digitados
   const [confirmandoRemocaoFoto, setConfirmandoRemocaoFoto] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erroForm, setErroForm] = useState<string | null>(null);
@@ -146,10 +147,15 @@ export default function FormularioMembro({
     (cargoSelecionado as (Cargo & { exige_instrumento?: boolean }) | undefined)?.exige_instrumento === true;
   // Só Músico e Organista têm categoria (as demais pessoas contam no painel pelo próprio cargo)
   const tipoCategoria = cargoUsaCategoria(cargoSelecionado?.nome);
+  // Regras automáticas do cargo (batizado, casado, selado): a tela mostra, trava e salva os valores do cargo.
+  // Veja modules/membros/regrasCargo.ts para mudar as regras.
+  const regras = regrasDoCargo(cargoSelecionado?.nome, categoria);
+  const cadastro = aplicarRegrasDoCargo(cadastroBruto, regras);
   // Cartão de identificação: só para os cargos marcados (cargos.exige_cartao)
   const exigeCartao = cargoExigeCartao(cargoSelecionado as (Cargo & { exige_cartao?: boolean }) | undefined);
   // Campos obrigatórios (*): cadastro novo, ou edição de quem já tem o cadastro preenchido (ou começou a preencher)
-  const completo = !editando || cadastroInicial !== null || temAlgumDado(cadastro);
+  // (os campos preenchidos pelo cargo não contam: só o que a pessoa digitou decide se o cadastro está "começado")
+  const completo = !editando || cadastroInicial !== null || temAlgumDado(cadastroBruto);
   // Cargo travado no Órgão (Organista, Examinadora, Instrutor, Instrutora): só os instrumentos Órgão aparecem
   const somenteOrgao = cargoSomenteOrgao(cargoSelecionado);
   const instrumentosDisponiveis = instrumentosDoCargo(instrumentos, somenteOrgao);
@@ -544,22 +550,6 @@ export default function FormularioMembro({
         </Campo>
 
         <div className="grid grid-cols-2 gap-3">
-          <Campo id="estado_civil" rotulo="Estado civil" obrigatorio={completo}>
-            <select
-              id="estado_civil"
-              value={cadastro.estado_civil}
-              onChange={(e) => mudar("estado_civil", e.target.value)}
-              disabled={salvando}
-              className={classeInput}
-            >
-              <option value="">{rotuloSimNao(completo)}</option>
-              {ESTADOS_CIVIS.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </Campo>
           <Campo id="sexo" rotulo="Sexo" obrigatorio={completo}>
             <select
               id="sexo"
@@ -675,12 +665,12 @@ export default function FormularioMembro({
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Campo id="batizado" rotulo="Batizado(a)?" obrigatorio={completo}>
+          <Campo id="batizado" rotulo="Batizado(a)?" obrigatorio={completo} dica={regras.batizado ? "Automático para este cargo." : undefined}>
             <select
               id="batizado"
               value={cadastro.batizado}
               onChange={(e) => escolherBatizado(e.target.value as SimNao)}
-              disabled={salvando}
+              disabled={salvando || regras.batizado}
               className={classeInput}
             >
               <option value="">{rotuloSimNao(completo)}</option>
@@ -688,12 +678,12 @@ export default function FormularioMembro({
               <option value="nao">Não</option>
             </select>
           </Campo>
-          <Campo id="selado" rotulo="Selado(a)?" obrigatorio={completo}>
+          <Campo id="selado" rotulo="Selado(a)?" obrigatorio={completo} dica={regras.selado ? "Automático para este cargo." : undefined}>
             <select
               id="selado"
               value={cadastro.selado}
               onChange={(e) => mudar("selado", e.target.value as SimNao)}
-              disabled={salvando}
+              disabled={salvando || regras.selado}
               className={classeInput}
             >
               <option value="">{rotuloSimNao(completo)}</option>
@@ -702,6 +692,11 @@ export default function FormularioMembro({
             </select>
           </Campo>
         </div>
+
+        {/* Menor de 12 anos (cargo sem batismo automático): o batismo depende da autorização dos pais */}
+        {avisoBatismoDeMenor(regras, dataNascimento, hoje) && (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{avisoBatismoDeMenor(regras, dataNascimento, hoje)}</p>
+        )}
 
         {/* Data do batismo: só aparece (e é obrigatória) para quem é batizado */}
         {cadastro.batizado === "sim" && (
@@ -717,6 +712,24 @@ export default function FormularioMembro({
             />
           </Campo>
         )}
+
+        {/* Estado civil: vem DEPOIS do cargo porque alguns cargos já definem "Casado (a)" */}
+        <Campo id="estado_civil" rotulo="Estado civil" obrigatorio={completo} dica={regras.casado ? "Automático para este cargo." : undefined}>
+          <select
+            id="estado_civil"
+            value={cadastro.estado_civil}
+            onChange={(e) => mudar("estado_civil", e.target.value)}
+            disabled={salvando || regras.casado}
+            className={classeInput}
+          >
+            <option value="">{rotuloSimNao(completo)}</option>
+            {ESTADOS_CIVIS.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+        </Campo>
       </Secao>
 
       {/* ---------- Cartão de identificação (só para os cargos marcados em cargos.exige_cartao) ---------- */}

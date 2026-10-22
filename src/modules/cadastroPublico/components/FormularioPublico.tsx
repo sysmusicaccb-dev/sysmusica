@@ -25,6 +25,7 @@ import {
   type CadastroMusical,
   type SimNao,
 } from "@/modules/membros/cadastroMusical";
+import { aplicarRegrasDoCargo, avisoBatismoDeMenor, regrasDoCargo } from "@/modules/membros/regrasCargo";
 import { CATEGORIAS, cargoUsaCategoria } from "@/modules/painel/regras";
 import { cpfValido, formatarCpfParcial, soDigitos } from "../cpf";
 import { itensDoAviso } from "../aviso";
@@ -105,6 +106,11 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
   const tipoCategoria = cargoUsaCategoria(cargo?.nome);
   const instrumentos = instrumentosDoFormularioPublico(opcoes.instrumentos, cargo);
   const menor = ehMenorDeIdade(dados.dataNascimento, hojeIso());
+  // Regras automáticas do cargo (batizado, casado): o formulário mostra, trava e ENVIA os valores do cargo.
+  // Veja modules/membros/regrasCargo.ts para mudar as regras (o banco confere de novo, migração 0050).
+  const regras = regrasDoCargo(cargo?.nome, dados.categoria);
+  const dadosEfetivos = { ...dados, cadastro: aplicarRegrasDoCargo(dados.cadastro, regras) };
+  const avisoMenor = avisoBatismoDeMenor(regras, dados.dataNascimento, hojeIso());
   const itens = useMemo(() => itensDoAviso(process.env.NEXT_PUBLIC_CONTATO_PRIVACIDADE), []);
 
   const mudar = <K extends keyof DadosFormularioPublico>(campo: K, valor: DadosFormularioPublico[K]) =>
@@ -174,7 +180,7 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
       return;
     }
 
-    const problema = validarEnvioPublico(dados, {
+    const problema = validarEnvioPublico(dadosEfetivos, {
       cargo,
       temFoto: foto !== null,
       temDocumentoFrente: frente !== null,
@@ -188,7 +194,7 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
     setErro(null);
     setEnviando(true);
     try {
-      await enviarCadastroPublico(montarCargaPublica(dados, { cargo, hoje }), { foto, frente, verso }, token);
+      await enviarCadastroPublico(montarCargaPublica(dadosEfetivos, { cargo, hoje }), { foto, frente, verso }, token);
       setEnviado(true);
     } catch (ex) {
       setErro(ex instanceof Error ? ex.message : "Não foi possível enviar o cadastro.");
@@ -208,7 +214,7 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
     );
   }
 
-  const cad = dados.cadastro;
+  const cad = dadosEfetivos.cadastro;
   const exigeCartao = cargoExigeCartao(cargo);
   const bloqueado = enviando;
 
@@ -242,12 +248,6 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
           </Campo>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Campo id="estado_civil" rotulo="Estado civil" obrigatorio>
-            <select id="estado_civil" value={cad.estado_civil} onChange={(e) => mudarCad("estado_civil", e.target.value)} disabled={bloqueado} className={classeInput}>
-              <option value="">Selecione</option>
-              {ESTADOS_CIVIS.map((v) => <option key={v} value={v}>{v}</option>)}
-            </select>
-          </Campo>
           <Campo id="sexo" rotulo="Sexo" obrigatorio>
             <select id="sexo" value={cad.sexo} onChange={(e) => mudarCad("sexo", e.target.value)} disabled={bloqueado} className={classeInput}>
               <option value="">Selecione</option>
@@ -304,12 +304,19 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
             <FamiliaAutomatica instrumentoId={dados.instrumentoId} instrumentos={instrumentos} familias={opcoes.familias} />
           </>
         )}
+        {/* Estado civil: vem DEPOIS do cargo porque alguns cargos já definem "Casado (a)" */}
+        <Campo id="estado_civil" rotulo="Estado civil" obrigatorio dica={regras.casado ? "Automático para este cargo." : undefined}>
+          <select id="estado_civil" value={cad.estado_civil} onChange={(e) => mudarCad("estado_civil", e.target.value)} disabled={bloqueado || regras.casado} className={classeInput}>
+            <option value="">Selecione</option>
+            {ESTADOS_CIVIS.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+        </Campo>
       </Secao>
 
       <Secao titulo="Dados religiosos (consentimento específico)">
         <div className="grid gap-3 sm:grid-cols-2">
-          <Campo id="batizado" rotulo="É batizado(a)?" obrigatorio>
-            <select id="batizado" value={cad.batizado} onChange={(e) => mudarCad("batizado", e.target.value as SimNao)} disabled={bloqueado} className={classeInput}>
+          <Campo id="batizado" rotulo="É batizado(a)?" obrigatorio dica={regras.batizado ? "Automático para este cargo." : (avisoMenor ?? undefined)}>
+            <select id="batizado" value={cad.batizado} onChange={(e) => mudarCad("batizado", e.target.value as SimNao)} disabled={bloqueado || regras.batizado} className={classeInput}>
               <option value="">Selecione</option>
               <option value="sim">Sim</option>
               <option value="nao">Não</option>
@@ -321,8 +328,8 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
             </Campo>
           )}
         </div>
-        <Campo id="selado" rotulo="É selado(a)?" obrigatorio>
-          <select id="selado" value={cad.selado} onChange={(e) => mudarCad("selado", e.target.value as SimNao)} disabled={bloqueado} className={classeInput}>
+        <Campo id="selado" rotulo="É selado(a)?" obrigatorio dica={regras.selado ? "Automático para este cargo." : undefined}>
+          <select id="selado" value={cad.selado} onChange={(e) => mudarCad("selado", e.target.value as SimNao)} disabled={bloqueado || regras.selado} className={classeInput}>
             <option value="">Selecione</option>
             <option value="sim">Sim</option>
             <option value="nao">Não</option>
