@@ -58,7 +58,9 @@ export const PAGINA_INICIAL: OpcoesPagina = {
     emissao: true,
     emitidoPor: true,
   },
-  rodapeMarcado: { paginacao: true, sistema: true, emitidoPor: true, emissao: false, total: true },
+  // Quem emitiu, quando e o total já ficam no quadro do cabeçalho: o rodapé padrão só leva o nome do sistema
+  // (e a numeração das páginas). Quem quiser repetir esses itens no rodapé marca nas opções da página.
+  rodapeMarcado: { paginacao: true, sistema: true, emitidoPor: false, emissao: false, total: false },
   assinaturas: false,
   nomesAssinaturas: "Responsável",
   ajuste: "automatico",
