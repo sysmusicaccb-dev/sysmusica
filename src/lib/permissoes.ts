@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Catálogo de permissões (fonte única no frontend).
+ * Sysmusica — Catálogo de permissões (fonte única no frontend).
  *
  * Cada permissão tem o formato "modulo.acao". O tipo CodigoPermissao faz o TypeScript recusar
  * códigos digitados errado (ex: pode("membros.editr") não compila).

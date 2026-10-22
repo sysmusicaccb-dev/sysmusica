@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Dashboard (página inicial "/").
+ * Sysmusica — Dashboard (página inicial "/").
  *
  * Indicadores REAIS (contagens do banco), gráficos dos cadastros (membros por cargo, família,
  * instrumento e congregação; presenças), próximos eventos e atalhos.
@@ -71,7 +71,7 @@ export default function DashboardConteudo() {
   return (
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <PageHeader titulo="Dashboard" descricao="Visão geral do SysMúsica." />
+        <PageHeader titulo="Dashboard" descricao="Visão geral do Sysmusica." />
 
         {carregando ? (
           // Carregando: skeleton com o mesmo formato da tela final

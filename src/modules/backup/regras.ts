@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras do Backup (sem banco, rede ou criptografia): formato do arquivo, nomes, textos
+ * Sysmusica — Regras puras do Backup (sem banco, rede ou criptografia): formato do arquivo, nomes, textos
  * dos avisos e validações. Roda no servidor e no navegador. Testadas em regras.test.ts.
  */
 
@@ -70,7 +70,7 @@ export function lerPacote(texto: string): PacoteBackup {
   }
 
   const pacote = valor as Record<string, unknown>;
-  if (pacote.formato !== NOME_FORMATO) throw new Error("Este arquivo não é um backup do SysMúsica.");
+  if (pacote.formato !== NOME_FORMATO) throw new Error("Este arquivo não é um backup do Sysmusica.");
   if (typeof pacote.versao !== "number" || pacote.versao > VERSAO_FORMATO) {
     throw new Error("Este backup foi feito por uma versão mais nova do sistema.");
   }
@@ -174,7 +174,7 @@ export function mensagemSucesso(dados: DadosAviso): { assunto: string; texto: st
   ];
   if (dados.verificacao) linhas.push(`Verificação automática: ${resumoCurtoVerificacao(dados.verificacao)}`);
   if (dados.refeito) linhas.push("Atenção: a primeira cópia falhou na verificação e foi refeita automaticamente.");
-  return { assunto: "SysMúsica: backup concluído", texto: linhas.join("\n") };
+  return { assunto: "Sysmusica: backup concluído", texto: linhas.join("\n") };
 }
 
 export function mensagemFalha(dados: DadosAviso): { assunto: string; texto: string } {
@@ -185,7 +185,7 @@ export function mensagemFalha(dados: DadosAviso): { assunto: string; texto: stri
     `Motivo: ${(dados.motivo ?? "não informado").slice(0, 300)}`,
     `Tentativa de: ${dados.feitoPor?.trim() || "sistema"}`,
   ];
-  return { assunto: "SysMúsica: o backup falhou", texto: linhas.join("\n") };
+  return { assunto: "Sysmusica: o backup falhou", texto: linhas.join("\n") };
 }
 
 const ROTULO_CANAL: Record<ResultadoCanal["canal"], string> = {
@@ -233,7 +233,7 @@ export function mensagemVerificacaoFalhou(dados: {
     "O que fazer: abra Administração > Backup, confira o registro e faça um novo backup.",
     `Tentativa de: ${dados.feitoPor?.trim() || "sistema"}`,
   ];
-  return { assunto: "SysMúsica: ALERTA, backup com falha na verificação", texto: linhas.join("\n") };
+  return { assunto: "Sysmusica: ALERTA, backup com falha na verificação", texto: linhas.join("\n") };
 }
 
 /** Aviso da verificação feita por um administrador (botão Verificar). */
@@ -253,7 +253,7 @@ export function mensagemVerificacaoManual(dados: {
     `Verificado por: ${dados.feitoPor?.trim() || "sistema"}`,
   ];
   return {
-    assunto: ok ? "SysMúsica: backup verificado" : "SysMúsica: ALERTA, problema na verificação do backup",
+    assunto: ok ? "Sysmusica: backup verificado" : "Sysmusica: ALERTA, problema na verificação do backup",
     texto: linhas.join("\n"),
   };
 }

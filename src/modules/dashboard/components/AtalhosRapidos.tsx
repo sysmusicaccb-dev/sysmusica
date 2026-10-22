@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Cartão "Atalhos" do dashboard.
+ * Sysmusica — Cartão "Atalhos" do dashboard.
  * Cada atalho leva a uma tela real, onde fica o formulário correspondente.
  * Fase 3: os atalhos passarão a respeitar as permissões do usuário.
  */

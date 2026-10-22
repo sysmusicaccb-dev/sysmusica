@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Formulário para redefinir a senha de um usuário (feito pelo administrador).
+ * Sysmusica — Formulário para redefinir a senha de um usuário (feito pelo administrador).
  * A troca passa pelo servidor (precisa da chave secreta). Depois, informe a nova senha
  * ao usuário por um canal seguro.
  */

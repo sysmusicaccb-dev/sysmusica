@@ -1,4 +1,4 @@
-/** SysMúsica — Tipos do módulo Dados do Ensaio (campos = o que as funções do banco devolvem, migração 0041). */
+/** Sysmusica — Tipos do módulo Dados do Ensaio (campos = o que as funções do banco devolvem, migração 0041). */
 import type { ModeloEnsaio } from "@/modules/tiposEvento/regras";
 
 export type CargoAtende = "ANCIAO" | "DIACONO" | "COOPERADOR_OFICIO" | "COOPERADOR_RJM";

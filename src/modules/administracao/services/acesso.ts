@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviços da tela de Administração.
+ * Sysmusica — Serviços da tela de Administração.
  *
  * Consultas e alterações de grupos/usuários usam as funções protegidas do banco (migração 0003).
  * Criar usuário e redefinir senha usam as rotas de servidor (/api/admin/...), pois dependem da

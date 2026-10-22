@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras das preferências de aparência (sem banco nem navegador).
+ * Sysmusica — Regras puras das preferências de aparência (sem banco nem navegador).
  * Testadas em regras.test.ts. Os mesmos valores existem no banco (migração 0019) e no estilo (tema.css).
  */
 import type { CorId, FonteId, Preferencias, TemaId } from "./tipos";

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Casa de Oração de origem (opcional) de quem entra sem cadastro.
+ * Sysmusica — Casa de Oração de origem (opcional) de quem entra sem cadastro.
  * Busca pelas primeiras letras do nome da casa de oração (a partir de 2 letras). Se houver casas com o mesmo
  * nome em lugares diferentes, a lista mostra o caminho (estado, região, setor) de cada uma para a pessoa escolher.
  * Se a casa não estiver na lista: nome digitado + Estado (UF) + Cidade, com a lista de municípios do IBGE.

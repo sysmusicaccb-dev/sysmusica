@@ -1,5 +1,5 @@
 /**
- * SysMúsica — GET /api/cron/conferir: conferência da tarde (18:00 UTC = 15:00 em Salvador): avisa se o backup de
+ * Sysmusica — GET /api/cron/conferir: conferência da tarde (18:00 UTC = 15:00 em Salvador): avisa se o backup de
  * hoje não foi feito e, às segundas-feiras, reverifica os backups mais recentes. Protegida pelo CRON_SECRET.
  */
 import type { NextRequest } from "next/server";

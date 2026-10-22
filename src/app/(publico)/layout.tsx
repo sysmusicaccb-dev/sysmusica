@@ -1,11 +1,11 @@
 /**
- * SysMúsica — Layout das páginas PÚBLICAS (sem login, sem menu). Hoje: /cadastro.
+ * Sysmusica — Layout das páginas PÚBLICAS (sem login, sem menu). Hoje: /cadastro.
  * Não usa o GuardaPainel: quem chega aqui não precisa estar logado. Nunca coloque dados internos nestas páginas.
  */
 import type { ReactNode } from "react";
 
 export const metadata = {
-  title: "Cadastro Musical — SysMúsica",
+  title: "Cadastro Musical — Sysmusica",
   robots: { index: false, follow: false }, // o link é divulgado diretamente; não precisa aparecer em buscadores
 };
 

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras da configuração dos avisos do Backup (sem banco nem rede): tipos, validação do
+ * Sysmusica — Regras puras da configuração dos avisos do Backup (sem banco nem rede): tipos, validação do
  * que o administrador digita, leitura segura do corpo da requisição e leitura dos chats do Telegram.
  * Roda no servidor e no navegador. Testadas em configuracao.test.ts.
  * Segredos (token, senhas, chaves) só existem na ENTRADA; na saída para a tela aparecem mascarados.
@@ -78,7 +78,7 @@ export function chatIdValido(texto: string): boolean {
   return /^-?\d{1,20}$/.test(limpo) || /^@[A-Za-z][A-Za-z0-9_]{4,31}$/.test(limpo);
 }
 
-/** Remetente: "backup@exemplo.com" ou "SysMúsica <backup@exemplo.com>". */
+/** Remetente: "backup@exemplo.com" ou "Sysmusica <backup@exemplo.com>". */
 export function remetenteValido(texto: string): boolean {
   const limpo = texto.trim();
   if (emailValido(limpo)) return true;

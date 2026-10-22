@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /portaria: atendimento da portaria (QR Code, busca pelo nome, fotografia).
+ * Sysmusica — Página /portaria: atendimento da portaria (QR Code, busca pelo nome, fotografia).
  * A tela antiga (histórico por evento, lançamento em lote, editar e excluir) está em /portaria/registros.
  */
 import AtendimentoPortaria from "@/modules/atendimento/components/AtendimentoPortaria";

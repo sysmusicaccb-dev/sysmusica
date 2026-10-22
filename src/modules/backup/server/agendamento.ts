@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Agendamento dos backups no servidor: configuração, rotina diária (backup + retenção) e conferência
+ * Sysmusica — Agendamento dos backups no servidor: configuração, rotina diária (backup + retenção) e conferência
  * da tarde (aviso de atraso + verificação semanal). As duas rotinas são chamadas pelo Vercel (vercel.json) com o
  * segredo CRON_SECRET; quem aperta o botão "Executar a rotina agora" passa pela permissão de Administrador.
  *
@@ -266,7 +266,7 @@ export async function conferirDia(): Promise<ResultadoConferencia> {
     resultado.atrasado = true;
     await auditar(admin, null, "backup_agendado_atrasado", { tipo });
     await notificar("falha", {
-      assunto: "SysMúsica: o backup agendado de hoje não foi feito",
+      assunto: "Sysmusica: o backup agendado de hoje não foi feito",
       texto:
         `Quando: ${dataHoraSalvador(agora)}\n` +
         `Era esperado um backup ${descreverTipoDoDia(tipo)} às 03:00, mas não há nenhum backup concluído hoje.\n` +
@@ -300,8 +300,8 @@ export async function conferirDia(): Promise<ResultadoConferencia> {
       await notificar(resultado.problemas === 0 ? "sucesso" : "falha", {
         assunto:
           resultado.problemas === 0
-            ? "SysMúsica: verificação semanal dos backups concluída"
-            : "SysMúsica: ALERTA na verificação semanal dos backups",
+            ? "Sysmusica: verificação semanal dos backups concluída"
+            : "Sysmusica: ALERTA na verificação semanal dos backups",
         texto:
           `Quando: ${dataHoraSalvador(agora)}\n` +
           `Backups reverificados: ${resultado.verificados}. Com problema: ${resultado.problemas}.\n\n${linhas.join("\n")}`,

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras da entrada na Portaria (sem banco). Testadas em regrasEntrada.test.ts.
+ * Sysmusica — Regras puras da entrada na Portaria (sem banco). Testadas em regrasEntrada.test.ts.
  * Quem decide de verdade é o banco (registrar_entrada e registrar_entrada_avulsa conferem tudo de novo);
  * aqui ficam as conferências rápidas para a tela responder na hora.
  */

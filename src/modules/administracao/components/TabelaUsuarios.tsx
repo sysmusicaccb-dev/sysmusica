@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Tabela de usuários, com busca por nome/e-mail e filtro por grupo.
+ * Sysmusica — Tabela de usuários, com busca por nome/e-mail e filtro por grupo.
  * Ações por linha (só para quem tem usuarios.editar): editar, redefinir senha e ativar/desativar.
  * Ninguém desativa a própria conta por aqui (o banco também recusa).
  */

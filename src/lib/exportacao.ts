@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Saída de dados: impressão em janela própria (sem menu nem barra lateral) e exportação CSV.
+ * Sysmusica — Saída de dados: impressão em janela própria (sem menu nem barra lateral) e exportação CSV.
  * Usado pela Auditoria e pelos Relatórios. As funções "montar...", "gerar..." e "urlSegura" são puras
  * (testadas em exportacao.test.ts); só imprimirTabela, abrirJanelaImpressao, escreverImpressao e baixarCsv
  * mexem no navegador.
@@ -53,7 +53,7 @@ export interface OpcoesImpressao {
   geradoEm?: string;
   /** Abre a caixa de impressão sozinha (padrão: sim). Com "false", mostra a página para conferir e o botão Imprimir. */
   abrirImpressao?: boolean;
-  /** Nome da marca no topo (ex.: "SysMúsica"). */
+  /** Nome da marca no topo (ex.: "Sysmusica"). */
   marca?: string;
   /** Logomarca: endereço https, caminho do próprio site (/logo.png) ou imagem embutida (data:image). */
   logoUrl?: string;
@@ -191,10 +191,10 @@ export function montarHtmlImpressao(opcoes: OpcoesImpressao): string {
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { font-family: Arial, Helvetica, sans-serif; color: #0f172a; margin: 0; zoom: ${zoom}; }
   .folha { padding: ${margem}mm; }
-  .cab { display: flex; align-items: center; gap: 14px; padding-bottom: 8px; margin-bottom: 10px; border-bottom: 3px solid #4f46e5; }
-  .marca { display: flex; align-items: center; gap: 8px; color: #4f46e5; font-weight: 700; font-size: ${fonte + 3}pt; white-space: nowrap; }
+  .cab { display: grid; grid-template-columns: 1fr minmax(0, auto) 1fr; align-items: center; gap: 14px; padding-bottom: 8px; margin-bottom: 10px; border-bottom: 3px solid #4f46e5; }
+  .marca { grid-column: 1; justify-self: start; display: flex; align-items: center; gap: 8px; color: #4f46e5; font-weight: 700; font-size: ${fonte + 3}pt; white-space: nowrap; }
   .logo { height: 13mm; width: auto; }
-  .tit { min-width: 0; flex: 1; }
+  .tit { min-width: 0; grid-column: 2; text-align: center; } /* título centralizado na folha */
   h1 { font-size: ${fonte + 6}pt; margin: 0; line-height: 1.15; }
   .sub { font-size: ${fonte + 1}pt; color: #475569; margin: 3px 0 0; }
   .info { display: grid; grid-template-columns: repeat(${colunasInfo}, minmax(0, 1fr)); gap: 3px 18px; margin: 0 0 10px; padding: 7px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: ${fonte}pt; }

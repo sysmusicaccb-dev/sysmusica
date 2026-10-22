@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Detalhe de um cadastro enviado pelo link público (dentro do painel lateral).
+ * Sysmusica — Detalhe de um cadastro enviado pelo link público (dentro do painel lateral).
  * Mostra a foto e o documento (endereços temporários), os dados e, nas ATUALIZAÇÕES, a comparação campo a campo
  * com o cadastro atual do membro. Aprovar e Recusar só aparecem para quem tem cadastros.aprovar.
  */

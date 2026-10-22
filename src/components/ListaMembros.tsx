@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Lista de membros em tabela, com barra de ferramentas de filtros.
+ * Sysmusica — Lista de membros em tabela, com barra de ferramentas de filtros.
  *
  * Não acessa o banco: recebe os dados e os estados (loading/erro) da página.
  * Os filtros (busca por nome, cargo e família) são aplicados no navegador sobre a lista recebida.

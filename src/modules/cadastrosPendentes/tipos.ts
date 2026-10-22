@@ -1,4 +1,4 @@
-/** SysMúsica — Tipos da tela "Cadastros pendentes" (formato das funções do banco da migração 0042). */
+/** Sysmusica — Tipos da tela "Cadastros pendentes" (formato das funções do banco da migração 0042). */
 
 export type StatusCadastro = "PENDENTE" | "APROVADO" | "REJEITADO" | "EXPIRADO" | "SUBSTITUIDO";
 export type TipoCadastro = "NOVO" | "ATUALIZACAO";

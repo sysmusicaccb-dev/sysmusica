@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Cartão (UI base): contêiner branco com borda, título e descrição opcionais.
+ * Sysmusica — Cartão (UI base): contêiner branco com borda, título e descrição opcionais.
  */
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Foto na hora, dentro da conferência da portaria: para o membro que ainda não tem fotografia.
+ * Sysmusica — Foto na hora, dentro da conferência da portaria: para o membro que ainda não tem fotografia.
  * Só aparece para quem tem a permissão Fotografia (o banco confere, inclusive a região). Depois de salvar,
  * a conferência é atualizada e a foto passa a identificar o membro nas próximas vezes.
  */

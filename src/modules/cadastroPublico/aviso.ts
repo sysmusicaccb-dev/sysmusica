@@ -1,7 +1,7 @@
 /**
- * SysMúsica — Aviso de privacidade do cadastro público (LGPD).
+ * Sysmusica — Aviso de privacidade do cadastro público (LGPD).
  *
- * ATENÇÃO (administradores): este texto é um modelo técnico, escrito para o SysMúsica. Antes de divulgar o link,
+ * ATENÇÃO (administradores): este texto é um modelo técnico, escrito para o Sysmusica. Antes de divulgar o link,
  * peça para o ministério/a CCB (e, se possível, um profissional de direito) revisar. Se o texto mudar de
  * significado, SUBA a versão (VERSAO_AVISO): o sistema grava, em cada cadastro, qual versão a pessoa aceitou.
  *
@@ -30,7 +30,7 @@ export function itensDoAviso(contato: string | null | undefined): ItemAviso[] {
     {
       titulo: "Quem trata os seus dados",
       texto:
-        "A administração musical da CCB da sua região, por meio do sistema SysMúsica, é quem analisa o seu cadastro e " +
+        "A administração musical da CCB da sua região, por meio do sistema Sysmusica, é quem analisa o seu cadastro e " +
         "decide como os dados são usados.",
     },
     {

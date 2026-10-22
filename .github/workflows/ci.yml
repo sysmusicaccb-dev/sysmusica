@@ -1,4 +1,4 @@
-# SysMúsica — Integração contínua: valida o projeto a cada push na main e em pull requests.
+# Sysmusica — Integração contínua: valida o projeto a cada push na main e em pull requests.
 name: CI
 
 on:

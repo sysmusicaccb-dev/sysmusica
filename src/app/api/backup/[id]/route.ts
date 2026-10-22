@@ -1,4 +1,4 @@
-/** SysMúsica — Rota DELETE /api/backup/[id]: exclui um backup (exige a permissão de configurar). */
+/** Sysmusica — Rota DELETE /api/backup/[id]: exclui um backup (exige a permissão de configurar). */
 import type { NextRequest } from "next/server";
 import { autenticar } from "@/modules/backup/server/autorizacao";
 import { excluirBackup } from "@/modules/backup/server/operacoes";

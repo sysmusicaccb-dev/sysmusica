@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de edição de uma presença da portaria (conteúdo do painel lateral).
+ * Sysmusica — Formulário de edição de uma presença da portaria (conteúdo do painel lateral).
  * O membro e o evento são só informativos (não mudam: para outro membro ou evento, exclua e
  * registre de novo). Editáveis: status e, quando "Presente", as horas de entrada e saída.
  */

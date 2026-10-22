@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página pública /cadastro: Cadastro Musical sem login.
+ * Sysmusica — Página pública /cadastro: Cadastro Musical sem login.
  * Carrega as opções (cargos, instrumentos, Casas de Oração) por uma função pública do banco e mostra o formulário.
  */
 import { useEffect, useState } from "react";

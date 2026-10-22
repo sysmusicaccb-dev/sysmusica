@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Ciclo de vida do evento (regras puras, sem banco).
+ * Sysmusica — Ciclo de vida do evento (regras puras, sem banco).
  *
  * A situação é CALCULADA pela data (ninguém precisa "finalizar" o evento na mão):
  *   Agendado     -> ainda falta mais de 2h para começar

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras dos Dados do Ensaio (sem banco). Testadas em regras.test.ts.
+ * Sysmusica — Regras puras dos Dados do Ensaio (sem banco). Testadas em regras.test.ts.
  *
  * Só ensaios Local e Regional. O que se registra:
  *   - quem atendeu (Regional: sempre um Ancião; Local: Ancião, Diácono, Cooperador do Ofício ou de RJM) e o nome;

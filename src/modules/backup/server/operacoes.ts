@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Operações do Backup no servidor: fazer, listar, baixar, verificar e excluir.
+ * Sysmusica — Operações do Backup no servidor: fazer, listar, baixar, verificar e excluir.
  * Usa a chave secreta do Supabase (ignora as políticas de acesso): quem chama já foi autenticado pela rota.
  * O arquivo é comprimido, criptografado (BACKUP_CHAVE) e guardado no armazenamento privado "backups".
  *

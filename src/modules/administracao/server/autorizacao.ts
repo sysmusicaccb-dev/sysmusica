@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Autorização das rotas de servidor da Administração.
+ * Sysmusica — Autorização das rotas de servidor da Administração.
  *
  * A sessão do navegador fica no armazenamento local (não em cookies), então a tela envia o token
  * de login no cabeçalho "Authorization: Bearer ...". Aqui o servidor:

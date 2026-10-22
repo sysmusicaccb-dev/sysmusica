@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Tipos do módulo Cartões (alerta de vencimento do cartão de identificação).
+ * Sysmusica — Tipos do módulo Cartões (alerta de vencimento do cartão de identificação).
  * Os dados vêm das funções do banco resumo_cartoes e listar_cartoes (migração 0044).
  */
 export type SituacaoCartao = "VENCIDO" | "A_VENCER" | "SEM_VALIDADE";

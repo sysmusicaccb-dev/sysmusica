@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Formatação de datas para a interface (pt-BR, fuso do navegador).
+ * Sysmusica — Formatação de datas para a interface (pt-BR, fuso do navegador).
  * O banco devolve timestamptz em ISO 8601 (UTC); aqui convertemos para exibição.
  * Data e hora são formatadas em separado para não depender do separador que a
  * plataforma usa entre elas.

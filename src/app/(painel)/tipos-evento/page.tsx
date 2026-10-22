@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /tipos-evento: cadastro dos tipos de evento (Ensaio Regional, Culto Oficial...).
+ * Sysmusica — Página /tipos-evento: cadastro dos tipos de evento (Ensaio Regional, Culto Oficial...).
  * Cada tipo diz se usa a tela Dados do Ensaio e em qual modelo. Os botões só aparecem para quem tem a
  * permissão; o banco confere de novo.
  */

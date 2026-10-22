@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Busca de cidade (regra pura) para o campo Cidade-UF dos encarregados.
+ * Sysmusica — Busca de cidade (regra pura) para o campo Cidade-UF dos encarregados.
  * A lista de municípios vem do IBGE (services/cidades.ts); aqui ficam a leitura da resposta e a busca.
  */
 import { SIGLAS_UF } from "./regras";

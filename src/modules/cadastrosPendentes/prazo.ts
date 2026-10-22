@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras PURAS do prazo dos Cadastros Pendentes (sem acesso ao banco), testadas em prazo.test.ts.
+ * Sysmusica — Regras PURAS do prazo dos Cadastros Pendentes (sem acesso ao banco), testadas em prazo.test.ts.
  * O banco é quem manda: ele recusa prazos fora de 7 a 365 dias (migração 0045). Aqui só se valida o que a
  * pessoa digitou, para avisar na hora, e se calcula a data de exemplo mostrada na tela.
  */

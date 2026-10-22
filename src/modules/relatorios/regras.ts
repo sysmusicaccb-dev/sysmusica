@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras dos Relatórios (sem banco): escolha de colunas, montagem da tabela, ajuste da
+ * Sysmusica — Regras puras dos Relatórios (sem banco): escolha de colunas, montagem da tabela, ajuste da
  * página, resumo dos filtros e montagem das linhas dos relatórios que vêm de cadastros simples.
  * Testadas em regras.test.ts.
  */
@@ -271,7 +271,7 @@ export function opcoesCasaOracao(nos: NoOrganizacao[], regiaoId: string, setorId
 
 // ---------- Cabeçalho, rodapé e margens do relatório impresso ----------
 
-export const NOME_DO_SISTEMA = "SysMúsica";
+export const NOME_DO_SISTEMA = "Sysmusica";
 
 /** Itens do quadro do cabeçalho, na ordem em que aparecem. */
 export const ITENS_CABECALHO: { id: ItemCabecalho; rotulo: string }[] = [
@@ -420,11 +420,9 @@ export function montarInformacoes(entrada: EntradaInformacoes): ItemInformacao[]
   }
 
   if (itens.filtros && OUTROS_FILTROS.some((campo) => tem(campo))) {
-    lista.push({
-      rotulo: "Filtros",
-      valor: textoOutrosFiltros(definicao, filtros, rotulos) || "Nenhum filtro adicional",
-      largo: true,
-    });
+    // Só mostra a linha quando há filtro de verdade; sem filtro, ela some do cabeçalho
+    const outros = textoOutrosFiltros(definicao, filtros, rotulos);
+    if (outros) lista.push({ rotulo: "Filtros", valor: outros, largo: true });
   }
 
   if (itens.total) lista.push({ rotulo: "Total de registros", valor: String(entrada.total) });

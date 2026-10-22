@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Barra superior: botões do menu, identificação do sistema, breadcrumbs, Configurações
+ * Sysmusica — Barra superior: botões do menu, identificação do sistema, breadcrumbs, Configurações
  * (engrenagem, que abre a aparência do sistema) e o menu do usuário.
  */
 import { Menu, PanelLeftClose, PanelLeftOpen, Settings } from "lucide-react";
@@ -59,7 +59,7 @@ export default function Topbar({
       </button>
 
       {/* Identificação do sistema (no desktop ela já aparece no menu lateral) */}
-      <span className="text-base font-bold tracking-tight text-slate-900 lg:hidden">SysMúsica</span>
+      <span className="text-base font-bold tracking-tight text-slate-900 lg:hidden">Sysmusica</span>
 
       <div className="hidden min-w-0 sm:block">
         <Breadcrumbs />

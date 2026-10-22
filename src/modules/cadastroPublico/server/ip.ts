@@ -1,5 +1,5 @@
 /**
- * SysMúsica — IP de quem chamou e o "hash" dele (SEM server-only: é função pura e testada em ip.test.ts).
+ * Sysmusica — IP de quem chamou e o "hash" dele (SEM server-only: é função pura e testada em ip.test.ts).
  *
  * O IP nunca é guardado puro: o banco recebe só o hash (sha256 com um sal secreto), usado apenas para limitar
  * quantos envios saem de um mesmo lugar por hora. Na Vercel, o primeiro item de x-forwarded-for é o IP real

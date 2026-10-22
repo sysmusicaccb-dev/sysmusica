@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Agendamento dos backups: regras puras (sem banco nem rede), compartilhadas entre a tela e o servidor.
+ * Sysmusica — Agendamento dos backups: regras puras (sem banco nem rede), compartilhadas entre a tela e o servidor.
  *  - Uma tarefa automática roda UMA vez por dia (limite do Vercel gratuito) às 06:00 UTC = 03:00 em Salvador
  *    (o Brasil não tem horário de verão). A cada dia o sistema decide QUAL tipo de backup fazer:
  *    mensal > quinzenal > semanal > diário (só o de maior prioridade que estiver ligado e valer hoje).

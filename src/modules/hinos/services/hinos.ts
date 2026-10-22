@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço dos Hinos. Tudo passa por funções do banco (migração 0041), que conferem a permissão
+ * Sysmusica — Serviço dos Hinos. Tudo passa por funções do banco (migração 0041), que conferem a permissão
  * de cada operação: a tabela não é acessada diretamente.
  */
 import { supabase } from "@/lib/supabase";

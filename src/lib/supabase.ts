@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Cliente Supabase (conexão com o banco de dados)
+ * Sysmusica — Cliente Supabase (conexão com o banco de dados)
  *
  * Único ponto de criação do cliente: todos os módulos devem importar
  * `supabase` daqui, nunca chamar createClient() por conta própria.

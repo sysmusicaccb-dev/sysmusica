@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Tabela de portarias, com busca e filtro por situação.
+ * Sysmusica — Tabela de portarias, com busca e filtro por situação.
  * Aprovar, rejeitar e excluir só aparecem quando o BANCO informa que o usuário pode
  * (pode_decidir / pode_excluir); o histórico está sempre disponível.
  */

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço de dados do atendimento da portaria.
+ * Sysmusica — Serviço de dados do atendimento da portaria.
  * Todas as regras (portaria aprovada, abrangência do usuário, QR Code válido, nome completo,
  * duplicidade) são aplicadas pelo banco; a tela só chama e mostra o resultado. Sem acesso à portaria,
  * o banco responde "Portaria indisponível para você" sem revelar nada de outras portarias.

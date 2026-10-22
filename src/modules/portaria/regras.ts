@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras da Portaria (sem acesso ao banco). Testadas em regras.test.ts.
+ * Sysmusica — Regras puras da Portaria (sem acesso ao banco). Testadas em regras.test.ts.
  */
 import { datetimeLocalParaIso } from "@/lib/dataLocal";
 

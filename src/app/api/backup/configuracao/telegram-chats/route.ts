@@ -1,4 +1,4 @@
-/** SysMúsica — Rota POST /api/backup/configuracao/telegram-chats: descobre o ID do chat pelas mensagens recebidas pelo bot. */
+/** Sysmusica — Rota POST /api/backup/configuracao/telegram-chats: descobre o ID do chat pelas mensagens recebidas pelo bot. */
 import type { NextRequest } from "next/server";
 import { autenticar } from "@/modules/backup/server/autorizacao";
 import { buscarChatsTelegram } from "@/modules/backup/server/configuracao";

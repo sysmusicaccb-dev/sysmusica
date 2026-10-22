@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Rota /api/backup/restauracao/comparar: POST compara um backup com os dados de hoje (só leitura).
+ * Sysmusica — Rota /api/backup/restauracao/comparar: POST compara um backup com os dados de hoje (só leitura).
  * Somente o Administrador (permissão backup.restaurar, conferida no banco a cada chamada).
  */
 import type { NextRequest } from "next/server";

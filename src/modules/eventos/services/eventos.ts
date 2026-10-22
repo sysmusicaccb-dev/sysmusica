@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço de dados de eventos.
+ * Sysmusica — Serviço de dados de eventos.
  * Excluir é EXCLUSÃO LÓGICA: o evento some das telas e as presenças registradas são mantidas.
  */
 import { supabase } from "@/lib/supabase";

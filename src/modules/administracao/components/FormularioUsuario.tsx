@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de usuário (novo ou edição).
+ * Sysmusica — Formulário de usuário (novo ou edição).
  * usuario = null -> criar conta (nome, e-mail, senha e grupos); preenchido -> editar nome e grupos.
  * O usuário pode ter VÁRIOS grupos: as permissões dos grupos marcados se somam. O e-mail não muda
  * depois de criado. Senha de conta existente: use "Redefinir senha".

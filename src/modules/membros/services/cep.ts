@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Consulta de endereço pelo CEP (ViaCEP, serviço público e gratuito).
+ * Sysmusica — Consulta de endereço pelo CEP (ViaCEP, serviço público e gratuito).
  * A consulta sai do navegador de quem está cadastrando e leva só o CEP (8 números); nenhum outro dado da pessoa.
  * Se o serviço estiver fora do ar ou sem internet, o formulário continua funcionando: a pessoa digita o endereço.
  * A conversão da resposta fica em cadastroMusical.ts (enderecoDoViaCep), onde é testada.

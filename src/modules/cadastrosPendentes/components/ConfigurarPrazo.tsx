@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Painel "Prazo dos pedidos" (botão com ícone de engrenagem em Cadastros Pendentes).
+ * Sysmusica — Painel "Prazo dos pedidos" (botão com ícone de engrenagem em Cadastros Pendentes).
  * Define por quantos dias um pedido do formulário público espera análise antes de vencer. O novo prazo vale
  * para os pedidos novos e para os que já estão pendentes. Se algum pendente já passou do novo prazo, a tela
  * avisa quantos são e pede confirmação antes de salvar. Só aparece para quem tem a permissão cadastros.configurar

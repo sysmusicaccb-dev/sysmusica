@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Card "Cartões de identificação" do Dashboard.
+ * Sysmusica — Card "Cartões de identificação" do Dashboard.
  * Mostra quantos cartões já venceram, quantos vencem nos próximos 30 dias e quantos não têm validade
  * informada, com um atalho para a lista. Só aparece para quem tem a permissão cartoes.visualizar; os
  * números vêm do banco já filtrados pela abrangência de quem está logado. Se a busca falhar, o erro

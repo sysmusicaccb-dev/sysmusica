@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Painel lateral (UI base), usado para os formulários de cadastro.
+ * Sysmusica — Painel lateral (UI base), usado para os formulários de cadastro.
  *
  * Usa o elemento <dialog> nativo do navegador, que já cuida de: foco preso dentro do painel,
  * tecla Esc para fechar e fundo escurecido. Clicar fora do painel também fecha.

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras para escolher os grupos de um usuário (sem banco). Testadas em
+ * Sysmusica — Regras puras para escolher os grupos de um usuário (sem banco). Testadas em
  * gruposDoUsuario.test.ts. A regra de verdade (ao menos um grupo, último administrador, etc.)
  * é aplicada pelo banco; aqui há só conferências para dar resposta imediata na tela.
  */

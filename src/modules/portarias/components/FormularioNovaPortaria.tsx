@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de nova portaria (painel lateral). Escolhe-se um EVENTO existente (data,
+ * Sysmusica — Formulário de nova portaria (painel lateral). Escolhe-se um EVENTO existente (data,
  * hora e local vêm dele). A portaria nasce PENDENTE: criar não autoriza o uso. O banco confere
  * permissão, cota de 4 por dia, cidade do evento e duplicidade; a mensagem dele aparece aqui.
  */

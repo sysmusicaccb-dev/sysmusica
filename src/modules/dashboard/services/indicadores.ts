@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço do dashboard (acesso a dados).
+ * Sysmusica — Serviço do dashboard (acesso a dados).
  *
  * Fica fora do componente para a tela não misturar interface com consultas ao banco.
  * As contagens usam { count: "exact", head: true }: o banco só devolve o número, sem baixar linhas.

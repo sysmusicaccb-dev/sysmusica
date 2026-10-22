@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Relatório de presença de uma portaria (regras puras, sem banco).
+ * Sysmusica — Relatório de presença de uma portaria (regras puras, sem banco).
  * Recebe o que a função do banco entrega (relatorio_presenca_portaria) e monta a folha de impressão:
  * logomarca da CCB, título com o evento, quadro de informações com o resumo, a lista de presentes agrupada
  * pelas mesmas linhas do Painel ao vivo (com subtotal), linhas de assinatura e rodapé com paginação.
@@ -230,7 +230,7 @@ export function montarImpressaoPresenca(
   }
 
   // Rodapé: o nome do sistema fica só aqui
-  const rodapeItens = ["SysMúsica"];
+  const rodapeItens = ["Sysmusica"];
   if (opcoes.emitidoPor) rodapeItens.push(`Emitido por ${contexto.emitidoPor}`);
   if (opcoes.emitidoEm) rodapeItens.push(`Emitido em ${contexto.geradoEm}`);
 

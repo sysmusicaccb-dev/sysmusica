@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Painel ao vivo: acompanha, em tempo real, quantos já entraram no evento e a contagem por
+ * Sysmusica — Painel ao vivo: acompanha, em tempo real, quantos já entraram no evento e a contagem por
  * Ministério, Músicos, Organistas e Instrumentos, enquanto a Portaria registra as entradas.
  *
  * Atualização automática: a tela pergunta ao banco de tempos em tempos (padrão 10 s; o usuário escolhe

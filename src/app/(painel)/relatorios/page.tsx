@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /relatorios: monta, visualiza, imprime e exporta relatórios.
+ * Sysmusica — Página /relatorios: monta, visualiza, imprime e exporta relatórios.
  * Passos: 1) tipo, 2) filtros, 3) colunas e ordem, 4) página (orientação e ajuste automático ou manual),
  * 5) resultado com prévia, pré-visualização da página, impressão (ou PDF pelo navegador) e CSV.
  *

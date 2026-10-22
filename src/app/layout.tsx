@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Layout raiz (HTML, fontes e metadados).
+ * Sysmusica — Layout raiz (HTML, fontes e metadados).
  *
  * A estrutura visual do painel (menu lateral, topo, breadcrumbs) fica em
  * src/app/(painel)/layout.tsx. Assim, telas públicas (ex: login, Fase 2) podem ter
@@ -27,8 +27,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "SysMúsica", template: "%s | SysMúsica" },
-  description: "Gestão de membros, eventos e presenças do SysMúsica.",
+  title: { default: "Sysmusica", template: "%s | Sysmusica" },
+  description: "Gestão de membros, eventos e presenças do Sysmusica.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

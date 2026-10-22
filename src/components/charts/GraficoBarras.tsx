@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Gráfico de barras horizontais (SVG/CSS próprio, sem biblioteca).
+ * Sysmusica — Gráfico de barras horizontais (SVG/CSS próprio, sem biblioteca).
  * Cada linha mostra o rótulo, o valor e uma barra proporcional ao maior valor.
  */
 import { cn } from "@/lib/cn";

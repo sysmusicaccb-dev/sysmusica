@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Importar lista de hinos (conteúdo do painel lateral).
+ * Sysmusica — Importar lista de hinos (conteúdo do painel lateral).
  * Cole um hino por linha ("001 - Título", "1. Título" ou "Coro 1 - Título"). A tela mostra uma prévia antes de
  * gravar. A importação só ACRESCENTA: número que já existe é ignorado (nada é alterado nem apagado).
  */

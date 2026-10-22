@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço de dados dos gráficos do dashboard.
+ * Sysmusica — Serviço de dados dos gráficos do dashboard.
  *
  * Busca os dados no Supabase e delega os cálculos a ./agregacoes.ts.
  * Observações:

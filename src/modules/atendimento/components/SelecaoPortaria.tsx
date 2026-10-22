@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Escolha da portaria do atendimento. Lista as portarias aprovadas a que o usuário tem
+ * Sysmusica — Escolha da portaria do atendimento. Lista as portarias aprovadas a que o usuário tem
  * acesso, das mais próximas do horário atual para as mais distantes. Se houver mais de uma no mesmo
  * horário, avisa para conferir o local antes de escolher.
  */

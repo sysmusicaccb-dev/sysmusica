@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de login (e-mail e senha), integrado ao Supabase Auth.
+ * Sysmusica — Formulário de login (e-mail e senha), integrado ao Supabase Auth.
  *
  * Estados visuais: carregando (botão com indicador, campos bloqueados), sucesso e erro.
  * Mensagens de erro são genéricas: não revelam se o e-mail existe nem detalhes técnicos.

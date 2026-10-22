@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras do seletor de instrumento (sem banco). Testadas em selecao.test.ts.
+ * Sysmusica — Regras puras do seletor de instrumento (sem banco). Testadas em selecao.test.ts.
  * O mesmo seletor é usado no cadastro de membro e no cadastro de visitante, para a escolha ser sempre
  * igual: lista suspensa agrupada por família, e a família aparece sozinha pelo instrumento escolhido.
  */

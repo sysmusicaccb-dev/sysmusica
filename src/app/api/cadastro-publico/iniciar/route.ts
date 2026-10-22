@@ -1,5 +1,5 @@
 /**
- * SysMúsica — POST /api/cadastro-publico/iniciar (PÚBLICA, sem login): passo 1 do envio do Cadastro Musical.
+ * Sysmusica — POST /api/cadastro-publico/iniciar (PÚBLICA, sem login): passo 1 do envio do Cadastro Musical.
  *
  * 1) confere o campo-armadilha e o Turnstile (anti-robô) no servidor;
  * 2) o banco confere o limite de envios por IP e cria o id do envio;

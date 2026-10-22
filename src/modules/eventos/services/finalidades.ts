@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço do catálogo de finalidades de evento.
+ * Sysmusica — Serviço do catálogo de finalidades de evento.
  * O formulário de evento usa obterOuCriarFinalidade: se a pessoa digita uma finalidade que ainda
  * não existe, ela é salva e fica disponível para os próximos eventos.
  */

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Abas da tela de Eventos (regra pura): Eventos | Tipo do Evento | Gestão de portarias | Portaria.
+ * Sysmusica — Abas da tela de Eventos (regra pura): Eventos | Tipo do Evento | Gestão de portarias | Portaria.
  * Cada aba é uma tela que já existe (mesma rota e mesma permissão); aqui só se decide QUAIS abas a pessoa vê.
  * As abas existem só para quem tem a permissão de Eventos e acesso a pelo menos mais uma tela: quem não tem
  * Eventos (ex.: grupo Portaria) continua com os itens próprios no menu e não vê barra de abas.

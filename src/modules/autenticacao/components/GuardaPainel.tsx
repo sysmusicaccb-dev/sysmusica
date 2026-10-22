@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Guarda do painel: só mostra as telas internas para quem está logado e com acesso.
+ * Sysmusica — Guarda do painel: só mostra as telas internas para quem está logado e com acesso.
  *  - sem login: manda para /login;
  *  - conta sem grupo, inativa ou sem nenhuma permissão: mostra a tela "Sem acesso";
  *  - erro ao carregar as permissões: oferece tentar novamente.

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Estado vazio (UI base): explica que não há dados e orienta a próxima ação.
+ * Sysmusica — Estado vazio (UI base): explica que não há dados e orienta a próxima ação.
  */
 import type { ReactNode } from "react";
 

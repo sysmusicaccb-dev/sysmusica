@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Qual ilustração usar para cada instrumento (regras puras, sem banco). Testadas em ilustracoes.test.ts.
+ * Sysmusica — Qual ilustração usar para cada instrumento (regras puras, sem banco). Testadas em ilustracoes.test.ts.
  *
  * A escolha é feita pelo NOME do instrumento (sem acento/maiúsculas). Instrumento sem desenho próprio usa o
  * desenho genérico da FAMÍLIA (Cordas, Madeiras, Metais, Teclas); sem família conhecida, uma nota musical.

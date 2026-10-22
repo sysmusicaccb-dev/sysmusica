@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço do módulo Cartões. As duas consultas passam por funções do banco
+ * Sysmusica — Serviço do módulo Cartões. As duas consultas passam por funções do banco
  * (resumo_cartoes e listar_cartoes) que conferem a permissão cartoes.visualizar e a abrangência
  * de quem consulta: o navegador nunca lê a tabela diretamente.
  */

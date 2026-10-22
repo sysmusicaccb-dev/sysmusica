@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço de dados da organização (Estado › RRM › RA › ADM › Setor › Casa de Oração) e dos vínculos dos usuários.
+ * Sysmusica — Serviço de dados da organização (Estado › RRM › RA › ADM › Setor › Casa de Oração) e dos vínculos dos usuários.
  * Todas as regras (permissão, nomes repetidos, abrangência) são aplicadas pelo banco (migração 0012);
  * a tela só chama e mostra o resultado, com as mensagens do banco já escritas para o usuário.
  */

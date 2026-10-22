@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de membro (cadastro e edição) — conteúdo do painel lateral.
+ * Sysmusica — Formulário de membro (cadastro e edição) — conteúdo do painel lateral.
  * membro = null -> cadastrar; preenchido -> editar (inclui o status Ativo/Inativo).
  *
  * Casa de Oração: lista agrupada por Região › Setor (cadastrada em Organização). O nome da congregação sai da casa de oração.

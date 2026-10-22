@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Conferência de identidade antes de registrar a entrada (janela sobre a tela).
+ * Sysmusica — Conferência de identidade antes de registrar a entrada (janela sobre a tela).
  * Mostra a fotografia e os dados do membro. Avisa quando não há foto, quando o cadastro está inativo
  * ou quando a entrada já foi registrada nesta portaria (nesses dois últimos casos não deixa registrar).
  * Quando a pessoa foi localizada pelo NOME, é preciso marcar que a identidade foi conferida.

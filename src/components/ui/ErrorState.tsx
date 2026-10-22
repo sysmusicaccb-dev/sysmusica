@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Estado de erro (UI base) com botão opcional "Tentar novamente".
+ * Sysmusica — Estado de erro (UI base) com botão opcional "Tentar novamente".
  * Mostre mensagens simples ao usuário; o detalhe técnico fica no console.
  */
 interface ErrorStateProps {

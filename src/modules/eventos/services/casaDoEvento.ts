@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Busca os dados de UMA Casa de Oração para o formulário de evento (nome e cidade).
+ * Sysmusica — Busca os dados de UMA Casa de Oração para o formulário de evento (nome e cidade).
  * Usa a função do banco dados_casa_oracao (migração 0037), que respeita a abrangência do usuário:
  * fora dela devolve nulo e a tela pede a cidade manualmente.
  */

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Verificação anti-robô (Cloudflare Turnstile).
+ * Sysmusica — Verificação anti-robô (Cloudflare Turnstile).
  * Precisa da variável NEXT_PUBLIC_TURNSTILE_SITE_KEY (chave do site, pública). Sem ela, avisa que o formulário
  * está indisponível: o servidor também recusa o envio sem a verificação ("falha fechada").
  * Para testar localmente use a chave de teste da Cloudflare 1x00000000000000000000AA.

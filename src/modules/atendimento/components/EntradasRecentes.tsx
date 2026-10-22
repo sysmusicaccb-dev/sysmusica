@@ -1,4 +1,4 @@
-/** SysMúsica — Últimas entradas registradas na portaria selecionada. */
+/** Sysmusica — Últimas entradas registradas na portaria selecionada. */
 import { horaCurta } from "../regras";
 import { descreverAvulsa } from "../regrasEntrada";
 import type { EntradaRecente } from "../tipos";

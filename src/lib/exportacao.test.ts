@@ -94,7 +94,7 @@ describe("montarHtmlImpressao: cabeçalho, rodapé e margens", () => {
   });
 
   it("mostra a marca em texto e só aceita logomarca de endereço seguro", () => {
-    expect(montarHtmlImpressao({ ...base, marca: "SysMúsica" })).toContain("<span>SysMúsica</span>");
+    expect(montarHtmlImpressao({ ...base, marca: "Sysmusica" })).toContain("<span>Sysmusica</span>");
     expect(montarHtmlImpressao({ ...base, logoUrl: "https://exemplo.com/logo.png" })).toContain(
       '<img class="logo" src="https://exemplo.com/logo.png"'
     );

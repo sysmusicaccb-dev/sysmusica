@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Rota /api/backup/restauracao/aplicar: POST restaura um backup (grava no banco).
+ * Sysmusica — Rota /api/backup/restauracao/aplicar: POST restaura um backup (grava no banco).
  * Somente o Administrador (backup.restaurar), com a SENHA conferida de novo a cada restauração.
  */
 import type { NextRequest } from "next/server";

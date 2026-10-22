@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de rejeição de portaria (painel lateral). O motivo é obrigatório e fica
+ * Sysmusica — Formulário de rejeição de portaria (painel lateral). O motivo é obrigatório e fica
  * no histórico. O banco confere permissão, abrangência e que a portaria não é de quem rejeita.
  */
 import { useState, type FormEvent } from "react";

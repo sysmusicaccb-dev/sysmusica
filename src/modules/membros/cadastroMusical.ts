@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras do "Cadastro Musical" (sem banco, sem tela). Testadas em cadastroMusical.test.ts.
+ * Sysmusica — Regras puras do "Cadastro Musical" (sem banco, sem tela). Testadas em cadastroMusical.test.ts.
  *
  * O cadastro tem duas partes:
  *  - dados que já ficavam em "membros" (nome, casa de oração, cargo, instrumento, categoria, cidade, bairro, CPF...);

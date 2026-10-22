@@ -1,4 +1,4 @@
-/** SysMúsica — Rota POST /api/backup/[id]/baixar: devolve um link temporário para baixar o arquivo criptografado. */
+/** Sysmusica — Rota POST /api/backup/[id]/baixar: devolve um link temporário para baixar o arquivo criptografado. */
 import type { NextRequest } from "next/server";
 import { autenticar } from "@/modules/backup/server/autorizacao";
 import { urlDeDownload } from "@/modules/backup/server/operacoes";

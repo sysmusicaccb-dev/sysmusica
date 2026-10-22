@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Menu do usuário (topo da tela): identificação, grupo de acesso e botão Sair.
+ * Sysmusica — Menu do usuário (topo da tela): identificação, grupo de acesso e botão Sair.
  * Só tem ações que existem: por enquanto, encerrar a sessão.
  */
 import { useEffect, useRef, useState } from "react";

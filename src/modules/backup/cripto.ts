@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Criptografia do backup (só roda no SERVIDOR: usa os módulos "crypto" e "zlib" do Node).
+ * Sysmusica — Criptografia do backup (só roda no SERVIDOR: usa os módulos "crypto" e "zlib" do Node).
  *  - O arquivo de backup é comprimido (gzip) e criptografado com AES-256-GCM. O GCM também detecta
  *    qualquer alteração no arquivo: se um byte mudar, ou se a chave estiver errada, a abertura falha.
  *  - Os segredos guardados no banco (token do Telegram, senha do e-mail) usam o mesmo método, em formato texto.

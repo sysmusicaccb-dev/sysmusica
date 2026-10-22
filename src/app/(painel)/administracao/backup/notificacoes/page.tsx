@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /administracao/backup/notificacoes (só o Administrador): avisos do backup por Telegram e
+ * Sysmusica — Página /administracao/backup/notificacoes (só o Administrador): avisos do backup por Telegram e
  * e-mail. Token e senhas são enviados ao servidor só ao salvar, ficam criptografados e nunca voltam para a tela.
  * Campo de segredo em branco = manter o valor atual. Os testes usam a configuração JÁ SALVA.
  */
@@ -340,7 +340,7 @@ export default function NotificacoesBackupPage() {
                     <input id="rs-chave" type="password" autoComplete="new-password" value={form.resend.chave} onChange={(e) => mudarResend({ chave: e.target.value })} placeholder={config.resend?.chave_final ? "••••••••••••" : "re_..."} className={classeCampo} />
                   </Campo>
                   <Campo id="rs-remetente" rotulo="E-mail do remetente" dica="Precisa ser de um domínio verificado no Resend.">
-                    <input id="rs-remetente" type="text" value={form.resend.remetente} onChange={(e) => mudarResend({ remetente: e.target.value })} placeholder="SysMúsica <backup@seudominio.com>" className={classeCampo} />
+                    <input id="rs-remetente" type="text" value={form.resend.remetente} onChange={(e) => mudarResend({ remetente: e.target.value })} placeholder="Sysmusica <backup@seudominio.com>" className={classeCampo} />
                   </Campo>
                 </>
               ) : (
@@ -368,7 +368,7 @@ export default function NotificacoesBackupPage() {
                     </Campo>
                   </div>
                   <Campo id="sm-remetente" rotulo="E-mail do remetente">
-                    <input id="sm-remetente" type="text" value={form.smtp.remetente} onChange={(e) => mudarSmtp({ remetente: e.target.value })} placeholder="SysMúsica <backup@exemplo.com>" className={classeCampo} />
+                    <input id="sm-remetente" type="text" value={form.smtp.remetente} onChange={(e) => mudarSmtp({ remetente: e.target.value })} placeholder="Sysmusica <backup@exemplo.com>" className={classeCampo} />
                   </Campo>
                   <p className="text-xs text-slate-500">
                     Se a sua organização usa o Microsoft 365, o envio por SMTP com senha costuma estar bloqueado. Nesse caso, use outro servidor SMTP ou o Resend.

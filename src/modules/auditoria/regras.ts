@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras da Auditoria (sem banco): nomes legíveis, "antes e depois" e período dos filtros.
+ * Sysmusica — Regras puras da Auditoria (sem banco): nomes legíveis, "antes e depois" e período dos filtros.
  * Testadas em regras.test.ts.
  */
 import { formatarDataHora } from "@/lib/datas";

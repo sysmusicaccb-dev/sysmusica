@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Seletor de CASA DE ORAÇÃO (igreja/salão), agrupado por "Região › Setor".
+ * Sysmusica — Seletor de CASA DE ORAÇÃO (igreja/salão), agrupado por "Região › Setor".
  * Mostra só as casas de oração que o usuário pode usar (o banco filtra pela abrangência dele; quem tem
  * acesso total vê todas). Usado nos eventos e, em seguida, no cadastro de membros.
  */

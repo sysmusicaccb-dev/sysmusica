@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço do prazo dos Cadastros Pendentes. Tudo passa por funções do banco (migração 0045),
+ * Sysmusica — Serviço do prazo dos Cadastros Pendentes. Tudo passa por funções do banco (migração 0045),
  * que conferem a permissão: ler a configuração exige cadastros.visualizar; ver a prévia e salvar exigem
  * cadastros.configurar. O navegador nunca lê nem grava a tabela de configuração diretamente.
  */

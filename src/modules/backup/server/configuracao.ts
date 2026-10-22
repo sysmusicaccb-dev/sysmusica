@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Configuração dos avisos do Backup no servidor: ler, salvar, destinatários, testes e busca de
+ * Sysmusica — Configuração dos avisos do Backup no servidor: ler, salvar, destinatários, testes e busca de
  * chats do Telegram. Usa a chave secreta do Supabase: quem chama já foi autenticado pela rota (permissão
  * backup.configurar). Token, senhas e chaves ficam criptografados com a BACKUP_CHAVE e NUNCA voltam para a tela
  * (só o final mascarado). Toda alteração e todo teste vão para a Auditoria, sem nenhum segredo.
@@ -340,20 +340,20 @@ export async function testarAviso(canal: "telegram" | "email", usuario: UsuarioA
   const segredos = abrirSegredos(linha, chave);
   const mascarar = listaDeSegredos(segredos);
   const quando = dataHoraSalvador(new Date());
-  const corpo = `Esta é uma mensagem de teste do módulo de Backup do SysMúsica.\nEnviada por ${usuario.nome || "administrador"} em ${quando}.`;
+  const corpo = `Esta é uma mensagem de teste do módulo de Backup do Sysmusica.\nEnviada por ${usuario.nome || "administrador"} em ${quando}.`;
 
   try {
     if (canal === "telegram") {
       if (segredos.token === "" || !linha.telegram_chat_id) {
         throw new ErroBackup(400, "Salve o token e o ID do chat do Telegram antes de testar.");
       }
-      await enviarTelegram(segredos.token, linha.telegram_chat_id, `SysMúsica: teste de aviso\n\n${corpo}`);
+      await enviarTelegram(segredos.token, linha.telegram_chat_id, `Sysmusica: teste de aviso\n\n${corpo}`);
     } else {
       const envio = abrirConfigEmail(segredos);
       if (!envio) throw new ErroBackup(400, "Salve a configuração de e-mail completa antes de testar.");
       const destinos = (await listarDestinatarios(admin)).filter((item) => item.ativo).map((item) => item.email);
       if (destinos.length === 0) throw new ErroBackup(400, "Cadastre pelo menos um destinatário ativo antes de testar.");
-      await enviarEmail(envio, destinos, "SysMúsica: teste de aviso", corpo);
+      await enviarEmail(envio, destinos, "Sysmusica: teste de aviso", corpo);
     }
   } catch (e) {
     if (e instanceof ErroBackup) throw e;

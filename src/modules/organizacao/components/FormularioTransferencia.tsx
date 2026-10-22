@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Transferência de uma casa de oração para outro local (painel lateral).
+ * Sysmusica — Transferência de uma casa de oração para outro local (painel lateral).
  * O destino é uma ADM (a casa fica sem setor) ou um setor de uma ADM. Exige a permissão de transferir; fica no
  * histórico da casa de oração e na auditoria. As portarias da casa de oração passam a valer para o destino novo
  * (elas seguem a casa de oração do evento).

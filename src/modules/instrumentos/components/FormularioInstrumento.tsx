@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de instrumento (novo ou edição) — conteúdo do painel lateral.
+ * Sysmusica — Formulário de instrumento (novo ou edição) — conteúdo do painel lateral.
  * instrumento = null -> criar; preenchido -> editar.
  *
  * A família é AUTOMÁTICA: enquanto ninguém a escolhe à mão, ela acompanha o nome digitado

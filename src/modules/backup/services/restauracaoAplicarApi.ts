@@ -1,4 +1,4 @@
-/** SysMúsica — Chamada do navegador à rota que restaura o backup (leva o token do login e a senha digitada). */
+/** Sysmusica — Chamada do navegador à rota que restaura o backup (leva o token do login e a senha digitada). */
 import { supabase } from "@/lib/supabase";
 import type { ModoRestauracao, RespostaRestauracao } from "../aplicacao";
 import type { GrupoDados } from "../tabelas";

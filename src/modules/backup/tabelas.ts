@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Quais tabelas entram no backup, em que ordem e como se relacionam.
+ * Sysmusica — Quais tabelas entram no backup, em que ordem e como se relacionam.
  * A ordem de TABELAS é a de dependência: quem é "pai" vem antes de quem o usa. Na restauração, o que é
  * gravado segue essa ordem e o que é apagado segue a ordem inversa.
  * Para incluir uma tabela nova no backup: acrescente aqui e na lista permitida da função backup_aplicar (banco).

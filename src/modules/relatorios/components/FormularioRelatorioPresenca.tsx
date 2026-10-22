@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Opções do relatório de presença: o que aparece na folha antes de gerar.
+ * Sysmusica — Opções do relatório de presença: o que aparece na folha antes de gerar.
  * Por padrão vai o mínimo (logomarca, título, evento, local e total). A escolha fica guardada neste navegador.
  */
 import { useState } from "react";

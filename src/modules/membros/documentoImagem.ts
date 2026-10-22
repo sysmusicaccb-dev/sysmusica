@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Preparo da foto do documento no navegador antes do envio.
+ * Sysmusica — Preparo da foto do documento no navegador antes do envio.
  * Reduz a imagem (lado maior de 1600 px, para o texto continuar legível) e converte para JPEG.
  * O armazenamento confere de novo o tipo (JPEG, PNG ou WebP) e o tamanho (máximo de 3 MB).
  * (Mesma ideia de fotoImagem.ts, com a imagem maior e mais nítida porque é um documento.)

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — POST /api/admin/usuarios: cria uma conta de login e a coloca em um grupo.
+ * Sysmusica — POST /api/admin/usuarios: cria uma conta de login e a coloca em um grupo.
  *
  * Exige a permissão usuarios.criar (conferida no banco). A senha só trafega nesta requisição
  * (HTTPS) e é guardada pelo Supabase com hash; ela nunca é registrada em log.

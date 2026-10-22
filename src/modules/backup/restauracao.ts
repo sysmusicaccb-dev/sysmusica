@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Restauração do Backup, parte 1 (comparar): regras puras, sem banco nem rede.
+ * Sysmusica — Restauração do Backup, parte 1 (comparar): regras puras, sem banco nem rede.
  * Compara os dados de UMA tabela no backup com os dados de hoje e separa:
  *   - APAGADOS: estavam no backup e hoje não existem (ou foram excluídos logicamente depois do backup);
  *   - ALTERADOS: existem nos dois, mas com colunas diferentes;

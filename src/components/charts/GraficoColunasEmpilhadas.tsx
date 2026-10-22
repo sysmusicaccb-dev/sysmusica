@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Gráfico de colunas empilhadas (CSS próprio, sem biblioteca).
+ * Sysmusica — Gráfico de colunas empilhadas (CSS próprio, sem biblioteca).
  * Cada coluna é uma categoria (ex: um evento) e cada trecho empilhado é um status.
  * A altura de cada coluna é proporcional ao maior total. Passe o mouse para ver os detalhes.
  */

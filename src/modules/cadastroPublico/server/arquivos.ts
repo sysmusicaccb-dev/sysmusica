@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Nomes e movimentação dos arquivos do cadastro público (SOMENTE SERVIDOR).
+ * Sysmusica — Nomes e movimentação dos arquivos do cadastro público (SOMENTE SERVIDOR).
  *
  * Enquanto o pedido está na fila, as 3 imagens ficam no bucket privado "cadastro-publico", em <id>/foto.jpg,
  * frente.jpg e verso.jpg. Na aprovação elas são MOVIDAS para as pastas finais do membro (fotos-membros e

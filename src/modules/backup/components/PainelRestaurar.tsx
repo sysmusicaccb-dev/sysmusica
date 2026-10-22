@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Painel "Restaurar" (aparece abaixo da comparação, só para o Administrador).
+ * Sysmusica — Painel "Restaurar" (aparece abaixo da comparação, só para o Administrador).
  * Modos: Recuperar (padrão, seguro) e Espelhar (exige digitar ESPELHAR). A senha é pedida de novo.
  * O servidor faz um backup de segurança antes e aplica tudo em uma única transação.
  */

@@ -100,7 +100,7 @@ describe("mensagens de aviso", () => {
       totalTabelas: 18,
       feitoPor: "Levi",
     });
-    expect(assunto).toBe("SysMúsica: backup concluído");
+    expect(assunto).toBe("Sysmusica: backup concluído");
     expect(texto).toContain("Tipo: Manual");
     expect(texto).toContain("Data: 18/10/2026 12:30");
     expect(texto).toContain("Tamanho: 2,0 KB");
@@ -175,7 +175,7 @@ describe("verificação automática", () => {
 
   it("o aviso da verificação manual muda conforme o resultado", () => {
     const bom = mensagemVerificacaoManual({ tipo: "manual", criadoEm: quando, quando, verificacao: ok, feitoPor: "Levi" });
-    expect(bom.assunto).toBe("SysMúsica: backup verificado");
+    expect(bom.assunto).toBe("Sysmusica: backup verificado");
     expect(bom.texto).toContain("Verificado por: Levi");
     const ruim = mensagemVerificacaoManual({ tipo: "manual", criadoEm: quando, quando, verificacao: { ...ok, ok: false, abre: false } });
     expect(ruim.assunto).toContain("ALERTA");

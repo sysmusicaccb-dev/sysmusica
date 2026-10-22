@@ -1,4 +1,4 @@
-/** SysMúsica — Tipos do atendimento da portaria (campos = colunas devolvidas pelas funções do banco, migração 0008). */
+/** Sysmusica — Tipos do atendimento da portaria (campos = colunas devolvidas pelas funções do banco, migração 0008). */
 
 /** Como a pessoa foi identificada: QR Code lido ou localizada pelo nome. */
 export type OrigemEntrada = "QR" | "MANUAL";

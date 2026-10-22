@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Layout do painel (telas internas).
+ * Sysmusica — Layout do painel (telas internas).
  *
  * Envolve todas as telas do grupo (painel) com a guarda de acesso (login obrigatório) e a estrutura
  * visual (menu lateral + topo). O nome da pasta entre parênteses é só um agrupamento: não aparece na URL.

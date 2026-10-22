@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Lista de municípios do IBGE para o campo Cidade-UF.
+ * Sysmusica — Lista de municípios do IBGE para o campo Cidade-UF.
  * Baixada uma vez por visita e guardada em memória. Nunca lança erro: se o IBGE estiver fora do ar, devolve
  * lista vazia e a tela deixa a pessoa digitar "Cidade-UF" à mão (o banco confere o formato).
  */

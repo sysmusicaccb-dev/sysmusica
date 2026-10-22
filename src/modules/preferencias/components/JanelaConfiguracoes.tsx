@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Janela de Configurações (painel lateral com a aparência do sistema).
+ * Sysmusica — Janela de Configurações (painel lateral com a aparência do sistema).
  * É desenhada na casca do sistema (AppShell) e NÃO dentro da barra do topo: a barra tem efeito de
  * desfoque, e isso prenderia o painel (que é fixo na tela) dentro dela. O botão que abre fica na barra.
  */

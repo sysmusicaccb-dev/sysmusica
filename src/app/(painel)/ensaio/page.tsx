@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /ensaio: Dados do Ensaio (Local ou Regional).
+ * Sysmusica — Página /ensaio: Dados do Ensaio (Local ou Regional).
  * Escolha o ensaio na lista; o formulário aparece abaixo. Quem tem "Painel ao vivo" também vê os totais do evento.
  * Quem preenche (ensaio.registrar) edita de 2 h antes até 3 h depois do início; depois disso só o Administrador.
  */

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Rotas /api/backup/agendamento: GET lê o agendamento; PUT salva. Só o Administrador entra
+ * Sysmusica — Rotas /api/backup/agendamento: GET lê o agendamento; PUT salva. Só o Administrador entra
  * (backup.configurar, conferida no banco a cada chamada).
  */
 import type { NextRequest } from "next/server";

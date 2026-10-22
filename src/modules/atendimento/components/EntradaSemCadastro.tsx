@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Entrada SEM cadastro (candidato, visitante...). Não cria membro: registra só o cargo/categoria,
+ * Sysmusica — Entrada SEM cadastro (candidato, visitante...). Não cria membro: registra só o cargo/categoria,
  * se vai tocar, o instrumento e a Casa de Oração de origem (opcional). A entrada entra na contagem do painel ao vivo.
  * Casa fora da lista: o texto gravado é "Casa - Cidade/UF" (cidade da lista do IBGE), no campo que já existia.
  */

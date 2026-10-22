@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Sessão e permissões do usuário logado (contexto para todo o sistema).
+ * Sysmusica — Sessão e permissões do usuário logado (contexto para todo o sistema).
  *
  * Guarda a sessão do Supabase Auth e a "conta" (nome, grupo e lista de permissões, vinda da função
  * minha_conta do banco). A tela usa pode("membros.editar") para mostrar ou esconder botões e

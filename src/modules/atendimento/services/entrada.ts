@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço de dados da entrada com "Vai tocar?" e da entrada SEM cadastro (migração 0028).
+ * Sysmusica — Serviço de dados da entrada com "Vai tocar?" e da entrada SEM cadastro (migração 0028).
  * Toda regra é aplicada pelo banco; a tela só chama e mostra o resultado.
  */
 import { supabase } from "@/lib/supabase";

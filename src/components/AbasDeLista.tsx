@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Abas simples para separar uma lista (ex.: Próximos / Encerrados / Arquivo), com contagem.
+ * Sysmusica — Abas simples para separar uma lista (ex.: Próximos / Encerrados / Arquivo), com contagem.
  * Só apresentação: quem usa decide o que cada aba mostra.
  */
 export interface AbaDeLista<Id extends string> {

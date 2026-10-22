@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Árvore da organização: Estado › RRM › RA › ADM › Setor (opcional) › Casa de Oração,
+ * Sysmusica — Árvore da organização: Estado › RRM › RA › ADM › Setor (opcional) › Casa de Oração,
  * com abrir/fechar e as ações de cada item.
  * RRM = Reunião Regional Ministerial · RA = Regional Administrativa · ADM = Administração.
  * Uma casa de oração pode ficar dentro de um setor OU ligada direto à ADM (o setor é opcional).

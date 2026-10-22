@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Botão só com ícone (UI base), para as ações de cada linha das tabelas.
+ * Sysmusica — Botão só com ícone (UI base), para as ações de cada linha das tabelas.
  * O "rotulo" vira dica (title) e nome acessível (aria-label): descreva a ação e o alvo,
  * ex: "Editar Maria". Se o botão estiver desabilitado, explique o motivo no rótulo.
  */

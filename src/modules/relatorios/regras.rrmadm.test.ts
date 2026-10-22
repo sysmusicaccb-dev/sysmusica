@@ -1,4 +1,4 @@
-/** SysMúsica — Testes das listas encadeadas RRM › RA › ADM › Setor › Casa de Oração dos filtros de relatório. */
+/** Sysmusica — Testes das listas encadeadas RRM › RA › ADM › Setor › Casa de Oração dos filtros de relatório. */
 import { describe, expect, it } from "vitest";
 import type { NoOrganizacao } from "@/modules/organizacao/tipos";
 import { FILTROS_VAZIOS, opcoesAdm, opcoesCasaOracao, opcoesRegiao, opcoesRrm, opcoesSetor, resumoFiltros, rotulosDosFiltros } from "./regras";

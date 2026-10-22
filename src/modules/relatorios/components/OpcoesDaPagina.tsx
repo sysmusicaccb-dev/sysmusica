@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Opções da página do relatório: título, orientação (retrato é o padrão), margens, o que
+ * Sysmusica — Opções da página do relatório: título, orientação (retrato é o padrão), margens, o que
  * aparece no cabeçalho e no rodapé, linhas de assinatura e o ajuste à página.
  *  - Automático: a letra diminui conforme o número de colunas, para a tabela caber na largura.
  *  - Manual: você escolhe o zoom (%) e o tamanho da letra (pt).

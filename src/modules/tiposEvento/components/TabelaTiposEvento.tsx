@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Tabela de tipos de evento, com busca e botão de ativar/desativar.
+ * Sysmusica — Tabela de tipos de evento, com busca e botão de ativar/desativar.
  * Tipo já usado por algum evento não pode ser excluído (só desativado); o banco confere de novo.
  */
 import { useState } from "react";

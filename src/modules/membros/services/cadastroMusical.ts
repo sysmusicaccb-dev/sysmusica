@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço do Cadastro Musical (dados pessoais do membro: estado civil, telefone, endereço, cartão...).
+ * Sysmusica — Serviço do Cadastro Musical (dados pessoais do membro: estado civil, telefone, endereço, cartão...).
  * Esses dados ficam na tabela protegida membros_cadastro: a tela só fala com as funções do banco, que conferem a
  * permissão (membros.criar / membros.editar) e a abrangência do usuário (casa de oração do membro).
  */

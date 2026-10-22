@@ -1,4 +1,4 @@
-/** SysMúsica — Tipos do módulo de Backup que o navegador e o servidor compartilham. */
+/** Sysmusica — Tipos do módulo de Backup que o navegador e o servidor compartilham. */
 import type { ResultadoCanal, ResultadoVerificacao, SituacaoVerificacao, TipoBackup } from "./regras";
 
 /** Uma linha da lista de backups. */

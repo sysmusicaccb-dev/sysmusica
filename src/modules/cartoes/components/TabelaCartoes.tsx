@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Tabela da tela "Cartões a Vencer" (componente de apresentação).
+ * Sysmusica — Tabela da tela "Cartões a Vencer" (componente de apresentação).
  * Recebe a lista pronta do banco; a cor do selo mostra a urgência (vencido, a vencer, sem validade).
  */
 import Badge from "@/components/ui/Badge";

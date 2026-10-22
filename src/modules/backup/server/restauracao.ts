@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Restauração, parte 1 (comparar), lado do servidor. SOMENTE LEITURA: abre o arquivo do backup
+ * Sysmusica — Restauração, parte 1 (comparar), lado do servidor. SOMENTE LEITURA: abre o arquivo do backup
  * escolhido e compara, tabela por tabela, com os dados de hoje. Não altera nada no banco nem no armazenamento.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";

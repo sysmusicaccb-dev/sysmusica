@@ -1,12 +1,12 @@
 /**
- * SysMúsica — Regras puras do atendimento da portaria (sem banco nem câmera). Testadas em regras.test.ts.
+ * Sysmusica — Regras puras do atendimento da portaria (sem banco nem câmera). Testadas em regras.test.ts.
  * As regras de verdade (acesso, duplicidade, aprovação) ficam no banco; aqui há conferências rápidas
  * para dar resposta imediata na tela e textos de erro da câmera.
  */
 
 export const PREFIXO_QR = "SYSMUSICA:";
 
-/** O texto lido parece um QR Code do SysMúsica? (resposta rápida, sem consultar o banco) */
+/** O texto lido parece um QR Code do Sysmusica? (resposta rápida, sem consultar o banco) */
 export function pareceQrSysMusica(texto: string): boolean {
   return texto.trim().toUpperCase().startsWith(PREFIXO_QR);
 }

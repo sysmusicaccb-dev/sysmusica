@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Limpeza diária do cadastro público (chamada pelo cron /api/cron/conferir, 1x por dia).
+ * Sysmusica — Limpeza diária do cadastro público (chamada pelo cron /api/cron/conferir, 1x por dia).
  *
  * O banco diz QUAIS pastas devem ser apagadas (envios abandonados há 24 h, pedidos vencidos em 60 dias, recusados há
  * 30 dias). Aqui o servidor apaga os arquivos do armazenamento e, SÓ se conseguiu apagar tudo, avisa o banco para

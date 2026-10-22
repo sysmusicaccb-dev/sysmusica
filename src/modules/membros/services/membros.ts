@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço de dados de membros.
+ * Sysmusica — Serviço de dados de membros.
  *
  * Em "membros" só se lêem colunas liberadas (nunca "*": o qr_secret e o CPF completo são
  * protegidos). O CPF completo e o código do QR Code vêm de funções do banco que conferem a

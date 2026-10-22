@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Cliente do Supabase com a chave SECRETA (service role). Só existe no servidor: nunca importe
+ * Sysmusica — Cliente do Supabase com a chave SECRETA (service role). Só existe no servidor: nunca importe
  * este arquivo em um componente de tela. Ele ignora as políticas de acesso, por isso toda rota confere a
  * permissão do usuário (autorizacao.ts) antes de usá-lo.
  */

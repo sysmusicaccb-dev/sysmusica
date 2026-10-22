@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Confere o token do Cloudflare Turnstile (anti-robô) NO SERVIDOR.
+ * Sysmusica — Confere o token do Cloudflare Turnstile (anti-robô) NO SERVIDOR.
  * Falha fechada: sem a chave secreta, sem resposta da Cloudflare ou com token inválido, o envio é recusado.
  * Variável: TURNSTILE_SECRET_KEY (secreta, só no servidor). Teste local: 1x0000000000000000000000000000000AA.
  */

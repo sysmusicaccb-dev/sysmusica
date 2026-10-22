@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /instrumentos: tabela de instrumentos e famílias com novo, editar e excluir.
+ * Sysmusica — Página /instrumentos: tabela de instrumentos e famílias com novo, editar e excluir.
  * Cada botão só aparece para quem tem a permissão (grupo do usuário); o banco confere de novo.
  * Os instrumentos também nascem no cadastro de membros (digitando um instrumento novo).
  */

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço dos Dados do Ensaio. Tudo passa por funções do banco (migração 0041), que conferem
+ * Sysmusica — Serviço dos Dados do Ensaio. Tudo passa por funções do banco (migração 0041), que conferem
  * permissão, abrangência (região/casa de oração) e o prazo de edição.
  */
 import { supabase } from "@/lib/supabase";

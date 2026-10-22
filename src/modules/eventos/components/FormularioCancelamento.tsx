@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Cancelamento de evento (só o Administrador). O motivo é obrigatório e fica no histórico.
+ * Sysmusica — Cancelamento de evento (só o Administrador). O motivo é obrigatório e fica no histórico.
  * As portarias pendentes ou aprovadas do evento são rejeitadas automaticamente pelo banco.
  */
 import { useState, type FormEvent } from "react";

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras do Cadastro Musical PÚBLICO (sem banco, sem tela). Testadas em regras.test.ts.
+ * Sysmusica — Regras puras do Cadastro Musical PÚBLICO (sem banco, sem tela). Testadas em regras.test.ts.
  *
  * O formulário público usa as mesmas regras do cadastro interno (modules/membros/cadastroMusical.ts) e soma:
  *  - aceite do aviso de privacidade (LGPD) e campo-armadilha contra robôs;

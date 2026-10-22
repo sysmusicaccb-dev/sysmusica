@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Formulário PÚBLICO do Cadastro Musical (sem login). Página: /cadastro.
+ * Sysmusica — Formulário PÚBLICO do Cadastro Musical (sem login). Página: /cadastro.
  * Mesmos campos do cadastro interno, mais: aviso de privacidade (LGPD), responsável (menores de 18 anos) e
  * verificação anti-robô. O envio NÃO cria o membro: gera um pedido que a secretaria aprova em "Cadastros pendentes".
  * Depois de enviar, a tela é sempre a mesma, exista ou não um cadastro anterior com o mesmo CPF.

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página inicial "/".
+ * Sysmusica — Página inicial "/".
  * Quem tem permissão vê o dashboard. Quem não tem (ex: grupo Portaria) vai direto para o
  * primeiro módulo que pode acessar.
  */

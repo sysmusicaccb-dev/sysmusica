@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /administracao/backup (só o Administrador): fazer backup agora, baixar, verificar e
+ * Sysmusica — Página /administracao/backup (só o Administrador): fazer backup agora, baixar, verificar e
  * excluir. Os backups são criptografados e guardados no armazenamento privado do sistema.
  * Restauração e configuração dos avisos chegam na parte 1C; OneDrive e agendamento no bloco 2.
  */

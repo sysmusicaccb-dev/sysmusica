@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Preparo da fotografia no navegador antes do envio.
+ * Sysmusica — Preparo da fotografia no navegador antes do envio.
  * Reduz a imagem (lado maior de 800 px) e converte para JPEG: a foto fica leve (poucas centenas de KB)
  * e o envio é rápido, inclusive em rede móvel. A conferência de tipo e tamanho final também é feita
  * pelo armazenamento do banco (limite de 2 MB; JPEG, PNG ou WebP).

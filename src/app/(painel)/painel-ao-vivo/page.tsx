@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /painel-ao-vivo: contagens do evento em tempo real (ministério, músicos, organistas e
+ * Sysmusica — Página /painel-ao-vivo: contagens do evento em tempo real (ministério, músicos, organistas e
  * instrumentos), atualizadas sozinhas enquanto a Portaria registra as entradas.
  * Só entra quem tem a permissão painel.visualizar (o banco também confere).
  */

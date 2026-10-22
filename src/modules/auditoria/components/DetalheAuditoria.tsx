@@ -1,4 +1,4 @@
-/** SysMúsica — Detalhe de um registro da Auditoria (painel lateral): quando, quem, o quê e o antes e o depois. */
+/** Sysmusica — Detalhe de um registro da Auditoria (painel lateral): quando, quem, o quê e o antes e o depois. */
 import { formatarDataHora } from "@/lib/datas";
 import { descreverDetalhes, rotuloAcao, rotuloDoItem } from "../regras";
 import type { LinhaAuditoria } from "../tipos";

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço de dados da Auditoria.
+ * Sysmusica — Serviço de dados da Auditoria.
  * A consulta exige a permissão auditoria.visualizar (o banco confere). Imprimir e exportar também ficam
  * registrados na própria auditoria (registrarUso), antes de o arquivo ser gerado.
  */

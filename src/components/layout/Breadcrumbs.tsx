@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Breadcrumbs (indicam onde o usuário está): Início > Grupo > Página.
+ * Sysmusica — Breadcrumbs (indicam onde o usuário está): Início > Grupo > Página.
  * Gerados pela rota atual a partir de ./navegacao.ts.
  */
 import Link from "next/link";

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Tradução dos erros do banco para respostas HTTP das rotas do cadastro público/pendentes.
+ * Sysmusica — Tradução dos erros do banco para respostas HTTP das rotas do cadastro público/pendentes.
  * As funções do banco escrevem a mensagem para a pessoa (em português). Só repassamos a mensagem dos códigos
  * "esperados"; qualquer outro erro vira a mensagem genérica e o detalhe fica apenas no log do servidor.
  */

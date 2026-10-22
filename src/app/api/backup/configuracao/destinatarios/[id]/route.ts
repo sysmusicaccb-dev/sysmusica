@@ -1,4 +1,4 @@
-/** SysMúsica — Rotas /api/backup/configuracao/destinatarios/[id]: PATCH liga ou desliga; DELETE remove. */
+/** Sysmusica — Rotas /api/backup/configuracao/destinatarios/[id]: PATCH liga ou desliga; DELETE remove. */
 import type { NextRequest } from "next/server";
 import { autenticar } from "@/modules/backup/server/autorizacao";
 import { alterarDestinatario, removerDestinatario } from "@/modules/backup/server/configuracao";

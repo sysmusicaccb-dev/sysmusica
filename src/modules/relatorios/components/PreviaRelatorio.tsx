@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Prévia do relatório na tela (as primeiras linhas). A impressão e o CSV trazem todas as
+ * Sysmusica — Prévia do relatório na tela (as primeiras linhas). A impressão e o CSV trazem todas as
  * linhas; para ver o layout real da página, use "Pré-visualizar página".
  */
 

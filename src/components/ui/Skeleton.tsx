@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Placeholder animado de carregamento (UI base).
+ * Sysmusica — Placeholder animado de carregamento (UI base).
  * Use className para definir tamanho (ex: "h-28 rounded-2xl").
  */
 import { cn } from "@/lib/cn";

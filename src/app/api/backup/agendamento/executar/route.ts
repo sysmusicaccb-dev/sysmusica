@@ -1,4 +1,4 @@
-/** SysMúsica — POST /api/backup/agendamento/executar: roda a rotina de hoje agora (botão do Administrador). */
+/** Sysmusica — POST /api/backup/agendamento/executar: roda a rotina de hoje agora (botão do Administrador). */
 import type { NextRequest } from "next/server";
 import { autenticar } from "@/modules/backup/server/autorizacao";
 import { executarRotina } from "@/modules/backup/server/agendamento";

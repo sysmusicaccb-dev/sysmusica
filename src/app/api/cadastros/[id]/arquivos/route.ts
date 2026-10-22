@@ -1,5 +1,5 @@
 /**
- * SysMúsica — GET /api/cadastros/[id]/arquivos: endereços TEMPORÁRIOS (5 min) das imagens de um cadastro pendente.
+ * Sysmusica — GET /api/cadastros/[id]/arquivos: endereços TEMPORÁRIOS (5 min) das imagens de um cadastro pendente.
  *
  * Quem chama precisa de cadastros.visualizar e enxergar a Casa de Oração do pedido (o banco confere em
  * obter_cadastro_pendente). A fotografia vai para quem passou nisso; a FRENTE e o VERSO do documento só vão

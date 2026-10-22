@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /portarias (Gestão de portarias): criar, aprovar, rejeitar, histórico, excluir.
+ * Sysmusica — Página /portarias (Gestão de portarias): criar, aprovar, rejeitar, histórico, excluir.
  * Quem pode criar escolhe um evento e cria a portaria (PENDENTE); um aprovador autorizado, de outro
  * usuário e dentro da abrangência, aprova ou rejeita (com motivo). Só portaria APROVADA registra
  * presenças. Cada botão só aparece quando o banco diz que o usuário pode; o banco confere de novo.

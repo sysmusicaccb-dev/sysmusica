@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Lista de eventos em tabela (largura total), com busca por finalidade, local ou tipo.
+ * Sysmusica — Lista de eventos em tabela (largura total), com busca por finalidade, local ou tipo.
  *
  * Não acessa o banco: recebe os dados e os estados (loading/erro) da página.
  * Os eventos chegam ordenados do mais recente para o mais antigo.

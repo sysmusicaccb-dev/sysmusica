@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Atendimento da portaria: escolher a portaria, ler o QR Code (ou buscar pelo nome),
+ * Sysmusica — Atendimento da portaria: escolher a portaria, ler o QR Code (ou buscar pelo nome),
  * conferir a fotografia e os dados e registrar a entrada.
  *
  * Só aparecem portarias APROVADAS dentro da abrangência do usuário (o banco filtra). Toda consulta
@@ -201,7 +201,7 @@ export default function AtendimentoPortaria() {
     setErroLeitura(null);
 
     if (!pareceQrSysMusica(texto)) {
-      setErroLeitura("Este QR Code não é do SysMúsica.");
+      setErroLeitura("Este QR Code não é do Sysmusica.");
       return;
     }
 

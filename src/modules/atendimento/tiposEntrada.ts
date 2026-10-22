@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Tipos da entrada na Portaria com "Vai tocar?" e da entrada SEM cadastro (migração 0028).
+ * Sysmusica — Tipos da entrada na Portaria com "Vai tocar?" e da entrada SEM cadastro (migração 0028).
  * Os campos são os devolvidos pelas funções do banco (info_entrada, opcoes_entrada, buscar_localidades ...).
  */
 

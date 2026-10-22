@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Contador de cadastros aguardando análise (selo no menu lateral).
+ * Sysmusica — Contador de cadastros aguardando análise (selo no menu lateral).
  * Só consulta para quem tem cadastros.visualizar; atualiza a cada 60 s, ao voltar para a aba e quando a tela
  * "Cadastros pendentes" aprova ou recusa alguém.
  */

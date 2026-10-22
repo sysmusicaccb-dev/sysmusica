@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Aparência do sistema: guarda as preferências do usuário, aplica o modo, a cor e o tamanho da
+ * Sysmusica — Aparência do sistema: guarda as preferências do usuário, aplica o modo, a cor e o tamanho da
  * letra na página (atributos data-tema, data-cor e data-fonte da tag html, lidos por tema.css) e salva na
  * conta e neste aparelho. Fica dentro do SessaoProvider; "logado" avisa quando já dá para ler e salvar na conta.
  */

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — QR Code do membro (conteúdo do painel lateral).
+ * Sysmusica — QR Code do membro (conteúdo do painel lateral).
  *
  * Mostra a imagem do QR Code (gerada no navegador a partir do código que o servidor devolveu),
  * permite copiar o código e baixar a imagem. Quem tem a permissão de substituição também vê o bloco

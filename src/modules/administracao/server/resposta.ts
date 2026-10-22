@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Resposta de erro padronizada das rotas de servidor da Administração.
+ * Sysmusica — Resposta de erro padronizada das rotas de servidor da Administração.
  * Erros esperados (ErroHttp) saem com a própria mensagem; qualquer outro vira um erro genérico
  * e o detalhe técnico fica só no log do servidor.
  */

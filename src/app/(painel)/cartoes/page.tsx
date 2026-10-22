@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Cadastros > Cartões a Vencer: lista dos cartões de identificação vencidos, a vencer no
+ * Sysmusica — Cadastros > Cartões a Vencer: lista dos cartões de identificação vencidos, a vencer no
  * prazo escolhido (30, 60 ou 90 dias) e dos cargos que exigem cartão mas estão sem validade informada.
  * Só mostra membros ativos da abrangência de quem consulta (o banco confere a permissão e a abrangência).
  * Para corrigir uma validade: Músicos e Organistas > editar o cadastro, ou aprovar a atualização

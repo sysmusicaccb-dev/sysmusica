@@ -1,4 +1,4 @@
-/** SysMúsica — Rota POST /api/backup/configuracao/destinatarios: adiciona um e-mail que recebe os avisos. */
+/** Sysmusica — Rota POST /api/backup/configuracao/destinatarios: adiciona um e-mail que recebe os avisos. */
 import type { NextRequest } from "next/server";
 import { autenticar } from "@/modules/backup/server/autorizacao";
 import { adicionarDestinatario } from "@/modules/backup/server/configuracao";

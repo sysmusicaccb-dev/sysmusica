@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regra pura: cidade do evento a partir da Casa de Oração escolhida (sem banco).
+ * Sysmusica — Regra pura: cidade do evento a partir da Casa de Oração escolhida (sem banco).
  * A cidade vem do cadastro da casa e fica travada na tela. Se a casa não tem cidade cadastrada
  * (ou o cadastro não pôde ser lido), o campo fica livre para digitar e um aviso orienta a completar o cadastro.
  */

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Aviso de sucesso no canto da tela (UI base).
+ * Sysmusica — Aviso de sucesso no canto da tela (UI base).
  * Aparece quando "mensagem" tem texto e some sozinho em 5 segundos (ou ao clicar no X).
  */
 import { useEffect, useRef } from "react";

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /administracao/backup/restauracao (só o Administrador): escolhe um backup e os grupos
+ * Sysmusica — Página /administracao/backup/restauracao (só o Administrador): escolhe um backup e os grupos
  * de dados e mostra o que mudou desde então (apagado, alterado, novo). Nesta etapa NADA é restaurado:
  * a tela só lê e compara. CPF e segredos aparecem como "(protegido)".
  */

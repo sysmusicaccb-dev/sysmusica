@@ -1,4 +1,4 @@
-/** SysMúsica — Tipos da Auditoria (campos = colunas devolvidas pelas funções do banco, migração 0015). */
+/** Sysmusica — Tipos da Auditoria (campos = colunas devolvidas pelas funções do banco, migração 0015). */
 
 /** Um registro da auditoria. */
 export interface LinhaAuditoria {

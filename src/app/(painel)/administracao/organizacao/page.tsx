@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /administracao/organizacao: Estado › RRM › RA › ADM › Setor (opcional) › Casa de Oração.
+ * Sysmusica — Página /administracao/organizacao: Estado › RRM › RA › ADM › Setor (opcional) › Casa de Oração.
  * Cadastro pelo sistema (sem código fixo), com ativar/inativar e transferência de casa de oração entre ADMs e setores.
  * Cada botão só aparece para quem tem a permissão; o banco confere de novo em toda operação.
  */

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Tipos compartilhados pelos gráficos.
+ * Sysmusica — Tipos compartilhados pelos gráficos.
  */
 export interface CorGrafico {
   texto: string; // classe de cor de traço (ex: "text-brand-600"), usada em SVG via currentColor

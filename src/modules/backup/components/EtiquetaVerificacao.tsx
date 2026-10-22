@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Etiqueta da situação de verificação de um backup: "A verificar" (rosa suave), "Verificado"
+ * Sysmusica — Etiqueta da situação de verificação de um backup: "A verificar" (rosa suave), "Verificado"
  * (verde suave) ou "Falha na verificação". Ao passar o mouse mostra quem verificou e quando.
  */
 import { descreverEtiquetaVerificacao } from "../regras";

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — POST /api/cadastro-publico/enviar (PÚBLICA, sem login): passo 2 do envio do Cadastro Musical.
+ * Sysmusica — POST /api/cadastro-publico/enviar (PÚBLICA, sem login): passo 2 do envio do Cadastro Musical.
  *
  * Recebe o id do envio (criado no passo 1) e os dados do formulário. O banco refaz TODAS as conferências
  * (CPF, cargo, instrumento, menor de idade, aceite da LGPD, limite por CPF...) e grava um pedido PENDENTE.

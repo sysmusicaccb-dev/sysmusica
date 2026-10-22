@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /hinos: lista de hinos do hinário e coros (corinhos), usada nos Dados do Ensaio.
+ * Sysmusica — Página /hinos: lista de hinos do hinário e coros (corinhos), usada nos Dados do Ensaio.
  * Permite adicionar, editar, ativar/desativar, excluir (só se nunca foi usado) e importar uma lista colada.
  */
 import { useCallback, useEffect, useState } from "react";

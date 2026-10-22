@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Janela de confirmação (UI base), para ações críticas (excluir, desativar...).
+ * Sysmusica — Janela de confirmação (UI base), para ações críticas (excluir, desativar...).
  * Usa o <dialog> nativo: foco preso na janela, Esc cancela e clicar fora também cancela.
  * Enquanto "processando" é verdadeiro, os botões ficam bloqueados (evita clique duplo).
  */

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço dos Tipos de evento. Tudo passa por funções do banco (migração 0041), que conferem a
+ * Sysmusica — Serviço dos Tipos de evento. Tudo passa por funções do banco (migração 0041), que conferem a
  * permissão de cada operação: a tabela não é acessada diretamente.
  */
 import { supabase } from "@/lib/supabase";

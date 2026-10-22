@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Tabela de hinos e coros: filtro Todos | Hinos | Coros, busca (número ou título) e status.
+ * Sysmusica — Tabela de hinos e coros: filtro Todos | Hinos | Coros, busca (número ou título) e status.
  * Hino já usado em ensaio não pode ser excluído (só desativado).
  */
 import { useMemo, useState } from "react";

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Abas da Administração de acesso (regra pura): Usuários | Grupos e Permissões.
+ * Sysmusica — Abas da Administração de acesso (regra pura): Usuários | Grupos e Permissões.
  * Cada aba é uma tela que já existe (mesma rota e mesma permissão); aqui só se decide QUAIS abas a pessoa vê.
  * As abas existem para quem tem a permissão de Usuários e acesso também a Grupos: quem só tem Grupos
  * continua com o item "Grupos e Permissões" no menu (ver ocultoSe em navegacao.ts) e não vê barra de abas.

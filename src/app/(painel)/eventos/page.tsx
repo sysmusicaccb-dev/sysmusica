@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /eventos: listagem em tabela (largura total), do evento mais recente para o
+ * Sysmusica — Página /eventos: listagem em tabela (largura total), do evento mais recente para o
  * mais antigo, com novo, editar e excluir. Cada botão só aparece para quem tem a permissão
  * (grupo do usuário); o banco confere de novo em toda operação.
  * Excluir é exclusão lógica: o evento some das telas e as presenças registradas são mantidas.
@@ -132,7 +132,7 @@ export default function EventosPage() {
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <PageHeader
           titulo="Eventos"
-          descricao={`Cadastre e acompanhe os ensaios, cultos e reuniões do SysMúsica.${
+          descricao={`Cadastre e acompanhe os ensaios, cultos e reuniões do Sysmusica.${
             !carregando && !erro ? ` ${eventos.length} cadastrado(s).` : ""
           }`}
           acoes={

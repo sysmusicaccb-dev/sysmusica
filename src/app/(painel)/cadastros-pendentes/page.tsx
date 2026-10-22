@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /cadastros-pendentes: cadastros enviados pelo link público (/cadastro), aguardando análise.
+ * Sysmusica — Página /cadastros-pendentes: cadastros enviados pelo link público (/cadastro), aguardando análise.
  * Aprovar cria o membro (ou atualiza o que já existe); Recusar exige um motivo. Nada entra no sistema sem aprovação.
  * Cada pessoa só enxerga os pedidos das Casas de Oração da sua abrangência.
  */

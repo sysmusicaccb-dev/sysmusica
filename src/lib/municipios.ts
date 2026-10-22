@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Municípios do Brasil (lista oficial do IBGE) e texto da localidade de origem.
+ * Sysmusica — Municípios do Brasil (lista oficial do IBGE) e texto da localidade de origem.
  *
  * Usado onde a pessoa informa uma cidade que não está cadastrada no sistema (ex.: Portaria > Entrada sem
  * cadastro; futuramente, encarregados do ensaio). A lista vem do serviço público do IBGE, por estado, e fica

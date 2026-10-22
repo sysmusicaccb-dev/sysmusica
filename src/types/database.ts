@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Tipos TypeScript das tabelas do banco (Supabase/PostgreSQL)
+ * Sysmusica — Tipos TypeScript das tabelas do banco (Supabase/PostgreSQL)
  *
  * Mantenha este arquivo em sincronia com supabase/schema.sql.
  * Convenções:

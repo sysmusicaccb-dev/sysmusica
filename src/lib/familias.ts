@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Classificação de instrumentos em famílias (Cordas, Madeiras, Metais, Teclas...).
+ * Sysmusica — Classificação de instrumentos em famílias (Cordas, Madeiras, Metais, Teclas...).
  *
  * ATENÇÃO: este algoritmo é o MESMO da função SQL inferir_familia_instrumento
  * (supabase/schema.sql). Aqui ele serve para MOSTRAR a família antes de salvar; o banco

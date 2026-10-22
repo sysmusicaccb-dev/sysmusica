@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço de dados da Gestão de portarias.
+ * Sysmusica — Serviço de dados da Gestão de portarias.
  * Todas as regras (permissão, cota de 4 por dia, abrangência, nunca decidir a própria portaria,
  * motivo da rejeição) são aplicadas pelas funções do banco; a tela só chama e mostra o resultado.
  */

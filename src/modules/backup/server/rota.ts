@@ -1,4 +1,4 @@
-/** SysMúsica — Envelope das rotas de backup: devolve JSON, converte erros em respostas e nunca guarda cache. */
+/** Sysmusica — Envelope das rotas de backup: devolve JSON, converte erros em respostas e nunca guarda cache. */
 import { NextResponse } from "next/server";
 import { ErroBackup } from "./erros";
 

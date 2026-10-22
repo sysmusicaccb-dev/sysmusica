@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Painel de aparência (dentro do botão de Configurações): modo, cor principal e tamanho da
+ * Sysmusica — Painel de aparência (dentro do botão de Configurações): modo, cor principal e tamanho da
  * letra. Cada escolha vale na hora e é salva na conta (e neste aparelho).
  */
 import LogoMarca from "@/components/ui/LogoMarca";

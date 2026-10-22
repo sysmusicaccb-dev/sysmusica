@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Administração > Grupos e Permissões: lista de grupos com criar, editar (inclusive a
+ * Sysmusica — Administração > Grupos e Permissões: lista de grupos com criar, editar (inclusive a
  * grade de permissões) e excluir. Cada botão só aparece para quem tem a permissão; o banco
  * confere a permissão de novo em toda operação.
  */

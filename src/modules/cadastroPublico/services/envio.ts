@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço do cadastro público (navegador, SEM login).
+ * Sysmusica — Serviço do cadastro público (navegador, SEM login).
  *
  * Fluxo do envio (em 2 etapas, porque a Vercel limita o corpo de cada pedido a 4,5 MB):
  *  1) /api/cadastro-publico/iniciar: confere o Turnstile (anti-robô) e devolve endereços de envio de uso único;

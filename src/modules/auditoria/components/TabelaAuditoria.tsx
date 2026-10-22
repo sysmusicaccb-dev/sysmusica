@@ -1,6 +1,6 @@
 "use client";
 
-/** SysMúsica — Tabela da Auditoria: quando, quem, o que fez e em qual item; o botão abre o antes e o depois. */
+/** Sysmusica — Tabela da Auditoria: quando, quem, o que fez e em qual item; o botão abre o antes e o depois. */
 import { Eye } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import BotaoIcone from "@/components/ui/BotaoIcone";

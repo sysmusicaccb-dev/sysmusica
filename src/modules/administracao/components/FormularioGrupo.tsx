@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de grupo (novo ou edição), com a grade de permissões.
+ * Sysmusica — Formulário de grupo (novo ou edição), com a grade de permissões.
  * grupo = null  -> criar;  grupo preenchido -> editar.
  * O grupo protegido (Administrador) tem nome, status e permissões travados: só a descrição muda.
  */

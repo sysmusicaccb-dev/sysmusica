@@ -9,7 +9,7 @@ import {
 } from "@/modules/atendimento/regras";
 
 describe("pareceQrSysMusica", () => {
-  it("reconhece o prefixo do QR Code do SysMúsica (ignorando espaços e maiúsculas)", () => {
+  it("reconhece o prefixo do QR Code do Sysmusica (ignorando espaços e maiúsculas)", () => {
     expect(pareceQrSysMusica("SYSMUSICA:1:abc")).toBe(true);
     expect(pareceQrSysMusica("  sysmusica:1:abc ")).toBe(true);
   });

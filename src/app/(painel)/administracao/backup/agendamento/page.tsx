@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /administracao/backup/agendamento (só o Administrador): backups automáticos diário, semanal,
+ * Sysmusica — Página /administracao/backup/agendamento (só o Administrador): backups automáticos diário, semanal,
  * quinzenal e mensal, com a retenção (quantos guardar de cada tipo). A tarefa roda uma vez por dia às 03:00 em
  * Salvador e escolhe o tipo do dia (mensal > quinzenal > semanal > diário). Os botões usam a configuração JÁ SALVA.
  */

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Botão "Copiar link do cadastro" (Músicos / Organistas).
+ * Sysmusica — Botão "Copiar link do cadastro" (Músicos / Organistas).
  * O link é o endereço do próprio sistema + /cadastro: o mesmo para todo mundo. Quem receber preenche o formulário
  * público; o cadastro cai em "Cadastros pendentes" para aprovação.
  */

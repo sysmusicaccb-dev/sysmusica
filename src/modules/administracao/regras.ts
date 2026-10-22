@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras do módulo Administração (sem acesso ao banco).
+ * Sysmusica — Regras puras do módulo Administração (sem acesso ao banco).
  * Usadas pela tela E pelo servidor (a validação do servidor é a que vale; a da tela só ajuda).
  * Testadas em regras.test.ts.
  */

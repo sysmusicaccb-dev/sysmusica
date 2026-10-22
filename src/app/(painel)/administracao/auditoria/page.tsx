@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /administracao/auditoria: tudo o que foi feito no sistema (quem, quando, o quê e
+ * Sysmusica — Página /administracao/auditoria: tudo o que foi feito no sistema (quem, quando, o quê e
  * o antes e o depois), com filtros, impressão e exportação CSV. Imprimir e exportar ficam registrados
  * na própria auditoria. Só quem tem a permissão auditoria.visualizar entra (o banco confere).
  */

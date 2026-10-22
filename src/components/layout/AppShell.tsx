@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Estrutura do painel: menu lateral + topo + área de conteúdo.
+ * Sysmusica — Estrutura do painel: menu lateral + topo + área de conteúdo.
  *
  * Guarda o estado do menu:
  *  - recolhida: no desktop, o menu fica só com ícones;

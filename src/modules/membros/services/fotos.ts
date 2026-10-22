@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço das fotografias dos membros.
+ * Sysmusica — Serviço das fotografias dos membros.
  * As fotos ficam em um bucket PRIVADO: para exibir, gera-se uma URL temporária (assinada).
  * Quem pode enviar, trocar ou remover é controlado pela permissão membros.foto (banco + armazenamento).
  */

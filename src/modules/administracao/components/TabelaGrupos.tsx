@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Tabela de grupos de acesso.
+ * Sysmusica — Tabela de grupos de acesso.
  * Ações por linha (só aparecem para quem tem a permissão): editar e excluir.
  * Excluir fica desabilitado (com o motivo na dica) para o grupo protegido e para grupos com usuários.
  */

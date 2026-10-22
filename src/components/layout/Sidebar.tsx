@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Menu lateral.
+ * Sysmusica — Menu lateral.
  *
  * Os itens vêm de ./navegacao.ts. No desktop (>= lg) é fixo e pode ser recolhido (só ícones);
  * no celular/tablet é uma gaveta que abre sobre a tela e fecha ao navegar, tocar fora ou apertar Esc.

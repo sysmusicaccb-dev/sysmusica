@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras PURAS do módulo Cartões (sem acesso ao banco), testadas em regras.test.ts.
+ * Sysmusica — Regras PURAS do módulo Cartões (sem acesso ao banco), testadas em regras.test.ts.
  * Quem decide o que está vencido ou a vencer é o banco (fuso America/Sao_Paulo); aqui só se
  * formatam textos e se filtra a lista que o banco já devolveu.
  */

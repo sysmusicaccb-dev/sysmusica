@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Grade de permissões de um grupo (um bloco por módulo, uma caixa por ação).
+ * Sysmusica — Grade de permissões de um grupo (um bloco por módulo, uma caixa por ação).
  * Marcar uma ação marca "visualizar" junto; desmarcar "visualizar" limpa o módulo (veja regras.ts).
  */
 import { alternarModulo, alternarPermissao, agruparPermissoesPorModulo } from "../regras";

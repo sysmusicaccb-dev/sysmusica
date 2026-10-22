@@ -1,5 +1,5 @@
 /**
- * SysMúsica — POST /api/admin/usuarios/[id]/senha: redefine a senha de um usuário.
+ * Sysmusica — POST /api/admin/usuarios/[id]/senha: redefine a senha de um usuário.
  *
  * Exige a permissão usuarios.editar (conferida no banco). A nova senha segue a mesma regra
  * da criação de usuário e nunca é registrada em log.

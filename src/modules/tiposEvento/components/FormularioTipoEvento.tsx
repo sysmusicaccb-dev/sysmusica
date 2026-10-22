@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de tipo de evento (novo ou edição) — conteúdo do painel lateral.
+ * Sysmusica — Formulário de tipo de evento (novo ou edição) — conteúdo do painel lateral.
  * tipo = null -> criar; preenchido -> editar.
  *
  * O campo "Dados do Ensaio" diz se os eventos deste tipo usam a tela Dados do Ensaio e em qual modelo

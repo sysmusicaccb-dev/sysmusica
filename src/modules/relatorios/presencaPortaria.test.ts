@@ -80,7 +80,7 @@ describe("montarImpressaoPresenca (padrão = mínimo)", () => {
 
   it("não traz quem aprovou, nem quem emitiu, nem assinaturas", () => {
     expect(saida.assinaturas).toEqual([]);
-    expect(saida.rodapeItens).toEqual(["SysMúsica", "Emitido em 20/10/2026 00:30"]);
+    expect(saida.rodapeItens).toEqual(["Sysmusica", "Emitido em 20/10/2026 00:30"]);
     expect(JSON.stringify(saida)).not.toContain("Lucas");
     expect(JSON.stringify(saida)).not.toContain("Levi Alencar");
   });

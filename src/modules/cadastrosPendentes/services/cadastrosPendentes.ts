@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço da tela "Cadastros pendentes". Listar, abrir, contar e recusar passam por funções do banco
+ * Sysmusica — Serviço da tela "Cadastros pendentes". Listar, abrir, contar e recusar passam por funções do banco
  * (que conferem permissão e abrangência). Aprovar e ver as imagens passam por rotas do servidor, porque mexem
  * no armazenamento privado com a chave de serviço.
  */

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Resumo lateral do ensaio: o que já foi preenchido, em tempo real, conforme a pessoa digita.
+ * Sysmusica — Resumo lateral do ensaio: o que já foi preenchido, em tempo real, conforme a pessoa digita.
  */
 import { rotuloCompleto, type Hino } from "@/modules/hinos/regras";
 import { rotuloDoCargo, rotuloEncarregado, type EstadoEnsaio } from "../regras";

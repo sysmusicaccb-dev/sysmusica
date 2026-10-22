@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Tabela de instrumentos e famílias, com busca por nome.
+ * Sysmusica — Tabela de instrumentos e famílias, com busca por nome.
  * Ações por linha (só aparecem para quem tem a permissão): editar e excluir.
  * A família é corrigida no formulário de edição (painel lateral).
  */

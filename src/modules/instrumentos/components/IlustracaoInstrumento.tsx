@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Ilustração simples do instrumento (ícone desenhado em SVG, original do SysMúsica).
+ * Sysmusica — Ilustração simples do instrumento (ícone desenhado em SVG, original do Sysmusica).
  * O desenho vem do NOME do instrumento; sem desenho próprio, usa o da família (regras em ../ilustracoes.ts).
  * A cor acompanha o texto (currentColor); o desenho é decorativo e o nome do instrumento fica ao lado.
  */

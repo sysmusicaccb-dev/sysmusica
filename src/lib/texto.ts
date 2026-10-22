@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Utilitários de texto.
+ * Sysmusica — Utilitários de texto.
  *
  * Usado na busca por nome (ListaMembros) e na comparação de nomes de instrumentos
  * (FormularioMembro), para que "Órgão", "orgao" e "  ORGÃO " sejam tratados como iguais.

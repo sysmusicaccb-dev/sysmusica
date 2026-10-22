@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Lista de cadastros enviados pelo link público. Clicar em "Abrir" mostra o detalhe.
+ * Sysmusica — Lista de cadastros enviados pelo link público. Clicar em "Abrir" mostra o detalhe.
  * O CPF aparece escondido (***.123.***-45); o completo só no detalhe, para quem tem a permissão CPF.
  */
 import { Eye } from "lucide-react";

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Campo para anexar UM lado do documento de identificação (frente ou verso).
+ * Sysmusica — Campo para anexar UM lado do documento de identificação (frente ou verso).
  * "Tirar foto" abre a câmera no celular; "Escolher da galeria" abre o seletor de arquivos. A imagem é reduzida
  * no navegador e só é enviada quando o formulário salva. Se já existe um documento anexado, o campo avisa;
  * ver o arquivo só é possível para quem tem a permissão membros.cpf (o armazenamento também confere).

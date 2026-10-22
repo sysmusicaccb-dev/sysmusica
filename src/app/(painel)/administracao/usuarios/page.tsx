@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Administração > Usuários: lista de usuários com criar, editar, redefinir senha e
+ * Sysmusica — Administração > Usuários: lista de usuários com criar, editar, redefinir senha e
  * ativar/desativar. Cada botão só aparece para quem tem a permissão; o banco e o servidor
  * conferem a permissão de novo em toda operação.
  */

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Gráfico de rosca (donut) em SVG próprio, com legenda e percentuais.
+ * Sysmusica — Gráfico de rosca (donut) em SVG próprio, com legenda e percentuais.
  * O total aparece no centro. Itens com valor zero não geram fatia.
  */
 import { cn } from "@/lib/cn";

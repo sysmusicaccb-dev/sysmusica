@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Escolha das colunas do relatório: marcar o que aparece e mudar a ordem com as setas.
+ * Sysmusica — Escolha das colunas do relatório: marcar o que aparece e mudar a ordem com as setas.
  * A impressão e o CSV seguem exatamente a ordem mostrada aqui.
  */
 import { ArrowDown, ArrowUp } from "lucide-react";

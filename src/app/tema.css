@@ -1,5 +1,5 @@
 /* =====================================================================
-   SysMúsica — Aparência: tamanho da letra, cor principal e modo escuro.
+   Sysmusica — Aparência: tamanho da letra, cor principal e modo escuro.
    Os atributos data-tema, data-cor e data-fonte são colocados na página (tag html) pelo painel de
    Configurações. Este arquivo NÃO está em nenhuma camada do Tailwind, então vale sobre as cores padrão.
    - Tamanho da letra: o sistema usa medidas em rem, então tudo cresce junto.

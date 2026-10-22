@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço dos documentos de identificação dos membros (frente e verso).
+ * Sysmusica — Serviço dos documentos de identificação dos membros (frente e verso).
  * Ficam em um bucket PRIVADO (documentos-membros), dentro da pasta do próprio membro:
  *   <id do membro>/frente-<código>.jpg  e  <id do membro>/verso-<código>.jpg
  * Quem cadastra ou edita membros pode anexar; VER o documento exige a permissão membros.cpf (o armazenamento

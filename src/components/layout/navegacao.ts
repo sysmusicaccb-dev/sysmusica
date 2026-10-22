@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Configuração do menu e dos breadcrumbs (fonte única).
+ * Sysmusica — Configuração do menu e dos breadcrumbs (fonte única).
  *
  * Para incluir uma tela no menu, basta adicionar um item aqui: o menu lateral e os
  * breadcrumbs são gerados a partir desta lista. Só devem entrar telas que EXISTEM.

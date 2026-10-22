@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Logomarca (emblema da Congregação Cristã no Brasil).
+ * Sysmusica — Logomarca (emblema da Congregação Cristã no Brasil).
  * A imagem é escura sobre fundo claro. Por isso, em locais escuros ou no modo escuro, use "comFundoBranco":
  * ela aparece em uma plaquinha branca (cor fixa, que não muda com o tema).
  * Troque o arquivo em public/logo-ccb.png para mudar a imagem em todo o sistema.

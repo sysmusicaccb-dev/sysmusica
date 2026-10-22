@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Chamadas do navegador às rotas /api/backup/agendamento. Cada chamada leva o token do login
+ * Sysmusica — Chamadas do navegador às rotas /api/backup/agendamento. Cada chamada leva o token do login
  * (o servidor confere a sessão e a permissão).
  */
 import { supabase } from "@/lib/supabase";

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Estado (UF) + Cidade com busca online na lista de municípios do IBGE.
+ * Sysmusica — Estado (UF) + Cidade com busca online na lista de municípios do IBGE.
  * Escolhida a UF, a lista de cidades do estado é buscada no IBGE e a cidade é digitada com sugestões.
  * Ao sair do campo, o nome vira o nome OFICIAL do município (sem erro de acento); se não existir na lista,
  * o campo é limpo. Se o IBGE estiver fora do ar, a cidade pode ser digitada à mão (com aviso).

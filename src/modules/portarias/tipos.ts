@@ -1,4 +1,4 @@
-/** SysMúsica — Tipos da Gestão de portarias (campos = colunas devolvidas pelas funções do banco, migração 0007). */
+/** Sysmusica — Tipos da Gestão de portarias (campos = colunas devolvidas pelas funções do banco, migração 0007). */
 
 export type StatusPortaria = "PENDENTE_APROVACAO" | "APROVADA" | "REJEITADA";
 

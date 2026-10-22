@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Fotografia do membro (miniatura ou retrato grande).
+ * Sysmusica — Fotografia do membro (miniatura ou retrato grande).
  * Busca a URL temporária da foto; sem foto (ou se falhar), mostra um espaço reservado.
  * Usa um fundo de imagem (e não <img>) com texto alternativo para leitores de tela.
  */

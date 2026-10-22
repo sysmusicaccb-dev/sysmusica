@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Gera a imagem (PNG em data URL) de um QR Code, no navegador.
+ * Sysmusica — Gera a imagem (PNG em data URL) de um QR Code, no navegador.
  * Correção de erro "M": tolera pequenas falhas de impressão ou de leitura.
  */
 import { toDataURL } from "qrcode";

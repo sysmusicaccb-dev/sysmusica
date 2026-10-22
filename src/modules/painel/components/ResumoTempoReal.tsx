@@ -1,5 +1,5 @@
 /**
- * SysMúsica — "Resumo em tempo real" do painel ao vivo (componente de apresentação).
+ * Sysmusica — "Resumo em tempo real" do painel ao vivo (componente de apresentação).
  * Total de participantes, os blocos Ministério, Músicos e Organistas (com as linhas de cada um) e o bloco
  * Instrumentos por família, com a quantidade e o percentual. Cada pessoa conta uma vez só no total; o bloco
  * Instrumentos é um recorte de quem toca e não soma de novo.

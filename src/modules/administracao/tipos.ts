@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Tipos do módulo Administração (usuários, grupos e permissões).
+ * Sysmusica — Tipos do módulo Administração (usuários, grupos e permissões).
  * Os nomes dos campos seguem as colunas devolvidas pelas funções do banco (migração 0003).
  */
 

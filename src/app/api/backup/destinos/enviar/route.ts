@@ -1,4 +1,4 @@
-/** SysMúsica — POST /api/backup/destinos/enviar: copia o backup mais recente para o servidor local agora. */
+/** Sysmusica — POST /api/backup/destinos/enviar: copia o backup mais recente para o servidor local agora. */
 import type { NextRequest } from "next/server";
 import { autenticar } from "@/modules/backup/server/autorizacao";
 import { enviarMaisRecente } from "@/modules/backup/server/destinos";

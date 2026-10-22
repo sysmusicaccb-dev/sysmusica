@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Erro com código HTTP, usado nas rotas de servidor da Administração.
+ * Sysmusica — Erro com código HTTP, usado nas rotas de servidor da Administração.
  * A mensagem é escrita para o usuário final (sem detalhes técnicos).
  */
 export class ErroHttp extends Error {

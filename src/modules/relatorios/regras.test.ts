@@ -209,7 +209,8 @@ describe("montarInformacoes", () => {
     );
     expect(lista).toContain("Evento: Todos os eventos do período");
     expect(lista).toContain("Localização: Toda a sua abrangência");
-    expect(lista).toContain("Filtros: Nenhum filtro adicional");
+    // Sem filtro adicional, a linha "Filtros" não aparece no cabeçalho
+    expect(lista.some((linha) => linha.startsWith("Filtros"))).toBe(false);
   });
 
   it("não inventa itens que o tipo não tem", () => {
@@ -224,7 +225,7 @@ describe("montarItensRodape e lerAssinaturas", () => {
   it("coloca o texto livre primeiro e só os itens marcados (a numeração é tratada à parte)", () => {
     expect(
       montarItensRodape({ itens, textoLivre: " Confidencial ", emitidoPor: "Levi", geradoEm: "agora", total: 3 })
-    ).toEqual(["Confidencial", "SysMúsica", "Emitido por Levi", "3 registro(s)"]);
+    ).toEqual(["Confidencial", "Sysmusica", "Emitido por Levi", "3 registro(s)"]);
     expect(
       montarItensRodape({
         itens: { ...itens, sistema: false, emitidoPor: false, total: false, emissao: true },

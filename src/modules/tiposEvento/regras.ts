@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras dos Tipos de evento (sem banco). Testadas em regras.test.ts.
+ * Sysmusica — Regras puras dos Tipos de evento (sem banco). Testadas em regras.test.ts.
  *
  * O tipo do evento (Ensaio Regional, Ensaio Local, Culto Oficial...) é um cadastro. Cada tipo diz se usa a tela
  * "Dados do Ensaio" e em qual modelo: LOCAL, REGIONAL ou nenhum. As mesmas regras valem no banco (migração 0041).

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Destino "Servidor local" do Backup, no servidor do sistema: salvar a configuração, testar a conexão e
+ * Sysmusica — Destino "Servidor local" do Backup, no servidor do sistema: salvar a configuração, testar a conexão e
  * enviar o arquivo (já criptografado) pelo túnel da Cloudflare até o receptor do Windows Server.
  *
  * SEGURANÇA, em três camadas:
@@ -276,7 +276,7 @@ export async function testarDestino(usuario: UsuarioAutenticado): Promise<{ deta
     if (!saude.ok || saude.json?.ok !== true) throw new Error(explicar(saude));
 
     const nome = `teste-conexao-${Math.floor(Date.now() / 1000)}.txt`;
-    const conteudo = Buffer.from(`Teste de conexão do SysMúsica em ${dataHoraSalvador(new Date())}\n`, "utf8");
+    const conteudo = Buffer.from(`Teste de conexão do Sysmusica em ${dataHoraSalvador(new Date())}\n`, "utf8");
     await enviarArquivo(config, nome, conteudo, sha256Hex(conteudo));
     await auditar(admin, usuario.id, "backup_destino_testado", null, { destino: TIPO, resultado: "ok" });
     return {
@@ -344,7 +344,7 @@ async function executarCopia(
 
   if (!deu) {
     await notificar("falha", {
-      assunto: "SysMúsica: a cópia do backup para o servidor local falhou",
+      assunto: "Sysmusica: a cópia do backup para o servidor local falhou",
       texto:
         `Quando: ${dataHoraSalvador(new Date())}\n` +
         `O backup foi feito, mas não foi copiado para o servidor local.\nMotivo: ${resultado.detalhe ?? "desconhecido"}\n` +
@@ -369,7 +369,7 @@ export async function enviarAutomatico(admin: SupabaseClient, id: string): Promi
         detalhe: "o envio automático está ligado, mas a configuração está incompleta ou não abre com a chave atual",
       };
       await notificar("falha", {
-        assunto: "SysMúsica: a cópia do backup para o servidor local falhou",
+        assunto: "Sysmusica: a cópia do backup para o servidor local falhou",
         texto: `Motivo: ${resultado.detalhe}.\nO backup continua válido no sistema. Confira a aba Destinos.`,
       });
       return resultado;

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Cartão "Próximos eventos" do dashboard (componente de apresentação).
+ * Sysmusica — Cartão "Próximos eventos" do dashboard (componente de apresentação).
  * Recebe a lista pronta; se estiver vazia, orienta o usuário a cadastrar um evento.
  */
 import Link from "next/link";

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regra da data do evento (pura, sem banco): não se agenda evento em data e hora que já passaram.
+ * Sysmusica — Regra da data do evento (pura, sem banco): não se agenda evento em data e hora que já passaram.
  * Uma tolerância de 5 minutos evita falso alarme (o campo de data só tem precisão de minutos e o usuário leva
  * alguns segundos para salvar). Ao EDITAR, só vale se a data/hora for alterada: um evento antigo continua
  * podendo ter outros dados corrigidos. A mesma regra é aplicada no banco (migração 0025).

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço de dados do painel ao vivo.
+ * Sysmusica — Serviço de dados do painel ao vivo.
  * As contagens são feitas no banco (funções painel_ao_vivo e eventos_do_painel): a tela recebe só números,
  * nunca as linhas de presença. O banco confere a permissão "Painel ao vivo" e a abrangência (região e setor)
  * de quem consulta.

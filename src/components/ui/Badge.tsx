@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Selo de status (UI base).
+ * Sysmusica — Selo de status (UI base).
  * Cores semânticas: sucesso (verde), alerta (âmbar), perigo (vermelho), marca (índigo), neutro (cinza).
  */
 import type { ReactNode } from "react";

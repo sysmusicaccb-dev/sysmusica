@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Leitor de QR Code pela câmera.
+ * Sysmusica — Leitor de QR Code pela câmera.
  * Abre a câmera sozinho (traseira, quando houver) e fica aguardando. Enquanto "ativo" for falso
  * (conferência aberta ou consulta em andamento), as leituras são ignoradas. A mesma leitura repetida
  * em menos de 3 segundos também é ignorada. Sem câmera, sem permissão ou sem https, mostra o motivo.

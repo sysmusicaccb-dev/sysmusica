@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Restauração, parte 2 (aplicar), lado do servidor.
+ * Sysmusica — Restauração, parte 2 (aplicar), lado do servidor.
  * Fluxo: confere a SENHA do administrador de novo -> compara o backup com os dados de hoje -> monta o plano
  * -> faz um BACKUP DE SEGURANÇA verificado (se não passar, nada é restaurado) -> aplica tudo em UMA transação
  * (backup_aplicar: se algo falhar, nada muda) -> avisa por Telegram/e-mail e registra na Auditoria.
@@ -121,7 +121,7 @@ export async function restaurarBackup(entrada: EntradaAplicacao, usuario: Usuari
     console.error("Falha ao aplicar a restauração:", erroAplicar.message);
     await registrar(admin, usuario.id, "backup_restauracao_falhou", entrada.id, { ...resumo, erro: erroAplicar.message.slice(0, 300) });
     await notificar("restauracao", {
-      assunto: "SysMúsica: a restauração FALHOU (nada foi alterado)",
+      assunto: "Sysmusica: a restauração FALHOU (nada foi alterado)",
       texto: `Backup de ${dataDoBackup}, modo ${modoTexto}, feita por ${usuario.nome}.\nMotivo: ${erroAplicar.message.slice(0, 300)}\nOs dados continuam como estavam.`,
     });
     throw new ErroBackup(500, `A restauração foi desfeita e nada foi alterado. Motivo: ${erroAplicar.message}`);
@@ -130,7 +130,7 @@ export async function restaurarBackup(entrada: EntradaAplicacao, usuario: Usuari
   const operacoes = (Array.isArray(resultado) ? resultado : []) as ResultadoOperacao[];
   const texto = resumirOperacoes(operacoes, rotulos);
   await notificar("restauracao", {
-    assunto: "SysMúsica: backup restaurado",
+    assunto: "Sysmusica: backup restaurado",
     texto:
       `Backup de ${dataDoBackup} restaurado por ${usuario.nome} (modo ${modoTexto}).\n${texto}.\n` +
       `Antes disso foi feito um backup de segurança, que pode ser usado para desfazer.`,

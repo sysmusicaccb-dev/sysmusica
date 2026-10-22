@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Restauração, parte 2 (aplicar): regras puras que transformam a comparação em um PLANO de
+ * Sysmusica — Restauração, parte 2 (aplicar): regras puras que transformam a comparação em um PLANO de
  * operações para a função backup_aplicar do banco (uma única transação: ou tudo, ou nada).
  *
  * Dois modos:

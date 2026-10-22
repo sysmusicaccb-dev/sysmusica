@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Histórico de uma portaria (painel lateral): criação, decisões e exclusão, com quem
+ * Sysmusica — Histórico de uma portaria (painel lateral): criação, decisões e exclusão, com quem
  * fez, quando e o motivo (nas rejeições). O histórico só tem acréscimos: ninguém o edita.
  */
 import { formatarDataHora } from "@/lib/datas";

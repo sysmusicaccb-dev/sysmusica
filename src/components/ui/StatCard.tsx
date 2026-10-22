@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Cartão de indicador (UI base): número em destaque que leva a uma tela.
+ * Sysmusica — Cartão de indicador (UI base): número em destaque que leva a uma tela.
  */
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";

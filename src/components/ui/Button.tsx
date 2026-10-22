@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Botão padrão (UI base).
+ * Sysmusica — Botão padrão (UI base).
  * Variantes: primario (ação principal), secundario (ação neutra), perigo (ação destrutiva).
  * O ícone é opcional e sempre decorativo (o texto do botão descreve a ação).
  */

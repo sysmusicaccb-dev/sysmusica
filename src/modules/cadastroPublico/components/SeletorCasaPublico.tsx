@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Casa de Oração no formulário público: UM campo com sugestões.
+ * Sysmusica — Casa de Oração no formulário público: UM campo com sugestões.
  * A pessoa começa a digitar e aparece, na hora, a lista das Casas de Oração cadastradas que combinam (por nome ou pelo
  * caminho RRM › RA › ADM › Setor). Clicar numa sugestão (ou setas + Enter) escolhe a casa.
  * Se a casa NÃO existe na lista, a pessoa simplesmente termina de digitar o nome: o formulário avisa que ela não está

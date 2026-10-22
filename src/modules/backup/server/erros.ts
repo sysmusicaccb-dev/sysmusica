@@ -1,4 +1,4 @@
-/** SysMúsica — Erro do módulo de Backup com o código HTTP que a rota devolve (a mensagem vai para a tela). */
+/** Sysmusica — Erro do módulo de Backup com o código HTTP que a rota devolve (a mensagem vai para a tela). */
 export class ErroBackup extends Error {
   readonly status: number;
 

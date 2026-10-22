@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Paleta dos gráficos.
+ * Sysmusica — Paleta dos gráficos.
  * As classes são escritas por extenso para o Tailwind conseguir detectá-las.
  * Itens "Outros" e "Sem ..." (sem dado) usam um cinza neutro, para não competirem com os dados reais.
  */

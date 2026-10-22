@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Barra de abas da tela de Eventos: Eventos | Tipo do Evento | Gestão de portarias | Portaria.
+ * Sysmusica — Barra de abas da tela de Eventos: Eventos | Tipo do Evento | Gestão de portarias | Portaria.
  * Cada aba leva para a tela que já existe (mesma rota e mesma permissão). A barra é exibida pelos layouts
  * dessas telas e só aparece para quem vê mais de uma aba (regra em ./abasEventos.ts).
  */

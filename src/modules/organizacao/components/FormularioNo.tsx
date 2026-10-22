@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de um item da organização (estado, RRM, RA, ADM, setor ou casa de oração), novo ou em edição.
+ * Sysmusica — Formulário de um item da organização (estado, RRM, RA, ADM, setor ou casa de oração), novo ou em edição.
  * Em item novo, o "pai" (estado, RRM, RA, ADM ou setor) vem de onde o botão + foi clicado. Para mudar uma
  * casa de oração de setor use a transferência (fica registrada). O banco confere permissão e nomes repetidos.
  */

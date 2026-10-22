@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Destinos do Backup: regras puras (sem acesso a banco nem a rede), compartilhadas entre a tela e o
+ * Sysmusica — Destinos do Backup: regras puras (sem acesso a banco nem a rede), compartilhadas entre a tela e o
  * servidor. Hoje existe um destino: o "Servidor local", um receptor que roda no Windows Server da casa do
  * administrador e é alcançado por um túnel da Cloudflare (sem porta aberta no roteador). O OneDrive desse servidor
  * sincroniza a pasta de destino; o sistema NÃO enxerga o OneDrive, só confirma que o servidor recebeu o arquivo.

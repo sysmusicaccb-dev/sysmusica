@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Tela de login (rota pública /login).
+ * Sysmusica — Tela de login (rota pública /login).
  * Se a pessoa já estiver logada, vai direto para o sistema.
  * Layout em duas colunas no desktop (marca à esquerda, formulário à direita); só o formulário no celular.
  * A logomarca (emblema da CCB) aparece em uma plaquinha branca, para ficar nítida em qualquer fundo e em
@@ -28,7 +28,7 @@ export default function LoginPage() {
       <aside className="hidden flex-col justify-between bg-sidebar p-12 text-sidebar-fg lg:flex">
         <div className="flex items-center gap-4">
           <LogoMarca altura={64} comFundoBranco />
-          <span className="text-2xl font-bold tracking-tight text-white">SysMúsica</span>
+          <span className="text-2xl font-bold tracking-tight text-white">Sysmusica</span>
         </div>
         <div>
           <h2 className="text-3xl font-bold leading-tight text-white">
@@ -48,7 +48,7 @@ export default function LoginPage() {
           {/* Marca no celular */}
           <div className="mb-8 flex items-center gap-3 lg:hidden">
             <LogoMarca altura={44} comFundoBranco />
-            <span className="text-xl font-bold tracking-tight">SysMúsica</span>
+            <span className="text-xl font-bold tracking-tight">Sysmusica</span>
           </div>
 
           <h1 className="text-2xl font-bold tracking-tight">Entrar</h1>

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Motor de avisos do Backup: Telegram e e-mail (SMTP ou Resend).
+ * Sysmusica — Motor de avisos do Backup: Telegram e e-mail (SMTP ou Resend).
  * A configuração fica na tabela backup_configuracao e em backup_destinatarios; o token e a senha estão
  * criptografados com a BACKUP_CHAVE. Os avisos NUNCA derrubam o backup: qualquer falha vira um resultado
  * "erro" que a tela mostra. As mensagens não trazem nome de membro, CPF nem foto.

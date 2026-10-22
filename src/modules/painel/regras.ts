@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras do painel ao vivo (sem banco). Testadas em regras.test.ts.
+ * Sysmusica — Regras puras do painel ao vivo (sem banco). Testadas em regras.test.ts.
  * A contagem de verdade é feita no banco (função painel_ao_vivo); aqui ficam a montagem dos blocos para a tela,
  * os percentuais, os formatos de data e hora e a regra do campo Categoria do membro.
  */

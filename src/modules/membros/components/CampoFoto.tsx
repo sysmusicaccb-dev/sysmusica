@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Campo de fotografia: "Tirar foto" e "Escolher da galeria", com pré-visualização.
+ * Sysmusica — Campo de fotografia: "Tirar foto" e "Escolher da galeria", com pré-visualização.
  * No celular, "Tirar foto" abre a câmera do aparelho; no computador abre o seletor de arquivos.
  * A imagem é reduzida e convertida para JPEG no navegador (leve e rápida de enviar). O arquivo só é
  * enviado quando o formulário que usa este campo salvar. Sem foto nova, mostra a foto atual (se houver).

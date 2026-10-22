@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Busca pelo nome completo (quando o membro não consegue mostrar o QR Code).
+ * Sysmusica — Busca pelo nome completo (quando o membro não consegue mostrar o QR Code).
  * Exige nome e sobrenome. Mostra até 6 resultados com foto; ao escolher, abre a conferência.
  */
 import { useState, type FormEvent } from "react";

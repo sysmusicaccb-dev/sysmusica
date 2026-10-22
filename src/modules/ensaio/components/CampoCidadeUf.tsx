@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Campo "Cidade-UF" com sugestões do IBGE.
+ * Sysmusica — Campo "Cidade-UF" com sugestões do IBGE.
  * Ao digitar ("sao pau"), aparece a lista de municípios; ao escolher, o texto vira "São Paulo-SP".
  * Se o IBGE estiver fora do ar a lista fica vazia e a pessoa digita à mão no formato Cidade-UF (o banco confere).
  */

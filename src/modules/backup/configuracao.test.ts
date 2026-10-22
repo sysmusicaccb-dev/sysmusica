@@ -48,8 +48,8 @@ describe("formatos", () => {
 
   it("confere o remetente", () => {
     expect(remetenteValido("backup@exemplo.com")).toBe(true);
-    expect(remetenteValido("SysMúsica <backup@exemplo.com>")).toBe(true);
-    expect(remetenteValido("SysMúsica <backup>")).toBe(false);
+    expect(remetenteValido("Sysmusica <backup@exemplo.com>")).toBe(true);
+    expect(remetenteValido("Sysmusica <backup>")).toBe(false);
     expect(remetenteValido("sem-arroba")).toBe(false);
   });
 });

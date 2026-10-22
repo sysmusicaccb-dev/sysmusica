@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Tipos da organização: Estado › RRM › RA › ADM › Setor (opcional) › Casa de Oração.
+ * Sysmusica — Tipos da organização: Estado › RRM › RA › ADM › Setor (opcional) › Casa de Oração.
  * Campos = colunas das funções do banco (migração 0039).
  *   RRM = Reunião Regional Ministerial · RA = Regional Administrativa · ADM = Administração
  */

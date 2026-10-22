@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço de dados da Portaria (registro de entrada e histórico).
+ * Sysmusica — Serviço de dados da Portaria (registro de entrada e histórico).
  * Em "membros" só se lêem colunas liberadas (nunca "*": qr_secret e CPF completo são protegidos).
  * As portarias APROVADAS que o usuário pode usar vêm de listarPortarias (o banco já filtra pela
  * permissão e pela abrangência). Excluir é EXCLUSÃO LÓGICA. Editar altera só status e horários.

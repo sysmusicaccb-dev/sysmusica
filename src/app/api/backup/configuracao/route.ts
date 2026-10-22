@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Rotas /api/backup/configuracao: GET lê a configuração dos avisos (sem segredos); PUT salva.
+ * Sysmusica — Rotas /api/backup/configuracao: GET lê a configuração dos avisos (sem segredos); PUT salva.
  * Só o Administrador entra (permissão backup.configurar, conferida no banco a cada chamada).
  */
 import type { NextRequest } from "next/server";

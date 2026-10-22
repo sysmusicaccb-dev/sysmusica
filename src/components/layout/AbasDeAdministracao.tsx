@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Barra de abas da Administração de acesso: Usuários | Grupos e Permissões.
+ * Sysmusica — Barra de abas da Administração de acesso: Usuários | Grupos e Permissões.
  * Cada aba leva para a tela que já existe (mesma rota e mesma permissão). A barra é exibida pelos layouts
  * dessas duas telas e só aparece para quem vê as duas abas (regra em ./abasAdministracao.ts).
  */

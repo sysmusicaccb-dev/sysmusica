@@ -1,5 +1,5 @@
 /**
- * SysMúsica — POST /api/cadastros/[id]/aprovar: aprova um cadastro pendente.
+ * Sysmusica — POST /api/cadastros/[id]/aprovar: aprova um cadastro pendente.
  *
  * Fluxo (precisa da permissão cadastros.aprovar e da abrangência, conferidas no banco):
  *  1) lê o pedido como o usuário (confirma que ele existe, está PENDENTE e é visível para quem aprova);

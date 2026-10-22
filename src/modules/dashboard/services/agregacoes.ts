@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Cálculos dos gráficos do dashboard (funções PURAS, sem acesso ao banco).
+ * Sysmusica — Cálculos dos gráficos do dashboard (funções PURAS, sem acesso ao banco).
  * Ficam separados do serviço de dados para poderem ser testados (agregacoes.test.ts).
  */
 import type { ItemGrafico } from "@/components/charts/tipos";

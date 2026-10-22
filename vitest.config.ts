@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Configuração dos testes (Vitest).
+ * Sysmusica — Configuração dos testes (Vitest).
  * O alias "@" aponta para src/, igual ao tsconfig, para os testes usarem os mesmos imports.
  */
 import path from "node:path";

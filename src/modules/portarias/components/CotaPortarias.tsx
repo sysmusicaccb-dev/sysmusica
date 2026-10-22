@@ -1,4 +1,4 @@
-/** SysMúsica — Indicador da cota diária de criação de portarias (âmbar quando resta uma ou nenhuma). */
+/** Sysmusica — Indicador da cota diária de criação de portarias (âmbar quando resta uma ou nenhuma). */
 import { cn } from "@/lib/cn";
 import { descreverCota } from "../regras";
 import type { CotaPortarias } from "../tipos";

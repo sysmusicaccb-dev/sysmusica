@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Cadastro rápido de visitante na portaria (painel lateral).
+ * Sysmusica — Cadastro rápido de visitante na portaria (painel lateral).
  * Para o irmão de outra região (ou sem cadastro) que vem congregar: nome completo, cargo ou ministério,
  * instrumento e a IGREJA DE ORIGEM, escolhida em listas encadeadas que vêm do banco
  * (Estado › RRM › RA › ADM › Setor (opcional) › Casa de Oração, cadastrados em Organização): nada de origem digitada à mão.

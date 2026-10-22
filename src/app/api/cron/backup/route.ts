@@ -1,5 +1,5 @@
 /**
- * SysMúsica — GET /api/cron/backup: rotina diária do agendamento (chamada pelo Vercel às 06:00 UTC = 03:00 em
+ * Sysmusica — GET /api/cron/backup: rotina diária do agendamento (chamada pelo Vercel às 06:00 UTC = 03:00 em
  * Salvador). Protegida pelo segredo CRON_SECRET que o próprio Vercel envia. Não usamos "runtime" nem "dynamic":
  * o projeto usa cacheComponents, que não aceita essas opções.
  */

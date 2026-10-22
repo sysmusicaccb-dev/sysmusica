@@ -1,4 +1,4 @@
-/** SysMúsica — Tipos do módulo Relatórios. */
+/** Sysmusica — Tipos do módulo Relatórios. */
 import type { OrientacaoPagina } from "@/lib/exportacao";
 import type { CodigoPermissao } from "@/lib/permissoes";
 import type { NoOrganizacao } from "@/modules/organizacao/tipos";

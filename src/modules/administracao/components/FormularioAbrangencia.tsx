@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Abrangência de atuação de um usuário (painel lateral).
+ * Sysmusica — Abrangência de atuação de um usuário (painel lateral).
  * REGRA PROVISÓRIA (aguarda definição administrativa): aprovar portarias e registrar presenças só
  * vale em portarias das cidades marcadas aqui. Sem nenhuma cidade, o usuário não atua em nenhuma.
  */

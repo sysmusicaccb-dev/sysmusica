@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras da organização (sem banco). Testadas em regras.test.ts.
+ * Sysmusica — Regras puras da organização (sem banco). Testadas em regras.test.ts.
  * Árvore: Estado › RRM › RA › ADM › Setor (opcional) › Casa de Oração.
  * As regras de verdade (permissão, nomes repetidos, abrangência) ficam no banco; aqui há
  * montagem de listas para a tela e conferências rápidas.

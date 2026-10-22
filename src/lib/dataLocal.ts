@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Conversão de datas para o campo <input type="datetime-local">.
+ * Sysmusica — Conversão de datas para o campo <input type="datetime-local">.
  *
  * O campo trabalha com texto "AAAA-MM-DDTHH:mm" SEM fuso (hora do navegador), enquanto o banco
  * guarda timestamptz (UTC). Estas funções fazem a ida e a volta sem deslocar o horário.

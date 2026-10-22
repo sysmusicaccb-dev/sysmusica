@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Rotas /api/backup/destinos: GET lê o destino (segredos só mascarados); PUT salva.
+ * Sysmusica — Rotas /api/backup/destinos: GET lê o destino (segredos só mascarados); PUT salva.
  * Só o Administrador entra (backup.configurar, conferida no banco a cada chamada).
  * Não usamos "runtime" nem "dynamic": o projeto usa cacheComponents, que não aceita essas opções.
  */

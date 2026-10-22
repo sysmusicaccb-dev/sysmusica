@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de lançamento de presenças na Portaria (painel lateral).
+ * Sysmusica — Formulário de lançamento de presenças na Portaria (painel lateral).
  * Fluxo: escolher a PORTARIA aprovada -> marcar o status de cada membro -> salvar (em lote: ou
  * salva todos, ou nenhum). Só aparecem portarias APROVADAS que o usuário pode usar. O banco confere
  * de novo tudo (aprovada, mesma cidade, membro ativo, sem duplicidade) e define a hora de entrada,

@@ -3,7 +3,7 @@
 import SeletorCasaOracao from "@/modules/organizacao/components/SeletorCasaOracao";
 
 /**
- * SysMúsica — Formulário de evento (cadastro e edição) — conteúdo do painel lateral.
+ * Sysmusica — Formulário de evento (cadastro e edição) — conteúdo do painel lateral.
  * evento = null -> cadastrar; preenchido -> editar.
  *
  * Campos: Tipo do evento (lista do cadastro Tipo do Evento), Data e hora, Casa de Oração e Cidade.

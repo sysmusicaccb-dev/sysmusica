@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras da Gestão de portarias (sem banco). As regras de verdade (cota,
+ * Sysmusica — Regras puras da Gestão de portarias (sem banco). As regras de verdade (cota,
  * aprovação, abrangência) ficam no banco; aqui só há textos e conferências auxiliares da tela.
  */
 import type { VarianteBadge } from "@/components/ui/Badge";

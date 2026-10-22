@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Cabeçalho de página (UI base): título, descrição e ações (ex: botão "Novo ...").
+ * Sysmusica — Cabeçalho de página (UI base): título, descrição e ações (ex: botão "Novo ...").
  */
 import type { ReactNode } from "react";
 

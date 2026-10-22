@@ -1,6 +1,6 @@
 "use client";
 
-/** SysMúsica — Abas do módulo de Backup (Backups e Notificações). Cada aba só aparece para quem tem a permissão. */
+/** Sysmusica — Abas do módulo de Backup (Backups e Notificações). Cada aba só aparece para quem tem a permissão. */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { CodigoPermissao } from "@/lib/permissoes";

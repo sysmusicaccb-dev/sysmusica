@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Script que aplica a aparência (modo, cor e tamanho da letra) ANTES da primeira pintura.
+ * Sysmusica — Script que aplica a aparência (modo, cor e tamanho da letra) ANTES da primeira pintura.
  * Vai dentro do <head> do layout raiz. Sem ele, a página abriria sempre no tema claro e só depois (quando o
  * sistema carrega) trocaria para o escuro, o que aparece como um "piscar".
  *

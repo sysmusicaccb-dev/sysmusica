@@ -1,4 +1,4 @@
-/** SysMúsica — Chamada do navegador à rota de comparação da restauração (leva o token do login). */
+/** Sysmusica — Chamada do navegador à rota de comparação da restauração (leva o token do login). */
 import { supabase } from "@/lib/supabase";
 import type { ResultadoComparacao } from "../restauracao";
 import type { GrupoDados } from "../tabelas";

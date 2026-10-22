@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Confere QUEM está chamando a rota e se tem a permissão pedida.
+ * Sysmusica — Confere QUEM está chamando a rota e se tem a permissão pedida.
  * 1) Valida a sessão (token do login) no Supabase. 2) Confere que a conta está ativa. 3) Junta o grupo
  * principal e os grupos extras e confere se algum deles tem a permissão. As permissões de backup só
  * podem pertencer ao grupo Administrador (trava no banco, migração 0020).

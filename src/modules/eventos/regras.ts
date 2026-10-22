@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras de eventos (sem acesso ao banco). Testadas em regras.test.ts.
+ * Sysmusica — Regras puras de eventos (sem acesso ao banco). Testadas em regras.test.ts.
  */
 export const FINALIDADE_MINIMO = 3;
 export const FINALIDADE_MAXIMO = 150;

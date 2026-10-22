@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Cliente Supabase com a CHAVE SECRETA (service_role). SOMENTE SERVIDOR.
+ * Sysmusica — Cliente Supabase com a CHAVE SECRETA (service_role). SOMENTE SERVIDOR.
  *
  * Essa chave ignora todas as regras de acesso do banco: ela jamais pode ir para o navegador.
  * O import "server-only" faz o build falhar se algum componente de tela importar este arquivo.

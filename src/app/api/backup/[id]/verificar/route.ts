@@ -1,4 +1,4 @@
-/** SysMúsica — Rota POST /api/backup/[id]/verificar: confere o arquivo (sem restaurar nada). */
+/** Sysmusica — Rota POST /api/backup/[id]/verificar: confere o arquivo (sem restaurar nada). */
 import type { NextRequest } from "next/server";
 import { autenticar } from "@/modules/backup/server/autorizacao";
 import { verificarBackup } from "@/modules/backup/server/operacoes";

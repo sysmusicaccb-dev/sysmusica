@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Cliente Supabase "como o usuário logado" para as rotas do servidor.
+ * Sysmusica — Cliente Supabase "como o usuário logado" para as rotas do servidor.
  * Necessário quando a função do banco usa auth.uid() (aprovar cadastro grava quem aprovou na auditoria).
  * O token vem no cabeçalho Authorization (a sessão do navegador não usa cookies).
  */

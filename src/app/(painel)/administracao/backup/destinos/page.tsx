@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /administracao/backup/destinos (só o Administrador): para onde vai a cópia dos backups.
+ * Sysmusica — Página /administracao/backup/destinos (só o Administrador): para onde vai a cópia dos backups.
  * Cada destino é um cartão que se abre ao clicar (evita poluir a tela). Hoje o único ativo é o "Servidor local",
  * alcançado por um túnel da Cloudflare. Segredos só são enviados ao servidor ao salvar, ficam criptografados e
  * nunca voltam para a tela. Campo secreto em branco = manter o valor atual. Os botões usam a configuração JÁ SALVA.

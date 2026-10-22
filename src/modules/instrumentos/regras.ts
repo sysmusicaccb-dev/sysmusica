@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras de instrumentos (sem acesso ao banco). Testadas em regras.test.ts.
+ * Sysmusica — Regras puras de instrumentos (sem acesso ao banco). Testadas em regras.test.ts.
  */
 import { ehNomeDeFamilia } from "@/lib/familias";
 import { normalizarTexto } from "@/lib/texto";

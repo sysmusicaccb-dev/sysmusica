@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Formulário de hino/coro (novo ou edição) — conteúdo do painel lateral.
+ * Sysmusica — Formulário de hino/coro (novo ou edição) — conteúdo do painel lateral.
  * Hino do hinário aparece como "002"; coro (corinho) aparece como "Coro 2".
  * Se o hino já foi usado em algum ensaio, o banco não deixa trocar o número/categoria (só o título e o status).
  */

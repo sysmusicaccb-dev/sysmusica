@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço de dados dos Relatórios.
+ * Sysmusica — Serviço de dados dos Relatórios.
  * As consultas que juntam várias tabelas são funções do banco (migração 0018), que conferem a permissão e
  * a REGIÃO do usuário. Os cadastros simples (instrumentos, cargos, organização e portarias) usam as mesmas
  * consultas das telas deles. Nada de CPF completo: só o parcial, e só para quem tem a permissão.

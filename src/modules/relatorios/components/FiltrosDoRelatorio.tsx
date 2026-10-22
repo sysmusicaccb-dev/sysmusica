@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Filtros do relatório. Mostra só os filtros do tipo escolhido. RA, setor e casa de oração são
+ * Sysmusica — Filtros do relatório. Mostra só os filtros do tipo escolhido. RA, setor e casa de oração são
  * listas encadeadas que vêm do banco (Organização): cada uma só mostra o que pertence à escolha anterior.
  */
 import type { ReactNode } from "react";

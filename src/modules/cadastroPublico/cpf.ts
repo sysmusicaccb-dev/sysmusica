@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Conferência do CPF (dígitos verificadores) para o cadastro público.
+ * Sysmusica — Conferência do CPF (dígitos verificadores) para o cadastro público.
  * Mesma regra de src/lib/cpf.ts; fica aqui para o cadastro público (e as rotas do servidor) não dependerem da tela interna.
  */
 

@@ -1,4 +1,4 @@
-/** SysMúsica — Rota POST /api/backup/configuracao/testar: envia uma mensagem de teste (Telegram ou e-mail). */
+/** Sysmusica — Rota POST /api/backup/configuracao/testar: envia uma mensagem de teste (Telegram ou e-mail). */
 import type { NextRequest } from "next/server";
 import { autenticar } from "@/modules/backup/server/autorizacao";
 import { testarAviso } from "@/modules/backup/server/configuracao";

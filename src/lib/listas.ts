@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Listas de sugestões para campos de texto com autocompletar (cidade, bairro...).
+ * Sysmusica — Listas de sugestões para campos de texto com autocompletar (cidade, bairro...).
  */
 import { normalizarTexto } from "@/lib/texto";
 

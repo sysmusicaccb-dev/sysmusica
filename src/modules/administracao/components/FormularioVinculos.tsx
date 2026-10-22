@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Vínculos organizacionais de um usuário (painel lateral).
+ * Sysmusica — Vínculos organizacionais de um usuário (painel lateral).
  * O usuário pode ser ligado a um estado, RRM, RA, ADM, setor ou casa de oração: o acesso desce em cascata (uma ADM
  * inclui todas as casas de oração dele). Sem nenhum vínculo, ele não vê nenhum dado (membros, eventos,
  * presenças e portarias). Quem tem acesso total não precisa de vínculo. Fica na auditoria.

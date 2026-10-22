@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço das preferências de aparência na conta do usuário (migração 0019).
+ * Sysmusica — Serviço das preferências de aparência na conta do usuário (migração 0019).
  * Se a migração ainda não foi aplicada (ou a conta não pode salvar), a leitura devolve nulo e o sistema
  * segue com a cópia do aparelho.
  */

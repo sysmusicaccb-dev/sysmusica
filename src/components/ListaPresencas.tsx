@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Histórico da Portaria (componente de apresentação).
+ * Sysmusica — Histórico da Portaria (componente de apresentação).
  *
  * Não acessa o banco: recebe presenças, membros, instrumentos e eventos da página e faz o
  * cruzamento (join) em memória, agrupando por evento (mais recente primeiro).

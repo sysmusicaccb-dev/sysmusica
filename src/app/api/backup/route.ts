@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Rotas /api/backup: GET lista os backups; POST faz um backup manual agora.
+ * Sysmusica — Rotas /api/backup: GET lista os backups; POST faz um backup manual agora.
  * Só o Administrador entra (a permissão é conferida no banco a cada chamada).
  * Não usamos "runtime" nem "dynamic" aqui: o projeto usa cacheComponents, que não aceita essas opções.
  */

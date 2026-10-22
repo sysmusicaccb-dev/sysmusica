@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço de dados de instrumentos e famílias.
+ * Sysmusica — Serviço de dados de instrumentos e famílias.
  *
  * Criar, editar e excluir passam pelas regras do banco (permissões e RLS). Excluir usa uma função
  * do banco que recusa a exclusão enquanto algum membro usar o instrumento.

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Chamadas do navegador às rotas /api/backup/destinos. Cada chamada leva o token do login (o servidor
+ * Sysmusica — Chamadas do navegador às rotas /api/backup/destinos. Cada chamada leva o token do login (o servidor
  * confere a sessão e a permissão). Client Secret e chave de assinatura só trafegam daqui para o servidor, ao salvar;
  * nada secreto volta na resposta.
  */

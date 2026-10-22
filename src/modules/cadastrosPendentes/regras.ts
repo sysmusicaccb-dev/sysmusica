@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras da tela "Cadastros pendentes" (sem banco, sem tela). Testadas em regras.test.ts.
+ * Sysmusica — Regras puras da tela "Cadastros pendentes" (sem banco, sem tela). Testadas em regras.test.ts.
  * Aqui fica a COMPARAÇÃO campo a campo entre o pedido de atualização e o cadastro atual do membro.
  */
 import { cargoUsaCategoria, rotuloDaCategoria } from "@/modules/painel/regras";

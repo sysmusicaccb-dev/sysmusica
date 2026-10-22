@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Pergunta "Vai tocar?" (Sim / Não) e, quando for tocar, a escolha do instrumento.
+ * Sysmusica — Pergunta "Vai tocar?" (Sim / Não) e, quando for tocar, a escolha do instrumento.
  * Usada na conferência do membro cadastrado e na entrada sem cadastro.
  * Se o membro já tem instrumento no cadastro, ele aparece como sugestão e a Portaria só troca se for outro.
  */

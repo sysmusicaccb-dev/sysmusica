@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Serviço do relatório de presença da portaria.
+ * Sysmusica — Serviço do relatório de presença da portaria.
  * Uma função do banco (migração 0036) confere a permissão e a abrangência e devolve tudo pronto.
  */
 import { mensagemDoErro } from "@/lib/erros";

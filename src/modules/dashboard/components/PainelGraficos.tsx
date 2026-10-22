@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Painel de gráficos do dashboard (componente de apresentação).
+ * Sysmusica — Painel de gráficos do dashboard (componente de apresentação).
  * Recebe os dados prontos de buscarDadosGraficos e organiza os cartões em grade responsiva.
  */
 import Card from "@/components/ui/Card";

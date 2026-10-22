@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Escolha dos hinos executados no ensaio.
+ * Sysmusica — Escolha dos hinos executados no ensaio.
  * Esquerda: lista de hinos ativos (com busca) para marcar e adicionar. Direita: hinos já escolhidos, na ordem
  * em que foram cantados (dá para subir, descer e remover). Hino não se repete e o hino de abertura fica de fora.
  */

@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Utilitários de CPF.
+ * Sysmusica — Utilitários de CPF.
  * ATENÇÃO: validarCpf segue o MESMO algoritmo da função SQL cpf_valido (supabase/migrations/0006).
  * Se mudar a regra de um lado, mude do outro.
  */

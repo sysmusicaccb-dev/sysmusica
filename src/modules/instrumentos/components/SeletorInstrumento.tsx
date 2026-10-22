@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Seletor de instrumento (lista suspensa agrupada por FAMÍLIA) e campo "Família (automática)".
+ * Sysmusica — Seletor de instrumento (lista suspensa agrupada por FAMÍLIA) e campo "Família (automática)".
  * É o único jeito de escolher instrumento no sistema (cadastro de membro e de visitante), igual aos
  * demais seletores (Cargo, Casa de Oração). Só aparecem os instrumentos cadastrados no banco; instrumento novo
  * se cadastra em Instrumentos e famílias, onde a família também é definida.

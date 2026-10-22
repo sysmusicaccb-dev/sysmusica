@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /membros: listagem em tabela (largura total) com busca e filtros, novo,
+ * Sysmusica — Página /membros: listagem em tabela (largura total) com busca e filtros, novo,
  * editar, excluir e QR Code. Cada botão só aparece para quem tem a permissão (grupo do usuário);
  * o banco confere de novo em toda operação.
  * Excluir é exclusão lógica: o membro some das telas e o histórico de presenças é mantido.
@@ -179,7 +179,7 @@ export default function MembrosPage() {
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <PageHeader
           titulo="Músicos e Organistas"
-          descricao={`Cadastre e acompanhe os membros do SysMúsica.${
+          descricao={`Cadastre e acompanhe os membros do Sysmusica.${
             !carregando && !erro ? ` ${membros.length} cadastrado(s).` : ""
           }`}
           acoes={

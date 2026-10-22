@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Catálogo dos relatórios: o que cada tipo traz (colunas, filtros e quem pode ver).
+ * Sysmusica — Catálogo dos relatórios: o que cada tipo traz (colunas, filtros e quem pode ver).
  * Para incluir uma coluna ou um tipo novo, basta acrescentar aqui e no serviço que busca os dados.
  */
 import type { DefinicaoRelatorio } from "./tipos";

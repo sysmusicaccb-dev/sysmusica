@@ -1,4 +1,4 @@
-/** SysMúsica — Tipos do painel ao vivo (campos = o que as funções do banco devolvem, migração 0026). */
+/** Sysmusica — Tipos do painel ao vivo (campos = o que as funções do banco devolvem, migração 0026). */
 
 export type BlocoPainel = "MINISTERIO" | "MUSICOS" | "ORGANISTAS";
 

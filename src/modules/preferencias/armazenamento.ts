@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Cópia das preferências neste aparelho (localStorage).
+ * Sysmusica — Cópia das preferências neste aparelho (localStorage).
  * Serve para a aparência aparecer logo ao abrir o sistema e para funcionar mesmo sem a conta.
  * Qualquer falha (navegador sem armazenamento, modo privado) é ignorada: o sistema usa o padrão.
  */

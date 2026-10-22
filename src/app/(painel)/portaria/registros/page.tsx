@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Página /portaria: histórico de presenças agrupado por evento (largura total).
+ * Sysmusica — Página /portaria: histórico de presenças agrupado por evento (largura total).
  * "Registrar presenças" abre o formulário de lançamento em um painel lateral; cada presença
  * tem editar e excluir. Cada botão só aparece para quem tem a permissão (grupo do usuário);
  * o banco confere de novo em toda operação.

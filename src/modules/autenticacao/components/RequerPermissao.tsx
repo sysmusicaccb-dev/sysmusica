@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Protege uma tela inteira: quem não tem a permissão vê "Acesso negado".
+ * Sysmusica — Protege uma tela inteira: quem não tem a permissão vê "Acesso negado".
  * Usado nos layouts de cada módulo (ex: src/app/(painel)/membros/layout.tsx), de modo que a
  * página nem é carregada para quem não pode vê-la (mesmo digitando a URL na mão).
  */

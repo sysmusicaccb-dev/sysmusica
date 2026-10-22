@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SysMúsica — Formulário dos Dados do Ensaio (Local ou Regional).
+ * Sysmusica — Formulário dos Dados do Ensaio (Local ou Regional).
  *
  * Regional: quem atende é sempre Ancião e há a "palavra" (obrigatória, até 500 caracteres).
  * Local: quem atende é Ancião, Diácono, Cooperador do Ofício ou Cooperador de RJM; não há palavra.

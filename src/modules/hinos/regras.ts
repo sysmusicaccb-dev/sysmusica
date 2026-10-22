@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Regras puras dos Hinos (sem banco). Testadas em regras.test.ts.
+ * Sysmusica — Regras puras dos Hinos (sem banco). Testadas em regras.test.ts.
  *
  * Duas categorias: HINO (hinário 5, exibido como "002") e CORO (corinhos, exibidos como "Coro 1", "Coro 2"...).
  * O mesmo número pode existir nas duas categorias (hino 1 e Coro 1). As mesmas regras são aplicadas no banco

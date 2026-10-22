@@ -1,5 +1,5 @@
 /**
- * SysMúsica — Campos obrigatórios do evento (regra pura, sem banco).
+ * Sysmusica — Campos obrigatórios do evento (regra pura, sem banco).
  * Todos os campos do formulário de evento são obrigatórios. Devolve os NOMES (como aparecem na tela) dos
  * campos que estão vazios, na ordem do formulário, para a tela marcar cada um e mostrar o alerta.
  */
