@@ -190,13 +190,24 @@ function GraficoBarras({
                 </div>
               </div>
             </div>
-            <div className="mt-1 flex justify-around gap-2 px-1">
+            {/* Poucas categorias: rótulo reto. Muitas (ex.: Músicos): rótulo inclinado, para não se misturarem. */}
+            <div className={"mt-1 flex justify-around gap-2 px-1" + (linhas.length > 4 ? " h-20" : "")}>
               {linhas.map((linha) => (
                 <span
                   key={linha.codigo}
-                  className="min-w-0 flex-1 text-center text-[10px] leading-tight text-slate-600 sm:text-[11px]"
+                  className={
+                    linhas.length > 4
+                      ? "relative min-w-0 flex-1"
+                      : "min-w-0 flex-1 text-center text-[10px] leading-tight text-slate-600 sm:text-[11px]"
+                  }
                 >
-                  {linha.rotulo}
+                  {linhas.length > 4 ? (
+                    <span className="absolute right-1/2 top-1 origin-top-right -rotate-45 whitespace-nowrap text-[11px] text-slate-600">
+                      {linha.rotulo}
+                    </span>
+                  ) : (
+                    linha.rotulo
+                  )}
                 </span>
               ))}
             </div>
