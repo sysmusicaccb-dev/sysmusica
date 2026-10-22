@@ -76,22 +76,31 @@ export default function PainelAoVivo() {
     setIntervalo(lerIntervaloGuardado());
   }, []);
 
-  // Lista de eventos: já abre no mais próximo de agora
+  // Lista de eventos EM ANDAMENTO (o banco só devolve os que estão acontecendo agora, migração 0051).
+  // A lista é consultada de novo a cada minuto: quando um evento termina (ou é encerrado) ele sai sozinho
+  // e, quando outro começa, ele aparece. O evento escolhido é mantido enquanto continuar em andamento.
   useEffect(() => {
     let cancelado = false;
-    void listarEventosDoPainel()
-      .then((lista) => {
-        if (cancelado) return;
-        setEventos(lista);
-        setEventoId(lista[0]?.id ?? "");
-      })
-      .catch((e: unknown) => {
-        if (cancelado) return;
-        setEventos([]);
-        setErroEventos(e instanceof Error ? e.message : "Não foi possível carregar os eventos.");
-      });
+    const carregar = (primeira: boolean) =>
+      listarEventosDoPainel()
+        .then((lista) => {
+          if (cancelado) return;
+          setEventos(lista);
+          setErroEventos(null);
+          setEventoId((atual) => (lista.some((item) => item.id === atual) ? atual : (lista[0]?.id ?? "")));
+        })
+        .catch((e: unknown) => {
+          if (cancelado || !primeira) return; // numa atualização que falhou, a lista que já está na tela fica
+          setEventos([]);
+          setErroEventos(e instanceof Error ? e.message : "Não foi possível carregar os eventos.");
+        });
+    void carregar(true);
+    const temporizador = setInterval(() => {
+      if (!document.hidden) void carregar(false);
+    }, 60_000);
     return () => {
       cancelado = true;
+      clearInterval(temporizador);
     };
   }, []);
 
@@ -171,8 +180,8 @@ export default function PainelAoVivo() {
   if (eventos.length === 0) {
     return (
       <EmptyState
-        titulo="Nenhum evento por perto"
-        descricao="O painel mostra os eventos dos últimos e dos próximos 30 dias dentro da sua abrangência. Cadastre o evento e a portaria para acompanhar a entrada."
+        titulo="Nenhum evento em andamento no momento"
+        descricao="O painel mostra o evento enquanto ele acontece (da abertura da Portaria até 3 horas depois do início) e acompanha as entradas em tempo real. Os eventos encerrados ficam em Eventos e em Relatórios."
       />
     );
   }

@@ -31,31 +31,42 @@ export const MOTIVO_CANCELAMENTO_MINIMO = 5;
 export const MOTIVO_CANCELAMENTO_MAXIMO = 250;
 
 /** Situação do evento no instante "agora" (ms), ignorando o cancelamento. */
-function situacaoPelaData(dataEvento: string, agora: number): Exclude<SituacaoEvento, "CANCELADO"> {
+function situacaoPelaData(dataEvento: string, agora: number, encerradoManual = false): Exclude<SituacaoEvento, "CANCELADO"> {
   const janela = janelaDaPortaria(dataEvento, agora);
   if (!janela) return "AGENDADO"; // data inválida: mantém visível para alguém corrigir
   if (janela.situacao === "antes") return "AGENDADO";
-  if (janela.situacao === "aberta") return "EM_ANDAMENTO";
+  // Encerrado à mão (migração 0051) antes das 3h: deixa de estar em andamento
+  if (janela.situacao === "aberta") return encerradoManual ? "ENCERRADO" : "EM_ANDAMENTO";
   return agora - janela.fecha.getTime() > DIAS_ARQUIVO * MS_DIA ? "ARQUIVADO" : "ENCERRADO";
 }
 
 /** Situação do evento: cancelado vence a data. */
-export function situacaoDoEvento(dataEvento: string, cancelado: boolean, agora: number): SituacaoEvento {
+export function situacaoDoEvento(
+  dataEvento: string,
+  cancelado: boolean,
+  agora: number,
+  encerradoEm?: string | null
+): SituacaoEvento {
   if (cancelado) return "CANCELADO";
-  return situacaoPelaData(dataEvento, agora);
+  return situacaoPelaData(dataEvento, agora, Boolean(encerradoEm));
 }
 
 /** Em qual aba da tela de Eventos o evento aparece. Cancelado nunca fica em "Próximos". */
-export function abaDoEvento(dataEvento: string, cancelado: boolean, agora: number): AbaEvento {
-  const pelaData = situacaoPelaData(dataEvento, agora);
+export function abaDoEvento(
+  dataEvento: string,
+  cancelado: boolean,
+  agora: number,
+  encerradoEm?: string | null
+): AbaEvento {
+  const pelaData = situacaoPelaData(dataEvento, agora, Boolean(encerradoEm));
   if (pelaData === "ARQUIVADO") return "arquivo";
   if (cancelado || pelaData === "ENCERRADO") return "encerrados";
   return "proximos";
 }
 
 /** O evento ainda está aberto (agendado ou em andamento, e não cancelado)? */
-export function eventoAberto(dataEvento: string, cancelado: boolean, agora: number): boolean {
-  const situacao = situacaoDoEvento(dataEvento, cancelado, agora);
+export function eventoAberto(dataEvento: string, cancelado: boolean, agora: number, encerradoEm?: string | null): boolean {
+  const situacao = situacaoDoEvento(dataEvento, cancelado, agora, encerradoEm);
   return situacao === "AGENDADO" || situacao === "EM_ANDAMENTO";
 }
 

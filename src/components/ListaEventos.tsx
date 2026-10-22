@@ -9,7 +9,7 @@
  * Trata quatro cenários: carregando, erro, nenhum evento e tabela com dados.
  */
 import { useState } from "react";
-import { Ban, Pencil, Search, Trash2 } from "lucide-react";
+import { Ban, Flag, Pencil, RotateCcw, Search, Trash2 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import BotaoIcone from "@/components/ui/BotaoIcone";
 import EmptyState from "@/components/ui/EmptyState";
@@ -23,6 +23,7 @@ import {
   situacaoDoEvento,
   varianteSituacaoEvento,
 } from "@/modules/eventos/ciclo";
+import { janelaDaPortaria } from "@/modules/portarias/janela";
 import type { Evento, FinalidadeEvento } from "@/types/database";
 
 interface ListaEventosProps {
@@ -40,6 +41,9 @@ interface ListaEventosProps {
   onEditar: (evento: Evento) => void;
   onExcluir: (evento: Evento) => void;
   onCancelar: (evento: Evento) => void;
+  podeEncerrar?: boolean; // quem aprova portarias: encerra um evento em andamento antes do horário
+  onEncerrar?: (evento: Evento) => void;
+  onReabrir?: (evento: Evento) => void; // só o Administrador (podeCancelar): reabre um evento encerrado à mão
 }
 
 // Cor do selo conforme o tipo do evento (tipos desconhecidos usam o neutro)
@@ -68,9 +72,12 @@ export default function ListaEventos({
   onEditar,
   onExcluir,
   onCancelar,
+  podeEncerrar = false,
+  onEncerrar,
+  onReabrir,
 }: ListaEventosProps) {
   const [busca, setBusca] = useState("");
-  const mostrarAcoes = podeEditar || podeExcluir || podeCancelar;
+  const mostrarAcoes = podeEditar || podeExcluir || podeCancelar || podeEncerrar;
 
   // 1) Carregando: skeleton (barra de ferramentas + linhas)
   if (carregando) {
@@ -193,9 +200,9 @@ export default function ListaEventos({
                 const { dia, mes } = partesDaData(evento.data_evento);
                 const finalidade = nomeDaFinalidade(evento);
                 const cancelado = Boolean(evento.cancelado_em);
-                const situacao = situacaoDoEvento(evento.data_evento, cancelado, agora);
+                const situacao = situacaoDoEvento(evento.data_evento, cancelado, agora, evento.encerrado_em);
                 // Evento encerrado ou cancelado é só leitura; o Administrador (podeCancelar) ainda corrige encerrados
-                const podeAlterar = !cancelado && (eventoAberto(evento.data_evento, cancelado, agora) || podeCancelar);
+                const podeAlterar = !cancelado && (eventoAberto(evento.data_evento, cancelado, agora, evento.encerrado_em) || podeCancelar);
 
                 return (
                   <tr key={evento.id} className="transition hover:bg-slate-50">
@@ -250,6 +257,24 @@ export default function ListaEventos({
                               onClick={() => onExcluir(evento)}
                             />
                           )}
+                          {podeEncerrar && onEncerrar && situacao === "EM_ANDAMENTO" && (
+                            <BotaoIcone
+                              icone={Flag}
+                              rotulo={`Encerrar o evento de ${formatarDataHora(evento.data_evento)}`}
+                              onClick={() => onEncerrar(evento)}
+                            />
+                          )}
+                          {podeCancelar &&
+                            onReabrir &&
+                            !cancelado &&
+                            evento.encerrado_em &&
+                            janelaDaPortaria(evento.data_evento, agora)?.situacao === "aberta" && (
+                              <BotaoIcone
+                                icone={RotateCcw}
+                                rotulo={`Reabrir o evento de ${formatarDataHora(evento.data_evento)}`}
+                                onClick={() => onReabrir(evento)}
+                              />
+                            )}
                           {podeCancelar && !cancelado && (
                             <BotaoIcone
                               icone={Ban}

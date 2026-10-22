@@ -55,6 +55,18 @@ export async function cancelarEvento(id: string, motivo: string): Promise<void> 
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível cancelar o evento."));
 }
 
+/** Encerra o evento ANTES do horário (função do banco, que confere a permissão de aprovar portarias e a abrangência). */
+export async function encerrarEvento(id: string): Promise<void> {
+  const { error } = await supabase.rpc("encerrar_evento", { p_id: id });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível encerrar o evento."));
+}
+
+/** Reabre um evento encerrado à mão (só o Administrador; o banco confere). */
+export async function reabrirEvento(id: string): Promise<void> {
+  const { error } = await supabase.rpc("reabrir_evento", { p_id: id });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível reabrir o evento."));
+}
+
 /** Exclusão lógica (função do banco, que confere a permissão eventos.excluir). */
 export async function excluirEvento(id: string): Promise<void> {
   const { error } = await supabase.rpc("excluir_evento", { p_id: id });

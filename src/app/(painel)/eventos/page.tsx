@@ -10,7 +10,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import {
   buscarEventosEFinalidades,
+  encerrarEvento,
   excluirEvento,
+  reabrirEvento,
 } from "@/modules/eventos/services/eventos";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import Button from "@/components/ui/Button";
@@ -40,6 +42,9 @@ export default function EventosPage() {
   const [alvoExclusao, setAlvoExclusao] = useState<Evento | null>(null);
   const [excluindo, setExcluindo] = useState(false);
   const [erroExclusao, setErroExclusao] = useState<string | null>(null);
+  const [alvoEncerrar, setAlvoEncerrar] = useState<Evento | null>(null); // evento que quem aprova portarias vai encerrar
+  const [encerrando, setEncerrando] = useState(false);
+  const [erroEncerrar, setErroEncerrar] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [aba, setAba] = useState<AbaEvento>("proximos");
   const [agora, setAgora] = useState(0); // instante atual (ms); 0 até a primeira carga
@@ -105,9 +110,37 @@ export default function EventosPage() {
     }
   }
 
+  // Encerra o evento antes do horário (o banco confere a permissão, a abrangência e se ele está em andamento)
+  async function confirmarEncerramento() {
+    if (!alvoEncerrar) return;
+    setEncerrando(true);
+    setErroEncerrar(null);
+    try {
+      await encerrarEvento(alvoEncerrar.id);
+      await carregar();
+      setAviso("Evento encerrado.");
+      setAlvoEncerrar(null);
+    } catch (e) {
+      setErroEncerrar(e instanceof Error ? e.message : "Não foi possível encerrar o evento.");
+    } finally {
+      setEncerrando(false);
+    }
+  }
+
+  // Reabre um evento encerrado à mão (só o Administrador; vale enquanto o horário do evento ainda vale)
+  async function reabrir(evento: Evento) {
+    try {
+      await reabrirEvento(evento.id);
+      await carregar();
+      setAviso("Evento reaberto.");
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : "Não foi possível reabrir o evento.");
+    }
+  }
+
   // Cada evento aparece em UMA aba. Próximos: do mais perto para o mais longe; as demais: do mais recente.
   const eventosDaAba = (alvo: AbaEvento) =>
-    eventos.filter((evento) => abaDoEvento(evento.data_evento, Boolean(evento.cancelado_em), agora) === alvo);
+    eventos.filter((evento) => abaDoEvento(evento.data_evento, Boolean(evento.cancelado_em), agora, evento.encerrado_em) === alvo);
   const proximos = eventosDaAba("proximos").reverse(); // a busca vem do mais recente para o mais antigo
   const encerrados = eventosDaAba("encerrados");
   const arquivo = eventosDaAba("arquivo");
@@ -169,6 +202,12 @@ export default function EventosPage() {
           podeEditar={pode("eventos.editar")}
           podeExcluir={pode("eventos.excluir")}
           podeCancelar={pode("eventos.cancelar")}
+          podeEncerrar={pode("portarias.aprovar") || pode("portarias.controle_total")}
+          onEncerrar={(evento) => {
+            setErroEncerrar(null);
+            setAlvoEncerrar(evento);
+          }}
+          onReabrir={(evento) => void reabrir(evento)}
           onCancelar={(evento) => setPainel({ tipo: "cancelar", evento })}
           onEditar={(evento) => setPainel({ tipo: "editar", evento })}
           onExcluir={(evento) => {
@@ -226,6 +265,30 @@ export default function EventosPage() {
         processando={excluindo}
         onConfirmar={() => void confirmarExclusao()}
         onCancelar={() => setAlvoExclusao(null)}
+      />
+
+      {/* Confirmação de encerramento (antes do horário) */}
+      <ConfirmDialog
+        aberto={alvoEncerrar !== null}
+        titulo="Encerrar evento?"
+        mensagem={
+          <>
+            <p>
+              O evento de <strong>{alvoEncerrar ? formatarDataHora(alvoEncerrar.data_evento) : ""}</strong> em{" "}
+              <strong>{alvoEncerrar?.local}</strong> deixará de aparecer no Painel ao Vivo, a Portaria não registrará mais
+              entradas e ele passará para a aba Encerrados. Só o Administrador pode reabri-lo.
+            </p>
+            {erroEncerrar && (
+              <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-red-700">
+                {erroEncerrar}
+              </p>
+            )}
+          </>
+        }
+        textoConfirmar="Encerrar"
+        processando={encerrando}
+        onConfirmar={() => void confirmarEncerramento()}
+        onCancelar={() => setAlvoEncerrar(null)}
       />
 
       <Notificacao mensagem={aviso} onFechar={() => setAviso(null)} />

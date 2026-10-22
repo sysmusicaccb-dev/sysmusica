@@ -113,6 +113,8 @@ export interface Evento {
   cancelado_em?: string | null; // preenchido quando o Administrador cancela o evento
   cancelado_por?: string | null;
   motivo_cancelamento?: string | null;
+  encerrado_em?: string | null; // preenchido quando quem aprova portarias encerra o evento antes do horário (migração 0051)
+  encerrado_por?: string | null;
 }
 
 /** Payload para INSERT: o id é gerado pelo banco; a finalidade é opcional (eventos antigos não têm). */
