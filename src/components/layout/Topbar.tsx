@@ -109,10 +109,9 @@ export default function Topbar({
           aria-label="Abrir as configurações de aparência"
           aria-haspopup="dialog"
           title="Configurações"
-          className={classeAtalho}
+          className={cn(classeAtalho, "w-10 justify-center px-0")}
         >
           <Settings className="h-5 w-5" aria-hidden="true" />
-          <span className="hidden lg:inline">Configurações</span>
         </button>
         <div className="ml-1 border-l border-white/20 pl-2">
           <UserMenu noTopo />
