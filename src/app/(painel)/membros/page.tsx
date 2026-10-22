@@ -8,7 +8,7 @@
  * Editar abre o formulário já com o CPF completo (só para quem tem a permissão membros.cpf).
  */
 import { useCallback, useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import {
   buscarDadosMembros,
   excluirMembro,
@@ -25,7 +25,6 @@ import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Drawer from "@/components/ui/Drawer";
 import Notificacao from "@/components/ui/Notificacao";
-import PageHeader from "@/components/ui/PageHeader";
 import BotaoCopiarLinkCadastro from "@/modules/cadastroPublico/components/BotaoCopiarLink";
 import FormularioMembro from "@/components/FormularioMembro";
 import ListaMembros from "@/components/ListaMembros";
@@ -177,23 +176,27 @@ export default function MembrosPage() {
   return (
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <PageHeader
-          titulo="Músicos e Organistas"
-          descricao={`Cadastre e acompanhe os membros do Sysmusica.${
-            !carregando && !erro ? ` ${membros.length} cadastrado(s).` : ""
-          }`}
-          acoes={
-            pode("membros.criar") ? (
-              <div className="flex flex-wrap gap-2">
-                {/* Copia o link público /cadastro para enviar aos membros (o "+ Adicionar" continua interno) */}
-                <BotaoCopiarLinkCadastro />
-                <Button icone={Plus} onClick={() => setPainel({ tipo: "novo" })} disabled={carregando || !!erro}>
-                  Adicionar
-                </Button>
-              </div>
-            ) : undefined
-          }
-        />
+        {/* Cabeçalho no padrão do protótipo: ícone, título, descrição, copiar link de cadastro e Adicionar */}
+        <header className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-brand-50 px-5 py-4 shadow-sm">
+          <div className="flex min-w-0 items-center gap-4">
+            <Users className="h-10 w-10 shrink-0 text-brand-700" aria-hidden="true" />
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Músicos e Organistas</h1>
+              <p className="text-sm text-slate-600">
+                {`Cadastre e acompanhe os membros do Sysmusica.${!carregando && !erro ? ` ${membros.length} cadastrado(s).` : ""}`}
+              </p>
+            </div>
+          </div>
+          {pode("membros.criar") ? (
+            <div className="flex flex-wrap gap-2">
+              {/* Copia o link público /cadastro para enviar aos membros (o "+ Adicionar" continua interno) */}
+              <BotaoCopiarLinkCadastro />
+              <Button icone={Plus} onClick={() => setPainel({ tipo: "novo" })} disabled={carregando || !!erro}>
+                Adicionar
+              </Button>
+            </div>
+          ) : null}
+        </header>
 
         {erroAcao && (
           <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
