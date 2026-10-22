@@ -59,10 +59,10 @@ describe("montarMigalhas", () => {
 });
 
 describe("filtrarMenu", () => {
-  it("o grupo Portaria enxerga apenas o item Portaria", () => {
+  it("o grupo Portaria enxerga apenas Portaria e Registrar Presença", () => {
     const menu = filtrarMenu(GRUPOS_MENU, criarPode(["portaria.visualizar", "portaria.registrar"]));
     expect(menu.map((grupo) => grupo.titulo)).toEqual(["Operações"]);
-    expect(menu[0].itens.map((item) => item.rotulo)).toEqual(["Portaria"]);
+    expect(menu[0].itens.map((item) => item.rotulo)).toEqual(["Portaria", "Registrar Presença"]);
   });
 
   it("remove os grupos que ficam vazios", () => {
@@ -137,10 +137,10 @@ describe("migalhasVisiveis", () => {
 describe("usuário só com acesso à Portaria", () => {
   const pode = criarPode(["portaria.visualizar", "portaria.registrar"]);
 
-  it("vê somente o item Portaria no menu e nenhum outro grupo", () => {
+  it("vê somente os itens Portaria e Registrar Presença no menu e nenhum outro grupo", () => {
     const menu = filtrarMenu(GRUPOS_MENU, pode);
     const itens = menu.flatMap((grupo) => grupo.itens.map((item) => item.rotulo));
-    expect(itens).toEqual(["Portaria"]);
+    expect(itens).toEqual(["Portaria", "Registrar Presença"]);
   });
 
   it("é levado direto para a Portaria ao entrar", () => {
@@ -193,14 +193,18 @@ describe("Gestão de portarias e Portaria como abas de Eventos", () => {
   const hrefsDe = (pode: ReturnType<typeof criarPode>) =>
     filtrarMenu(GRUPOS_MENU, pode).flatMap((grupo) => grupo.itens.map((item) => item.href));
 
-  it("quem vê Eventos acessa Gestão de portarias e Portaria pelas abas, sem itens soltos no menu", () => {
+  it("quem vê Eventos acessa Gestão de portarias e Portaria pelas abas (Registrar Presença continua no menu)", () => {
     const pode = criarPode(["eventos.visualizar", "portarias.visualizar", "portaria.visualizar"]);
-    expect(hrefsDe(pode)).toEqual(["/eventos"]);
+    expect(hrefsDe(pode)).toEqual(["/eventos", "/registrar-presenca"]);
   });
 
   it("quem NÃO vê Eventos continua com os itens próprios no menu", () => {
-    expect(hrefsDe(criarPode(["portarias.visualizar", "portaria.visualizar"]))).toEqual(["/portarias", "/portaria"]);
-    expect(hrefsDe(criarPode(["portaria.visualizar", "portaria.registrar"]))).toEqual(["/portaria"]);
+    expect(hrefsDe(criarPode(["portarias.visualizar", "portaria.visualizar"]))).toEqual([
+      "/portarias",
+      "/portaria",
+      "/registrar-presenca",
+    ]);
+    expect(hrefsDe(criarPode(["portaria.visualizar", "portaria.registrar"]))).toEqual(["/portaria", "/registrar-presenca"]);
   });
 
   it("o item Eventos fica marcado nas telas das abas e não nas demais", () => {

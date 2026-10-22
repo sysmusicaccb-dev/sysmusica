@@ -24,6 +24,7 @@ import {
   Music2,
   ShieldCheck,
   Tag,
+  UserPlus,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -101,6 +102,8 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         permissao: "portaria.visualizar",
         ocultoSe: "eventos.visualizar", // quem vê Eventos acessa por aba; quem só tem Portaria continua vendo só este item
       },
+      // Registro de presença em 3 passos (tipo, categoria e instrumento) + resumo em tempo real
+      { href: "/registrar-presenca", rotulo: "Registrar Presença", icone: UserPlus, permissao: "portaria.visualizar" },
       {
         href: "/ensaio",
         rotulo: "Dados do Ensaio",
