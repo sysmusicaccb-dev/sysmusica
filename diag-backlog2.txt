@@ -1,0 +1,1320 @@
+=== relatorios/catalogo.ts ===
+/**
+ * SysMúsica — Catálogo dos relatórios: o que cada tipo traz (colunas, filtros e quem pode ver).
+ * Para incluir uma coluna ou um tipo novo, basta acrescentar aqui e no serviço que busca os dados.
+ */
+import type { DefinicaoRelatorio } from "./tipos";
+
+export const DEFINICOES_RELATORIO: DefinicaoRelatorio[] = [
+  {
+    id: "presenca",
+    titulo: "Presença por evento",
+    descricao: "Quem entrou em cada evento: situação, horários, origem do registro e quem registrou.",
+    permissoes: ["portaria.visualizar"],
+    filtros: ["periodo", "evento", "regiao", "setor", "casa_oracao", "statusPresenca"],
+    colunas: [
+      { id: "numero", rotulo: "Nº", padrao: true },
+      { id: "membro", rotulo: "Membro", padrao: true },
+      { id: "cargo", rotulo: "Cargo", padrao: true },
+      { id: "instrumento", rotulo: "Instrumento", padrao: true },
+      { id: "membro_casa_oracao", rotulo: "Casa de Oração do membro", padrao: true },
+      { id: "status", rotulo: "Situação", padrao: true },
+      { id: "entrada", rotulo: "Entrada", padrao: true },
+      { id: "saida", rotulo: "Saída", padrao: false },
+      { id: "evento_data", rotulo: "Data do evento", padrao: false },
+      { id: "evento_tipo", rotulo: "Tipo do evento", padrao: false },
+      { id: "evento_local", rotulo: "Local do evento", padrao: false },
+      { id: "evento_finalidade", rotulo: "Finalidade", padrao: false },
+      { id: "regiao", rotulo: "RA", padrao: false },
+      { id: "setor", rotulo: "Setor", padrao: false },
+      { id: "casa_oracao", rotulo: "Casa de Oração do evento", padrao: false },
+      { id: "familia", rotulo: "Família do instrumento", padrao: false },
+      { id: "cidade", rotulo: "Cidade", padrao: false },
+      { id: "visitante", rotulo: "Visitante", padrao: false },
+      { id: "origem", rotulo: "Origem do registro", padrao: false },
+      { id: "registrado_por", rotulo: "Registrado por", padrao: false },
+    ],
+  },
+  {
+    id: "membros",
+    titulo: "Membros",
+    descricao: "Lista de membros com cargo, instrumento, casa de oração, setor e RA.",
+    permissoes: ["membros.visualizar"],
+    filtros: ["regiao", "setor", "casa_oracao", "cargo", "instrumento", "situacaoMembro", "visitante"],
+    colunas: [
+      { id: "numero", rotulo: "Nº", padrao: true },
+      { id: "nome", rotulo: "Nome", padrao: true },
+      { id: "cargo", rotulo: "Cargo", padrao: true },
+      { id: "instrumento", rotulo: "Instrumento", padrao: true },
+      { id: "casa_oracao", rotulo: "Casa de Oração", padrao: true },
+      { id: "status", rotulo: "Situação", padrao: true },
+      { id: "familia", rotulo: "Família do instrumento", padrao: false },
+      { id: "regiao", rotulo: "RA", padrao: false },
+      { id: "setor", rotulo: "Setor", padrao: false },
+      { id: "cidade", rotulo: "Cidade", padrao: false },
+      { id: "bairro", rotulo: "Bairro / igreja de referência", padrao: false },
+      { id: "visitante", rotulo: "Visitante", padrao: false },
+      { id: "data_nascimento", rotulo: "Data de nascimento", padrao: false },
+      { id: "cadastrado_em", rotulo: "Cadastrado em", padrao: false },
+      { id: "cpf_parcial", rotulo: "CPF (parcial)", padrao: false, exigePermissao: "membros.cpf" },
+    ],
+  },
+  {
+    id: "eventos",
+    titulo: "Eventos",
+    descricao: "Eventos com local, casa de oração, quantidade de presenças e situação da portaria.",
+    permissoes: ["eventos.visualizar"],
+    filtros: ["periodo", "regiao", "setor", "casa_oracao"],
+    colunas: [
+      { id: "numero", rotulo: "Nº", padrao: true },
+      { id: "data", rotulo: "Data e hora", padrao: true },
+      { id: "tipo", rotulo: "Tipo", padrao: true },
+      { id: "local", rotulo: "Local", padrao: true },
+      { id: "finalidade", rotulo: "Finalidade", padrao: true },
+      { id: "presentes", rotulo: "Presentes", padrao: true },
+      { id: "portaria", rotulo: "Portaria", padrao: true },
+      { id: "registros", rotulo: "Registros de presença", padrao: false },
+      { id: "casa_oracao", rotulo: "Casa de Oração", padrao: false },
+      { id: "setor", rotulo: "Setor", padrao: false },
+      { id: "regiao", rotulo: "RA", padrao: false },
+      { id: "cidade", rotulo: "Cidade", padrao: false },
+    ],
+  },
+  {
+    id: "instrumentos",
+    titulo: "Instrumentos e famílias",
+    descricao: "Instrumentos cadastrados, com a família e a quantidade de membros.",
+    permissoes: ["instrumentos.visualizar"],
+    filtros: [],
+    colunas: [
+      { id: "numero", rotulo: "Nº", padrao: true },
+      { id: "instrumento", rotulo: "Instrumento", padrao: true },
+      { id: "familia", rotulo: "Família", padrao: true },
+      { id: "membros", rotulo: "Membros", padrao: true, exigePermissao: "membros.visualizar" },
+    ],
+  },
+  {
+    id: "cargos",
+    titulo: "Cargos e categorias",
+    descricao: "Cargos cadastrados, se usam instrumento e a quantidade de membros.",
+    permissoes: ["membros.visualizar"],
+    filtros: [],
+    colunas: [
+      { id: "numero", rotulo: "Nº", padrao: true },
+      { id: "cargo", rotulo: "Cargo", padrao: true },
+      { id: "permite_instrumento", rotulo: "Permite instrumento", padrao: true },
+      { id: "exige_instrumento", rotulo: "Exige instrumento", padrao: true },
+      { id: "membros", rotulo: "Membros", padrao: true },
+    ],
+  },
+  {
+    id: "organizacao",
+    titulo: "Estrutura da Organização",
+    descricao: "A estrutura completa (estado, RRM, RA, ADM, setores e casas de oração), com situação e quantidade de membros.",
+    permissoes: ["organizacao.visualizar"],
+    filtros: ["regiao", "setor"],
+    colunas: [
+      { id: "numero", rotulo: "Nº", padrao: true },
+      { id: "nivel", rotulo: "Nível", padrao: true },
+      { id: "rrm", rotulo: "RRM", padrao: true },
+      { id: "regiao", rotulo: "RA", padrao: true },
+      { id: "adm", rotulo: "ADM", padrao: true },
+      { id: "setor", rotulo: "Setor", padrao: true },
+      { id: "casa_oracao", rotulo: "Casa de Oração", padrao: true },
+      { id: "situacao", rotulo: "Situação", padrao: true },
+      { id: "membros", rotulo: "Membros", padrao: true },
+      { id: "estado", rotulo: "Estado", padrao: false },
+      { id: "cidade", rotulo: "Cidade", padrao: false },
+      { id: "bairro", rotulo: "Bairro", padrao: false },
+      { id: "itens", rotulo: "Itens abaixo", padrao: false },
+    ],
+  },
+  {
+    id: "portarias",
+    titulo: "Portarias",
+    descricao: "Portarias criadas, com situação, quem criou e quem aprovou ou rejeitou.",
+    permissoes: ["portarias.visualizar", "portarias.criar", "portarias.aprovar", "portaria.registrar"],
+    filtros: ["periodo", "situacaoPortaria"],
+    colunas: [
+      { id: "numero", rotulo: "Nº", padrao: true },
+      { id: "data_evento", rotulo: "Data do evento", padrao: true },
+      { id: "tipo", rotulo: "Tipo", padrao: true },
+      { id: "local", rotulo: "Local", padrao: true },
+      { id: "setor", rotulo: "RA › ADM › Setor", padrao: true },
+      { id: "situacao", rotulo: "Situação", padrao: true },
+      { id: "criada_por", rotulo: "Criada por", padrao: true },
+      { id: "finalidade", rotulo: "Finalidade", padrao: false },
+      { id: "criada_em", rotulo: "Criada em", padrao: false },
+      { id: "decidida_por", rotulo: "Decidida por", padrao: false },
+      { id: "decidida_em", rotulo: "Decidida em", padrao: false },
+      { id: "motivo", rotulo: "Motivo da rejeição", padrao: false },
+    ],
+  },
+];
+=== relatorios/tipos.ts ===
+/** SysMúsica — Tipos do módulo Relatórios. */
+import type { OrientacaoPagina } from "@/lib/exportacao";
+import type { CodigoPermissao } from "@/lib/permissoes";
+import type { NoOrganizacao } from "@/modules/organizacao/tipos";
+
+export type TipoRelatorioId =
+  | "presenca"
+  | "membros"
+  | "eventos"
+  | "instrumentos"
+  | "cargos"
+  | "organizacao"
+  | "portarias";
+
+/** Filtros que cada tipo de relatório pode mostrar. */
+export type CampoFiltro =
+  | "periodo"
+  | "evento"
+  | "regiao"
+  | "setor"
+  | "casa_oracao"
+  | "cargo"
+  | "instrumento"
+  | "situacaoMembro"
+  | "statusPresenca"
+  | "visitante"
+  | "situacaoPortaria";
+
+export interface ColunaRelatorio {
+  id: string;
+  rotulo: string;
+  padrao: boolean; // vem marcada ao escolher o tipo
+  exigePermissao?: CodigoPermissao; // a coluna só existe para quem tem esta permissão
+}
+
+export interface DefinicaoRelatorio {
+  id: TipoRelatorioId;
+  titulo: string;
+  descricao: string;
+  permissoes: CodigoPermissao[]; // basta ter UMA para ver este tipo
+  filtros: CampoFiltro[];
+  colunas: ColunaRelatorio[];
+}
+
+/** Uma linha do relatório: valor de cada coluna, já em texto, pelo id da coluna. */
+export type LinhaRelatorio = Record<string, string>;
+
+export interface ResultadoRelatorio {
+  linhas: LinhaRelatorio[];
+  total: number; // total do filtro (pode ser maior que as linhas trazidas, quando passa do limite)
+}
+
+export interface FiltrosRelatorio {
+  inicio: string; // AAAA-MM-DD ("" = sem limite)
+  fim: string;
+  eventoId: string;
+  regiaoId: string;
+  setorId: string;
+  casaOracaoId: string;
+  cargoId: string;
+  instrumentoId: string;
+  situacao: string; // membros: Ativo/Inativo; portarias: código da situação
+  statusPresenca: string; // Presente, Ausente ou Justificado
+  visitante: string; // "", "sim" ou "nao"
+}
+
+export type AjustePagina = "automatico" | "manual";
+
+/** Margem da página impressa: estreita, normal ou larga (os valores em mm ficam em regras.ts). */
+export type MargemPagina = "estreita" | "normal" | "larga";
+
+/** O que pode aparecer no quadro de informações do cabeçalho. */
+export type ItemCabecalho =
+  | "marca"
+  | "evento"
+  | "periodo"
+  | "localizacao"
+  | "filtros"
+  | "total"
+  | "resumo"
+  | "emissao"
+  | "emitidoPor";
+
+/** O que pode aparecer no rodapé (além do texto livre). */
+export type ItemRodape = "paginacao" | "sistema" | "emitidoPor" | "emissao" | "total";
+
+export interface OpcoesPagina {
+  titulo: string;
+  rodape: string;
+  orientacao: OrientacaoPagina;
+  ajuste: AjustePagina;
+  escala: string; // zoom em % (só no ajuste manual)
+  fonte: string; // tamanho da letra em pt (só no ajuste manual)
+  subtitulo: string; // linha opcional sob o título
+  margem: MargemPagina;
+  cabecalho: Record<ItemCabecalho, boolean>; // o que aparece no quadro do cabeçalho
+  rodapeMarcado: Record<ItemRodape, boolean>; // o que aparece no rodapé (o texto livre é o campo "rodape")
+  assinaturas: boolean; // mostra as linhas de assinatura no fim
+  nomesAssinaturas: string; // nomes das linhas, separados por vírgula
+}
+
+export interface EventoFiltro {
+  id: string;
+  tipo: string;
+  data_evento: string;
+  local: string;
+}
+
+/** Listas dos filtros (já limitadas pelo que o usuário pode ver). */
+export interface OpcoesFiltros {
+  organizacao: NoOrganizacao[];
+  cargos: { id: string; nome: string }[];
+  instrumentos: { id: string; nome: string }[];
+  eventos: EventoFiltro[];
+}
+=== relatorios/services/relatorios.ts ===
+/**
+ * SysMúsica — Serviço de dados dos Relatórios.
+ * As consultas que juntam várias tabelas são funções do banco (migração 0018), que conferem a permissão e
+ * a REGIÃO do usuário. Os cadastros simples (instrumentos, cargos, organização e portarias) usam as mesmas
+ * consultas das telas deles. Nada de CPF completo: só o parcial, e só para quem tem a permissão.
+ */
+import { formatarDataHora } from "@/lib/datas";
+import { mensagemDoErro } from "@/lib/erros";
+import { supabase } from "@/lib/supabase";
+import { intervaloDoFiltro } from "@/modules/auditoria/regras";
+import { listarOrganizacao, listarOrganizacaoParaSelecao } from "@/modules/organizacao/services/organizacao";
+import type { NoOrganizacao } from "@/modules/organizacao/tipos";
+import { listarPortarias } from "@/modules/portarias/services/portarias";
+import type { Familia, Instrumento } from "@/types/database";
+import {
+  contarPor,
+  formatarDataFiltro,
+  linhasCargos,
+  linhasInstrumentos,
+  linhasOrganizacao,
+  linhasPortarias,
+  type CargoRelatorio,
+} from "../regras";
+import type {
+  EventoFiltro,
+  FiltrosRelatorio,
+  LinhaRelatorio,
+  OpcoesFiltros,
+  ResultadoRelatorio,
+  TipoRelatorioId,
+} from "../tipos";
+
+/** Máximo de linhas por relatório (o banco devolve também o total, para avisar quando passar). */
+export const LIMITE_LINHAS = 5000;
+
+const texto = (valor: unknown): string => (valor === null || valor === undefined ? "" : String(valor));
+const simNao = (valor: boolean | null | undefined): string => (valor ? "Sim" : "Não");
+const dataHora = (valor: string | null): string => (valor ? formatarDataHora(valor) : "");
+const dataBr = (valor: string | null): string => (valor ? formatarDataFiltro(valor) : "");
+
+function rotuloOrigem(origem: string): string {
+  if (origem === "QR") return "QR Code";
+  if (origem === "ANTIGO") return "Registro antigo";
+  return "Pelo nome";
+}
+
+// ---------- Listas dos filtros ----------
+
+export async function carregarOpcoesRelatorio(): Promise<OpcoesFiltros> {
+  const [organizacao, resCargos, resInstrumentos, resEventos] = await Promise.all([
+    listarOrganizacaoParaSelecao().catch(() => [] as NoOrganizacao[]),
+    supabase.from("cargos").select("id, nome").order("nome", { ascending: true }),
+    supabase.from("instrumentos").select("id, nome").order("nome", { ascending: true }),
+    supabase
+      .from("eventos")
+      .select("id, tipo, data_evento, local")
+      .order("data_evento", { ascending: false })
+      .limit(300),
+  ]);
+
+  // Uma lista que o usuário não pode ver simplesmente fica vazia (o tipo de relatório correspondente nem aparece)
+  return {
+    organizacao,
+    cargos: (resCargos.data ?? []) as { id: string; nome: string }[],
+    instrumentos: (resInstrumentos.data ?? []) as { id: string; nome: string }[],
+    eventos: (resEventos.data ?? []) as EventoFiltro[],
+  };
+}
+
+// ---------- Relatórios vindos de funções do banco ----------
+
+interface LinhaPresencaBanco {
+  evento_tipo: string;
+  evento_data: string;
+  evento_local: string;
+  evento_finalidade: string | null;
+  regiao: string | null;
+  setor: string | null;
+  casa_oracao: string | null;
+  membro_nome: string;
+  membro_casa_oracao: string | null;
+  cargo: string | null;
+  instrumento: string | null;
+  familia: string | null;
+  cidade: string | null;
+  bairro: string | null;
+  visitante: boolean;
+  status: string;
+  hora_entrada: string;
+  hora_saida: string | null;
+  origem: string;
+  registrado_por: string | null;
+  total: number | string;
+}
+
+async function buscarPresencas(filtros: FiltrosRelatorio): Promise<ResultadoRelatorio> {
+  const periodo = intervaloDoFiltro(filtros.inicio, filtros.fim);
+  const { data, error } = await supabase.rpc("relatorio_presencas", {
+    p_inicio: periodo.inicio,
+    p_fim: periodo.fim,
+    p_evento: filtros.eventoId || null,
+    p_regiao: filtros.regiaoId || null,
+    p_setor: filtros.setorId || null,
+    p_casa_oracao: filtros.casaOracaoId || null,
+    p_status: filtros.statusPresenca || null,
+    p_limite: LIMITE_LINHAS,
+  });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível gerar o relatório de presença."));
+
+  const brutas = (data ?? []) as LinhaPresencaBanco[];
+  return {
+    linhas: brutas.map((linha) => ({
+      evento_data: dataHora(linha.evento_data),
+      evento_tipo: linha.evento_tipo,
+      evento_local: linha.evento_local,
+      evento_finalidade: texto(linha.evento_finalidade),
+      regiao: texto(linha.regiao),
+      setor: texto(linha.setor),
+      casa_oracao: texto(linha.casa_oracao),
+      membro: linha.membro_nome,
+      membro_casa_oracao: texto(linha.membro_casa_oracao),
+      cargo: texto(linha.cargo),
+      instrumento: texto(linha.instrumento),
+      familia: texto(linha.familia),
+      cidade: texto(linha.cidade),
+      visitante: simNao(linha.visitante),
+      status: linha.status,
+      entrada: dataHora(linha.hora_entrada),
+      saida: dataHora(linha.hora_saida),
+      origem: rotuloOrigem(linha.origem),
+      registrado_por: texto(linha.registrado_por),
+    })),
+    total: brutas.length > 0 ? Number(brutas[0].total) : 0,
+  };
+}
+
+interface LinhaMembroBanco {
+  nome: string;
+  cargo: string | null;
+  instrumento: string | null;
+  familia: string | null;
+  regiao: string | null;
+  setor: string | null;
+  casa_oracao: string | null;
+  cidade: string | null;
+  bairro: string | null;
+  status: string;
+  visitante: boolean;
+  data_nascimento: string | null;
+  cadastrado_em: string;
+  cpf_parcial: string | null;
+  total: number | string;
+}
+
+async function buscarMembros(filtros: FiltrosRelatorio): Promise<ResultadoRelatorio> {
+  const { data, error } = await supabase.rpc("relatorio_membros", {
+    p_regiao: filtros.regiaoId || null,
+    p_setor: filtros.setorId || null,
+    p_casa_oracao: filtros.casaOracaoId || null,
+    p_cargo: filtros.cargoId || null,
+    p_instrumento: filtros.instrumentoId || null,
+    p_status: filtros.situacao || null,
+    p_visitante: filtros.visitante || null,
+    p_limite: LIMITE_LINHAS,
+  });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível gerar o relatório de membros."));
+
+  const brutas = (data ?? []) as LinhaMembroBanco[];
+  return {
+    linhas: brutas.map((linha) => ({
+      nome: linha.nome,
+      cargo: texto(linha.cargo),
+      instrumento: texto(linha.instrumento),
+      familia: texto(linha.familia),
+      regiao: texto(linha.regiao),
+      setor: texto(linha.setor),
+      casa_oracao: texto(linha.casa_oracao),
+      cidade: texto(linha.cidade),
+      bairro: texto(linha.bairro),
+      status: linha.status,
+      visitante: simNao(linha.visitante),
+      data_nascimento: dataBr(linha.data_nascimento),
+      cadastrado_em: dataHora(linha.cadastrado_em),
+      cpf_parcial: texto(linha.cpf_parcial),
+    })),
+    total: brutas.length > 0 ? Number(brutas[0].total) : 0,
+  };
+}
+
+interface LinhaEventoBanco {
+  tipo: string;
+  data_evento: string;
+  local_evento: string;
+  finalidade: string | null;
+  cidade: string | null;
+  regiao: string | null;
+  setor: string | null;
+  casa_oracao: string | null;
+  registros: number | string;
+  presentes: number | string;
+  portaria: string | null;
+  total: number | string;
+}
+
+async function buscarEventos(filtros: FiltrosRelatorio): Promise<ResultadoRelatorio> {
+  const periodo = intervaloDoFiltro(filtros.inicio, filtros.fim);
+  const { data, error } = await supabase.rpc("relatorio_eventos", {
+    p_inicio: periodo.inicio,
+    p_fim: periodo.fim,
+    p_regiao: filtros.regiaoId || null,
+    p_setor: filtros.setorId || null,
+    p_casa_oracao: filtros.casaOracaoId || null,
+    p_limite: LIMITE_LINHAS,
+  });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível gerar o relatório de eventos."));
+
+  const brutas = (data ?? []) as LinhaEventoBanco[];
+  return {
+    linhas: brutas.map((linha) => ({
+      data: dataHora(linha.data_evento),
+      tipo: linha.tipo,
+      local: linha.local_evento,
+      finalidade: texto(linha.finalidade),
+      cidade: texto(linha.cidade),
+      regiao: texto(linha.regiao),
+      setor: texto(linha.setor),
+      casa_oracao: texto(linha.casa_oracao),
+      registros: String(Number(linha.registros)),
+      presentes: String(Number(linha.presentes)),
+      portaria: linha.portaria ?? "Sem portaria",
+    })),
+    total: brutas.length > 0 ? Number(brutas[0].total) : 0,
+  };
+}
+
+// ---------- Relatórios de cadastros simples ----------
+
+/** Contagem de membros por instrumento e por cargo (só a abrangência do usuário). Sem permissão, fica vazia. */
+async function contagensDeMembros(): Promise<{ porInstrumento: Map<string, number>; porCargo: Map<string, number> }> {
+  const { data, error } = await supabase.rpc("contagem_membros_por");
+  const porInstrumento = new Map<string, number>();
+  const porCargo = new Map<string, number>();
+  if (error) return { porInstrumento, porCargo };
+
+  for (const linha of (data ?? []) as { tipo: string; id: string; qtd: number | string }[]) {
+    (linha.tipo === "INSTRUMENTO" ? porInstrumento : porCargo).set(linha.id, Number(linha.qtd));
+  }
+  return { porInstrumento, porCargo };
+}
+
+async function buscarInstrumentos(): Promise<ResultadoRelatorio> {
+  const [resInstrumentos, resFamilias, contagens] = await Promise.all([
+    supabase.from("instrumentos").select("*"),
+    supabase.from("familias").select("*"),
+    contagensDeMembros(),
+  ]);
+  const erro = resInstrumentos.error ?? resFamilias.error;
+  if (erro) throw new Error(mensagemDoErro(erro, "Não foi possível carregar os instrumentos."));
+
+  const linhas = linhasInstrumentos(
+    (resInstrumentos.data ?? []) as Instrumento[],
+    (resFamilias.data ?? []) as Familia[],
+    contagens.porInstrumento
+  );
+  return { linhas, total: linhas.length };
+}
+
+async function buscarCargos(): Promise<ResultadoRelatorio> {
+  const [resCargos, contagens] = await Promise.all([supabase.from("cargos").select("*"), contagensDeMembros()]);
+  if (resCargos.error) throw new Error(mensagemDoErro(resCargos.error, "Não foi possível carregar os cargos."));
+
+  const linhas = linhasCargos((resCargos.data ?? []) as CargoRelatorio[], contagens.porCargo);
+  return { linhas, total: linhas.length };
+}
+
+async function buscarOrganizacao(filtros: FiltrosRelatorio): Promise<ResultadoRelatorio> {
+  const nos = await listarOrganizacao();
+  const linhas = linhasOrganizacao(nos, { regiaoId: filtros.regiaoId, setorId: filtros.setorId });
+  return { linhas, total: linhas.length };
+}
+
+async function buscarPortarias(filtros: FiltrosRelatorio): Promise<ResultadoRelatorio> {
+  const linhas = linhasPortarias(await listarPortarias(), filtros);
+  return { linhas, total: linhas.length };
+}
+
+/** Busca os dados de um tipo de relatório (as linhas já vêm em texto, pelo id de cada coluna). */
+export async function buscarRelatorio(
+  tipo: TipoRelatorioId,
+  filtros: FiltrosRelatorio
+): Promise<ResultadoRelatorio> {
+  switch (tipo) {
+    case "presenca":
+      return buscarPresencas(filtros);
+    case "membros":
+      return buscarMembros(filtros);
+    case "eventos":
+      return buscarEventos(filtros);
+    case "instrumentos":
+      return buscarInstrumentos();
+    case "cargos":
+      return buscarCargos();
+    case "organizacao":
+      return buscarOrganizacao(filtros);
+    case "portarias":
+      return buscarPortarias(filtros);
+  }
+}
+
+// Mantém a assinatura clara para quem importar só os tipos
+export type { LinhaRelatorio };
+
+// Evita aviso de importação não usada de contarPor (usada nos testes e disponível aos serviços)
+void contarPor;
+=== FiltrosDoRelatorio.tsx ===
+"use client";
+
+/**
+ * SysMúsica — Filtros do relatório. Mostra só os filtros do tipo escolhido. RA, setor e casa de oração são
+ * listas encadeadas que vêm do banco (Organização): cada uma só mostra o que pertence à escolha anterior.
+ */
+import type { ReactNode } from "react";
+import { formatarDataHora } from "@/lib/datas";
+import { ROTULO_STATUS } from "@/modules/portarias/regras";
+import { opcoesCasaOracao, opcoesRegiao, opcoesSetor } from "../regras";
+import type { CampoFiltro, FiltrosRelatorio, OpcoesFiltros } from "../tipos";
+
+interface FiltrosDoRelatorioProps {
+  campos: CampoFiltro[];
+  valores: FiltrosRelatorio;
+  onChange: (novos: FiltrosRelatorio) => void;
+  opcoes: OpcoesFiltros | null;
+  desabilitado: boolean;
+}
+
+const classeCampo =
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm " +
+  "focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 " +
+  "disabled:cursor-not-allowed disabled:opacity-60 [color-scheme:light]";
+
+const STATUS_PRESENCA = ["Presente", "Ausente", "Justificado"];
+
+function Campo({ id, rotulo, children }: { id: string; rotulo: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="text-xs font-medium text-slate-600">
+        {rotulo}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+export default function FiltrosDoRelatorio({ campos, valores, onChange, opcoes, desabilitado }: FiltrosDoRelatorioProps) {
+  const tem = (campo: CampoFiltro) => campos.includes(campo);
+  const mudar = (parcial: Partial<FiltrosRelatorio>) => onChange({ ...valores, ...parcial });
+  const organizacao = opcoes?.organizacao ?? [];
+
+  if (campos.length === 0) {
+    return <p className="text-sm text-slate-500">Este relatório não tem filtros: traz tudo o que você pode ver.</p>;
+  }
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {tem("periodo") && (
+        <>
+          <Campo id="rel-inicio" rotulo="De (data do evento)">
+            <input
+              id="rel-inicio"
+              type="date"
+              value={valores.inicio}
+              onChange={(e) => mudar({ inicio: e.target.value })}
+              disabled={desabilitado}
+              className={classeCampo}
+            />
+          </Campo>
+          <Campo id="rel-fim" rotulo="Até (data do evento)">
+            <input
+              id="rel-fim"
+              type="date"
+              value={valores.fim}
+              onChange={(e) => mudar({ fim: e.target.value })}
+              disabled={desabilitado}
+              className={classeCampo}
+            />
+          </Campo>
+        </>
+      )}
+
+      {tem("evento") && (
+        <Campo id="rel-evento" rotulo="Evento">
+          <select
+            id="rel-evento"
+            value={valores.eventoId}
+            onChange={(e) => mudar({ eventoId: e.target.value })}
+            disabled={desabilitado}
+            className={classeCampo}
+          >
+            <option value="">Todos os eventos do período</option>
+            {(opcoes?.eventos ?? []).map((evento) => (
+              <option key={evento.id} value={evento.id}>
+                {formatarDataHora(evento.data_evento)} · {evento.tipo} · {evento.local}
+              </option>
+            ))}
+          </select>
+        </Campo>
+      )}
+
+      {tem("regiao") && (
+        <Campo id="rel-regiao" rotulo="RA (Regional Administrativa)">
+          <select
+            id="rel-regiao"
+            value={valores.regiaoId}
+            onChange={(e) => mudar({ regiaoId: e.target.value, setorId: "", casaOracaoId: "" })}
+            disabled={desabilitado}
+            className={classeCampo}
+          >
+            <option value="">Todas as RAs</option>
+            {opcoesRegiao(organizacao).map((opcao) => (
+              <option key={opcao.id} value={opcao.id}>
+                {opcao.rotulo}
+              </option>
+            ))}
+          </select>
+        </Campo>
+      )}
+
+      {tem("setor") && (
+        <Campo id="rel-setor" rotulo="Setor">
+          <select
+            id="rel-setor"
+            value={valores.setorId}
+            onChange={(e) => mudar({ setorId: e.target.value, casaOracaoId: "" })}
+            disabled={desabilitado || !valores.regiaoId}
+            className={classeCampo}
+          >
+            <option value="">{valores.regiaoId ? "Todos os setores" : "Escolha a RA primeiro"}</option>
+            {opcoesSetor(organizacao, valores.regiaoId).map((opcao) => (
+              <option key={opcao.id} value={opcao.id}>
+                {opcao.rotulo}
+              </option>
+            ))}
+          </select>
+        </Campo>
+      )}
+
+      {tem("casa_oracao") && (
+        <Campo id="rel-casa-oracao" rotulo="Casa de Oração">
+          <select
+            id="rel-casa-oracao"
+            value={valores.casaOracaoId}
+            onChange={(e) => mudar({ casaOracaoId: e.target.value })}
+            disabled={desabilitado || !valores.regiaoId}
+            className={classeCampo}
+          >
+            <option value="">{valores.regiaoId ? "Todas as casas de oração" : "Escolha a RA primeiro"}</option>
+            {opcoesCasaOracao(organizacao, valores.regiaoId, valores.setorId).map((opcao) => (
+              <option key={opcao.id} value={opcao.id}>
+                {opcao.rotulo}
+              </option>
+            ))}
+          </select>
+        </Campo>
+      )}
+
+      {tem("cargo") && (
+        <Campo id="rel-cargo" rotulo="Cargo">
+          <select
+            id="rel-cargo"
+            value={valores.cargoId}
+            onChange={(e) => mudar({ cargoId: e.target.value })}
+            disabled={desabilitado}
+            className={classeCampo}
+          >
+            <option value="">Todos os cargos</option>
+            {(opcoes?.cargos ?? []).map((cargo) => (
+              <option key={cargo.id} value={cargo.id}>
+                {cargo.nome}
+              </option>
+            ))}
+          </select>
+        </Campo>
+      )}
+
+      {tem("instrumento") && (
+        <Campo id="rel-instrumento" rotulo="Instrumento">
+          <select
+            id="rel-instrumento"
+            value={valores.instrumentoId}
+            onChange={(e) => mudar({ instrumentoId: e.target.value })}
+            disabled={desabilitado}
+            className={classeCampo}
+          >
+            <option value="">Todos os instrumentos</option>
+            {(opcoes?.instrumentos ?? []).map((instrumento) => (
+              <option key={instrumento.id} value={instrumento.id}>
+                {instrumento.nome}
+              </option>
+            ))}
+          </select>
+        </Campo>
+      )}
+
+      {tem("situacaoMembro") && (
+        <Campo id="rel-situacao-membro" rotulo="Situação do membro">
+          <select
+            id="rel-situacao-membro"
+            value={valores.situacao}
+            onChange={(e) => mudar({ situacao: e.target.value })}
+            disabled={desabilitado}
+            className={classeCampo}
+          >
+            <option value="">Todas</option>
+            <option value="Ativo">Ativo</option>
+            <option value="Inativo">Inativo</option>
+          </select>
+        </Campo>
+      )}
+
+      {tem("statusPresenca") && (
+        <Campo id="rel-status-presenca" rotulo="Situação da presença">
+          <select
+            id="rel-status-presenca"
+            value={valores.statusPresenca}
+            onChange={(e) => mudar({ statusPresenca: e.target.value })}
+            disabled={desabilitado}
+            className={classeCampo}
+          >
+            <option value="">Todas</option>
+            {STATUS_PRESENCA.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </Campo>
+      )}
+
+      {tem("visitante") && (
+        <Campo id="rel-visitante" rotulo="Visitantes">
+          <select
+            id="rel-visitante"
+            value={valores.visitante}
+            onChange={(e) => mudar({ visitante: e.target.value })}
+            disabled={desabilitado}
+            className={classeCampo}
+          >
+            <option value="">Todos</option>
+            <option value="sim">Somente visitantes</option>
+            <option value="nao">Sem visitantes</option>
+          </select>
+        </Campo>
+      )}
+
+      {tem("situacaoPortaria") && (
+        <Campo id="rel-situacao-portaria" rotulo="Situação da portaria">
+          <select
+            id="rel-situacao-portaria"
+            value={valores.situacao}
+            onChange={(e) => mudar({ situacao: e.target.value })}
+            disabled={desabilitado}
+            className={classeCampo}
+          >
+            <option value="">Todas</option>
+            {Object.entries(ROTULO_STATUS).map(([codigo, rotulo]) => (
+              <option key={codigo} value={codigo}>
+                {rotulo}
+              </option>
+            ))}
+          </select>
+        </Campo>
+      )}
+    </div>
+  );
+}
+=== FormularioVisitante.tsx ===
+"use client";
+
+/**
+ * SysMúsica — Cadastro rápido de visitante na portaria (painel lateral).
+ * Para o irmão de outra região (ou sem cadastro) que vem congregar: nome completo, cargo ou ministério,
+ * instrumento e a IGREJA DE ORIGEM, escolhida em listas encadeadas que vêm do banco
+ * (Estado › RRM › RA › ADM › Setor (opcional) › Casa de Oração, cadastrados em Organização): nada de origem digitada à mão.
+ *
+ * Instrumento: o MESMO seletor do cadastro de membro (lista por família), obrigatório nos cargos que
+ * exigem (o Músico), com a família preenchida automaticamente.
+ * O visitante é cadastrado na CASA DE ORAÇÃO da portaria em atendimento e só a região dela o enxerga.
+ * Depois de salvar, abre a conferência para registrar a entrada.
+ * O banco confere permissão, portaria aprovada, abrangência, instrumento, origem e nome repetido na casa de oração.
+ */
+import { useEffect, useState, type FormEvent } from "react";
+import Button from "@/components/ui/Button";
+import SeletorInstrumento, { FamiliaAutomatica } from "@/modules/instrumentos/components/SeletorInstrumento";
+import CampoFoto from "@/modules/membros/components/CampoFoto";
+import { descartarFoto, subirFotoNova } from "@/modules/membros/services/fotos";
+import { validarInstrumentoDoCargo } from "@/modules/instrumentos/selecao";
+import { filhosDe } from "@/modules/organizacao/regras";
+import type { NoOrganizacao } from "@/modules/organizacao/tipos";
+import { validarDadosVisitante } from "../regras";
+import { cadastrarVisitante, listarOpcoesVisitante, listarOrigensVisitante } from "../services/atendimento";
+import type { CartaoMembro, OpcoesVisitante } from "../tipos";
+
+interface FormularioVisitanteProps {
+  portariaId: string;
+  onCadastrado: (cartao: CartaoMembro) => void;
+}
+
+const classeInput =
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 " +
+  "shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:opacity-60";
+
+export default function FormularioVisitante({ portariaId, onCadastrado }: FormularioVisitanteProps) {
+  const [opcoes, setOpcoes] = useState<OpcoesVisitante | null>(null); // nulo = carregando
+  const [origens, setOrigens] = useState<NoOrganizacao[]>([]);
+  const [nome, setNome] = useState("");
+  const [cargoId, setCargoId] = useState("");
+  const [instrumentoId, setInstrumentoId] = useState("");
+  const [estadoId, setEstadoId] = useState("");
+  const [rrmId, setRrmId] = useState("");
+  const [raId, setRaId] = useState("");
+  const [admId, setAdmId] = useState("");
+  const [setorId, setSetorId] = useState("");
+  const [casaOracaoId, setCasaOracaoId] = useState("");
+  const [foto, setFoto] = useState<Blob | null>(null); // fotografia obrigatória do visitante
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+   
+  useEffect(() => {
+    let cancelado = false;
+    void Promise.all([listarOpcoesVisitante(), listarOrigensVisitante()])
+      .then(([listaOpcoes, listaOrigens]) => {
+        if (cancelado) return;
+        setOpcoes(listaOpcoes);
+        setOrigens(listaOrigens);
+        // Com um único estado cadastrado, ele já vem escolhido
+        const estados = filhosDe(listaOrigens, null, "ESTADO");
+        if (estados.length === 1) setEstadoId(estados[0].id);
+      })
+      .catch((e: unknown) => {
+        if (cancelado) return;
+        setOpcoes({ cargos: [], instrumentos: [], familias: [] });
+        setErro(e instanceof Error ? e.message : "Não foi possível carregar as opções.");
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+   
+
+  const cargo = opcoes?.cargos.find((item) => item.id === cargoId);
+  const exigeInstrumento = cargo?.exige_instrumento === true;
+
+  // Listas encadeadas: cada nível só mostra o que pertence à escolha anterior
+  const estados = filhosDe(origens, null, "ESTADO");
+  const rrms = estadoId ? filhosDe(origens, estadoId, "RRM") : [];
+  const ras = rrmId ? filhosDe(origens, rrmId, "RA") : [];
+  const adms = raId ? filhosDe(origens, raId, "ADM") : [];
+  const setores = admId ? filhosDe(origens, admId, "SETOR") : [];
+  // Com setor escolhido: as casas do setor; sem setor: as casas ligadas direto à ADM
+  const casasOracao = admId ? filhosDe(origens, setorId || admId, "CASA_ORACAO") : [];
+
+  // Ao trocar um nível, limpa os de baixo
+  function trocarEstado(id: string) {
+    setEstadoId(id);
+    setRrmId("");
+    setRaId("");
+    setAdmId("");
+    setSetorId("");
+    setCasaOracaoId("");
+  }
+  function trocarRrm(id: string) {
+    setRrmId(id);
+    setRaId("");
+    setAdmId("");
+    setSetorId("");
+    setCasaOracaoId("");
+  }
+  function trocarRa(id: string) {
+    setRaId(id);
+    setAdmId("");
+    setSetorId("");
+    setCasaOracaoId("");
+  }
+  function trocarAdm(id: string) {
+    setAdmId(id);
+    setSetorId("");
+    setCasaOracaoId("");
+  }
+  function trocarSetor(id: string) {
+    setSetorId(id);
+    setCasaOracaoId("");
+  }
+  // Ao trocar o cargo, limpa o instrumento se o novo cargo não usar instrumento
+  function trocarCargo(novoId: string) {
+    setCargoId(novoId);
+    const novo = opcoes?.cargos.find((item) => item.id === novoId);
+    if (!novo?.permite_instrumento) setInstrumentoId("");
+  }
+
+  async function salvar(submissao: FormEvent<HTMLFormElement>) {
+    submissao.preventDefault();
+    if (salvando) return; // evita envio duplicado
+    setErro(null);
+
+    const erroDados = validarDadosVisitante({ nome, cargoId, origemCasaOracaoId: casaOracaoId });
+    if (erroDados) return setErro(erroDados);
+    const erroInstrumento = validarInstrumentoDoCargo(exigeInstrumento, instrumentoId, cargo?.nome);
+    if (erroInstrumento) return setErro(erroInstrumento);
+    if (!foto) return setErro("A fotografia do visitante é obrigatória. Tire a foto ou escolha uma imagem.");
+
+    setSalvando(true);
+    try {
+      // O identificador do visitante é gerado aqui para a foto subir para a pasta dele antes do cadastro
+      const membroId = crypto.randomUUID();
+      const caminho = await subirFotoNova(membroId, foto);
+      let cartao: CartaoMembro;
+      try {
+        cartao = await cadastrarVisitante(portariaId, {
+          nome: nome.trim(),
+          cargoId,
+          instrumentoId: cargo?.permite_instrumento && instrumentoId ? instrumentoId : null,
+          origemCasaOracaoId: casaOracaoId,
+          membroId,
+          fotoPath: caminho,
+        });
+      } catch (e) {
+        await descartarFoto(caminho); // o cadastro falhou: não deixa a foto solta
+        throw e;
+      }
+      onCadastrado(cartao);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível cadastrar o visitante.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  if (opcoes === null) return <p className="text-sm text-slate-600">Carregando...</p>;
+
+  return (
+    <form onSubmit={salvar} className="space-y-5">
+      <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
+        O visitante é cadastrado na casa de oração desta portaria e só aparece para esta região. Depois de salvar, você
+        confere os dados e registra a entrada.
+      </p>
+
+      <div className="space-y-1.5">
+        <label htmlFor="nome-visitante" className="text-sm font-medium text-slate-700">
+          Nome completo
+        </label>
+        <input
+          id="nome-visitante"
+          type="text"
+          required
+          maxLength={120}
+          autoComplete="off"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          disabled={salvando}
+          placeholder="Ex: João da Silva Santos"
+          className={classeInput}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="cargo-visitante" className="text-sm font-medium text-slate-700">
+          Cargo ou ministério
+        </label>
+        <select
+          id="cargo-visitante"
+          required
+          value={cargoId}
+          onChange={(e) => trocarCargo(e.target.value)}
+          disabled={salvando}
+          className={classeInput}
+        >
+          <option value="">Selecione</option>
+          {opcoes.cargos.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.nome}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Instrumento: o mesmo seletor do cadastro de membro (obrigatório para Músico) + família automática */}
+      {cargo?.permite_instrumento && (
+        <>
+          <div className="space-y-1.5">
+            <label htmlFor="instrumento-visitante" className="text-sm font-medium text-slate-700">
+              Instrumento{" "}
+              {exigeInstrumento ? (
+                <span className="font-normal text-red-600">(obrigatório)</span>
+              ) : (
+                <span className="font-normal text-slate-400">(opcional)</span>
+              )}
+            </label>
+            <SeletorInstrumento
+              id="instrumento-visitante"
+              valor={instrumentoId}
+              onChange={setInstrumentoId}
+              instrumentos={opcoes.instrumentos}
+              familias={opcoes.familias}
+              obrigatorio={exigeInstrumento}
+              disabled={salvando}
+              className={classeInput}
+            />
+          </div>
+
+          <FamiliaAutomatica
+            instrumentoId={instrumentoId}
+            instrumentos={opcoes.instrumentos}
+            familias={opcoes.familias}
+          />
+        </>
+      )}
+
+      {/* Fotografia obrigatória: identifica o visitante e evita intrusos */}
+      <div className="space-y-1.5">
+        <span className="text-sm font-medium text-slate-700">
+          Fotografia <span className="font-normal text-red-600">(obrigatória)</span>
+        </span>
+        <CampoFoto nome={nome.trim() || "Visitante"} obrigatoria onChange={setFoto} disabled={salvando} />
+      </div>
+
+      {/* Origem: listas encadeadas que vêm do banco (Organização) */}
+      <fieldset className="space-y-3 rounded-xl border border-slate-200 p-4">
+        <legend className="px-1 text-sm font-medium text-slate-700">Igreja de origem</legend>
+
+        <div className="space-y-1.5">
+          <label htmlFor="estado-visitante" className="text-xs font-medium text-slate-600">
+            Estado
+          </label>
+          <select
+            id="estado-visitante"
+            value={estadoId}
+            onChange={(e) => trocarEstado(e.target.value)}
+            disabled={salvando}
+            className={classeInput}
+          >
+            <option value="">Selecione o estado</option>
+            {estados.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="rrm-visitante" className="text-xs font-medium text-slate-600">
+            RRM (Reunião Regional Ministerial)
+          </label>
+          <select
+            id="rrm-visitante"
+            value={rrmId}
+            onChange={(e) => trocarRrm(e.target.value)}
+            disabled={salvando || !estadoId}
+            className={classeInput}
+          >
+            <option value="">Selecione a RRM</option>
+            {rrms.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="ra-visitante" className="text-xs font-medium text-slate-600">
+            RA (Regional Administrativa)
+          </label>
+          <select
+            id="ra-visitante"
+            value={raId}
+            onChange={(e) => trocarRa(e.target.value)}
+            disabled={salvando || !rrmId}
+            className={classeInput}
+          >
+            <option value="">Selecione a RA</option>
+            {ras.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="adm-visitante" className="text-xs font-medium text-slate-600">
+            ADM (Administração)
+          </label>
+          <select
+            id="adm-visitante"
+            value={admId}
+            onChange={(e) => trocarAdm(e.target.value)}
+            disabled={salvando || !raId}
+            className={classeInput}
+          >
+            <option value="">Selecione a ADM</option>
+            {adms.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="setor-visitante" className="text-xs font-medium text-slate-600">
+            Setor (opcional)
+          </label>
+          <select
+            id="setor-visitante"
+            value={setorId}
+            onChange={(e) => trocarSetor(e.target.value)}
+            disabled={salvando || !admId}
+            className={classeInput}
+          >
+            <option value="">Sem setor (casas ligadas direto à ADM)</option>
+            {setores.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="casa-oracao-visitante" className="text-xs font-medium text-slate-600">
+            Casa de Oração
+          </label>
+          <select
+            id="casa-oracao-visitante"
+            value={casaOracaoId}
+            onChange={(e) => setCasaOracaoId(e.target.value)}
+            disabled={salvando || !admId}
+            className={classeInput}
+          >
+            <option value="">Selecione a casa de oração</option>
+            {casasOracao.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <p className="text-xs text-slate-500">
+          A cidade e a igreja de origem são preenchidas por esta escolha. Sem setor escolhido, aparecem as casas ligadas direto à ADM. Se a origem não aparecer na lista,
+          peça a um administrador para cadastrá-la em Administração &gt; Organização.
+        </p>
+      </fieldset>
+
+      {erro && (
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erro}
+        </p>
+      )}
+
+      <Button type="submit" disabled={salvando} className="w-full">
+        {salvando ? "Cadastrando..." : "Cadastrar e conferir"}
+      </Button>
+    </form>
+  );
+}
+=== PAINEL AO VIVO / ENSAIO: paginas ===
+src/app/(painel)/portarias/page.tsx
+src/app/(painel)/eventos/page.tsx
+src/app/(painel)/fotografias/page.tsx
+src/app/(painel)/instrumentos/page.tsx
+src/app/(painel)/ensaio/page.tsx
+src/app/(painel)/cadastros-pendentes/page.tsx
+src/app/(painel)/tipos-evento/page.tsx
+src/app/(painel)/hinos/page.tsx
+src/app/(painel)/relatorios/page.tsx
+src/app/(painel)/administracao/backup/restauracao/page.tsx
+src/app/(painel)/administracao/backup/destinos/page.tsx
+src/app/(painel)/administracao/backup/agendamento/page.tsx
+src/app/(painel)/administracao/backup/notificacoes/page.tsx
+src/app/(painel)/administracao/backup/page.tsx
+src/app/(painel)/administracao/organizacao/page.tsx
+src/app/(painel)/administracao/usuarios/page.tsx
+src/app/(painel)/administracao/grupos/page.tsx
+src/app/(painel)/administracao/auditoria/page.tsx
+src/app/(painel)/painel-ao-vivo/page.tsx
+src/app/(painel)/membros/page.tsx
+src/app/(painel)/cartoes/page.tsx
+src/app/(painel)/page.tsx
+src/app/(painel)/portaria/registros/page.tsx
+src/app/(painel)/portaria/page.tsx
+administracao
+cadastros-pendentes
+cartoes
+ensaio
+eventos
+fotografias
+hinos
+instrumentos
+layout.tsx
+membros
+page.tsx
+painel-ao-vivo
+portaria
+portarias
+relatorios
+tipos-evento
+src/modules/ensaio:
+cidades.test.ts
+cidades.ts
+components
+regras.test.ts
+regras.ts
+services
+tipos.ts
+
+src/modules/painel:
+components
+regras.test.ts
+regras.ts
+services
+tipos.ts
+=== Impressao no Painel/Ensaio ===
+src/app/(painel)/administracao/auditoria/page.tsx
+src/app/(painel)/portarias/page.tsx
+src/app/(painel)/relatorios/page.tsx
+src/lib/exportacao.test.ts
+src/lib/exportacao.ts
+=== Banco: somente_orgao e visitante ===
+supabase/migrations/0040_cadastro_musical_obrigatorios.sql
+supabase/migrations/0042_cadastro_publico.sql
+supabase/migrations/0043_casa_nao_cadastrada.sql
+supabase/migrations/0040_cadastro_musical_obrigatorios.sql:9:--   * cargos.somente_orgao: cargos que só podem usar o instrumento Órgão (Organista, Examinadora e Instrutora;
+supabase/migrations/0040_cadastro_musical_obrigatorios.sql:10:--     o Instrutor continua com instrumento livre). O banco recusa outro instrumento (gatilho trg_membros_somente_orgao). Para mudar a lista:
+supabase/migrations/0040_cadastro_musical_obrigatorios.sql:11:--         update public.cargos set somente_orgao = true|false where nome = '...';
+supabase/migrations/0040_cadastro_musical_obrigatorios.sql:23:alter table public.cargos add column if not exists somente_orgao boolean not null default false;
+supabase/migrations/0040_cadastro_musical_obrigatorios.sql:24:grant select (somente_orgao) on public.cargos to authenticated;
+supabase/migrations/0040_cadastro_musical_obrigatorios.sql:39:   set somente_orgao = true,
+supabase/migrations/0040_cadastro_musical_obrigatorios.sql:48:   set somente_orgao = false,
+supabase/migrations/0040_cadastro_musical_obrigatorios.sql:58:    join public.cargos c on c.id = m.cargo_id and c.somente_orgao
+supabase/migrations/0040_cadastro_musical_obrigatorios.sql:68:create or replace function public.membros_somente_orgao()
+supabase/migrations/0040_cadastro_musical_obrigatorios.sql:86:  select c.somente_orgao, c.nome into v_somente, v_cargo from public.cargos c where c.id = new.cargo_id;
+supabase/migrations/0040_cadastro_musical_obrigatorios.sql:98:drop trigger if exists trg_membros_somente_orgao on public.membros;
+supabase/migrations/0040_cadastro_musical_obrigatorios.sql:99:create trigger trg_membros_somente_orgao
+supabase/migrations/0040_cadastro_musical_obrigatorios.sql:101:  for each row execute function public.membros_somente_orgao();
+supabase/migrations/0042_cadastro_publico.sql:205:                  'somente_orgao', c.somente_orgao) order by c.nome), '[]'::jsonb)
+supabase/migrations/0042_cadastro_publico.sql:371:    if v_cargo.somente_orgao and not public.instrumento_e_orgao(v_instr_nome) then
+supabase/migrations/0043_casa_nao_cadastrada.sql:178:    if v_cargo.somente_orgao and not public.instrumento_e_orgao(v_instr_nome) then

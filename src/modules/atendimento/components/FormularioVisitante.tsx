@@ -18,6 +18,7 @@ import SeletorInstrumento, { FamiliaAutomatica } from "@/modules/instrumentos/co
 import CampoFoto from "@/modules/membros/components/CampoFoto";
 import { descartarFoto, subirFotoNova } from "@/modules/membros/services/fotos";
 import { validarInstrumentoDoCargo } from "@/modules/instrumentos/selecao";
+import { cargoSomenteOrgao, instrumentosDoCargo } from "@/modules/membros/cadastroMusical";
 import { filhosDe } from "@/modules/organizacao/regras";
 import type { NoOrganizacao } from "@/modules/organizacao/tipos";
 import { validarDadosVisitante } from "../regras";
@@ -74,6 +75,9 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
 
   const cargo = opcoes?.cargos.find((item) => item.id === cargoId);
   const exigeInstrumento = cargo?.exige_instrumento === true;
+  // Cargo travado no Órgão (Organista, Examinadora, Instrutor e Instrutora): só os instrumentos Órgão aparecem
+  const somenteOrgao = cargoSomenteOrgao(cargo);
+  const instrumentosDisponiveis = instrumentosDoCargo(opcoes?.instrumentos ?? [], somenteOrgao);
 
   // Listas encadeadas: cada nível só mostra o que pertence à escolha anterior
   const estados = filhosDe(origens, null, "ESTADO");
@@ -119,7 +123,13 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
   function trocarCargo(novoId: string) {
     setCargoId(novoId);
     const novo = opcoes?.cargos.find((item) => item.id === novoId);
-    if (!novo?.permite_instrumento) setInstrumentoId("");
+    if (!novo?.permite_instrumento) {
+      setInstrumentoId("");
+    } else if (cargoSomenteOrgao(novo)) {
+      // Cargo travado no Órgão: escolhe o Órgão sozinho (se só houver um) e tira um instrumento que não seja Órgão
+      const orgaos = instrumentosDoCargo(opcoes?.instrumentos ?? [], true);
+      setInstrumentoId((atual) => (orgaos.some((item) => item.id === atual) ? atual : orgaos.length === 1 ? orgaos[0].id : ""));
+    }
   }
 
   async function salvar(submissao: FormEvent<HTMLFormElement>) {
@@ -131,6 +141,10 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
     if (erroDados) return setErro(erroDados);
     const erroInstrumento = validarInstrumentoDoCargo(exigeInstrumento, instrumentoId, cargo?.nome);
     if (erroInstrumento) return setErro(erroInstrumento);
+    // Cargo travado no Órgão: o instrumento precisa ser um dos Órgãos (o banco confere de novo)
+    if (somenteOrgao && instrumentoId && !instrumentosDisponiveis.some((item) => item.id === instrumentoId)) {
+      return setErro(`O cargo ${cargo?.nome ?? "escolhido"} só pode usar o instrumento Órgão.`);
+    }
     if (!foto) return setErro("A fotografia do visitante é obrigatória. Tire a foto ou escolha uma imagem.");
 
     setSalvando(true);
@@ -224,12 +238,19 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
               id="instrumento-visitante"
               valor={instrumentoId}
               onChange={setInstrumentoId}
-              instrumentos={opcoes.instrumentos}
+              instrumentos={instrumentosDisponiveis}
               familias={opcoes.familias}
               obrigatorio={exigeInstrumento}
-              disabled={salvando}
+              disabled={salvando || (somenteOrgao && instrumentosDisponiveis.length === 1)}
               className={classeInput}
             />
+            {somenteOrgao && (
+              <p className="text-xs text-slate-500">
+                {instrumentosDisponiveis.length === 0
+                  ? "Este cargo só usa o instrumento Órgão, mas nenhum Órgão está cadastrado. Peça a um administrador para cadastrar em Instrumentos e famílias."
+                  : "Este cargo só usa o instrumento Órgão (escolhido automaticamente)."}
+              </p>
+            )}
           </div>
 
           <FamiliaAutomatica
