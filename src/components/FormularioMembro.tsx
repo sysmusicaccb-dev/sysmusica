@@ -43,6 +43,7 @@ import FotoMembro from "@/modules/membros/components/FotoMembro";
 import { descartarFoto, enviarFoto, removerFoto, subirFotoNova } from "@/modules/membros/services/fotos";
 import { buscarEnderecoPorCep } from "@/modules/membros/services/cep";
 import { avisoBatismoDeMenor, aplicarRegrasDoCargo, regrasDoCargo } from "@/modules/membros/regrasCargo";
+import { orgaoUnicoDoCargo } from "@/modules/membros/instrumentoDoCargo";
 import { descartarDocumentos, subirDocumento } from "@/modules/membros/services/documentos";
 import {
   CADASTRO_VAZIO,
@@ -123,7 +124,7 @@ export default function FormularioMembro({
   const [cpf, setCpf] = useState(cpfInicial ? formatarCpf(cpfInicial) : "");
   const [cargoId, setCargoId] = useState(membro?.cargo_id ?? "");
   const [dataNascimento, setDataNascimento] = useState(membro?.data_nascimento ?? ""); // "AAAA-MM-DD"
-  const [instrumentoId, setInstrumentoId] = useState(membro?.instrumento_id ?? "");
+  const [instrumentoDigitado, setInstrumentoId] = useState(membro?.instrumento_id ?? "");
   const [categoria, setCategoria] = useState(membro?.categoria ?? ""); // Oficializado, Culto Oficial ou RJM
   const [status, setStatus] = useState(membro?.status ?? "Ativo");
   const [foto, setFoto] = useState<Blob | null>(null); // foto nova já preparada (obrigatória no cadastro novo)
@@ -151,6 +152,9 @@ export default function FormularioMembro({
   // Veja modules/membros/regrasCargo.ts para mudar as regras.
   const regras = regrasDoCargo(cargoSelecionado?.nome, categoria);
   const cadastro = aplicarRegrasDoCargo(cadastroBruto, regras);
+  // Organista, Examinadora e Instrutora tocam sempre o Órgão: o instrumento vem preenchido e travado.
+  // Os demais (músicos) escolhem. Veja modules/membros/instrumentoDoCargo.ts.
+  const instrumentoId = orgaoUnicoDoCargo(cargoSelecionado, instrumentos) || instrumentoDigitado;
   // Cartão de identificação: só para os cargos marcados (cargos.exige_cartao)
   const exigeCartao = cargoExigeCartao(cargoSelecionado as (Cargo & { exige_cartao?: boolean }) | undefined);
   // Campos obrigatórios (*): cadastro novo, ou edição de quem já tem o cadastro preenchido (ou começou a preencher)

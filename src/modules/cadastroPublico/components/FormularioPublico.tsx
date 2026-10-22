@@ -26,6 +26,7 @@ import {
   type SimNao,
 } from "@/modules/membros/cadastroMusical";
 import { aplicarRegrasDoCargo, avisoBatismoDeMenor, regrasDoCargo } from "@/modules/membros/regrasCargo";
+import { orgaoUnicoDoCargo } from "@/modules/membros/instrumentoDoCargo";
 import { CATEGORIAS, cargoUsaCategoria } from "@/modules/painel/regras";
 import { cpfValido, formatarCpfParcial, soDigitos } from "../cpf";
 import { itensDoAviso } from "../aviso";
@@ -109,7 +110,13 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
   // Regras automáticas do cargo (batizado, casado): o formulário mostra, trava e ENVIA os valores do cargo.
   // Veja modules/membros/regrasCargo.ts para mudar as regras (o banco confere de novo, migração 0050).
   const regras = regrasDoCargo(cargo?.nome, dados.categoria);
-  const dadosEfetivos = { ...dados, cadastro: aplicarRegrasDoCargo(dados.cadastro, regras) };
+  // Organista, Examinadora e Instrutora tocam sempre o Órgão: o instrumento vem preenchido e travado.
+  const orgaoAuto = orgaoUnicoDoCargo(cargo, opcoes.instrumentos);
+  const dadosEfetivos = {
+    ...dados,
+    instrumentoId: orgaoAuto || dados.instrumentoId,
+    cadastro: aplicarRegrasDoCargo(dados.cadastro, regras),
+  };
   const avisoMenor = avisoBatismoDeMenor(regras, dados.dataNascimento, hojeIso());
   const itens = useMemo(() => itensDoAviso(process.env.NEXT_PUBLIC_CONTATO_PRIVACIDADE), []);
 
@@ -298,10 +305,10 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
         )}
         {cargo?.permite_instrumento && (
           <>
-            <Campo id="instrumento" rotulo="Instrumento" obrigatorio>
-              <SeletorInstrumento id="instrumento" valor={dados.instrumentoId} onChange={(v) => mudar("instrumentoId", v)} instrumentos={instrumentos} familias={opcoes.familias} obrigatorio disabled={bloqueado} className={classeInput} />
+            <Campo id="instrumento" rotulo="Instrumento" obrigatorio dica={orgaoAuto ? "Automático para este cargo (Órgão)." : undefined}>
+              <SeletorInstrumento id="instrumento" valor={dadosEfetivos.instrumentoId} onChange={(v) => mudar("instrumentoId", v)} instrumentos={instrumentos} familias={opcoes.familias} obrigatorio disabled={bloqueado || orgaoAuto !== ""} className={classeInput} />
             </Campo>
-            <FamiliaAutomatica instrumentoId={dados.instrumentoId} instrumentos={instrumentos} familias={opcoes.familias} />
+            <FamiliaAutomatica instrumentoId={dadosEfetivos.instrumentoId} instrumentos={instrumentos} familias={opcoes.familias} />
           </>
         )}
         {/* Estado civil: vem DEPOIS do cargo porque alguns cargos já definem "Casado (a)" */}

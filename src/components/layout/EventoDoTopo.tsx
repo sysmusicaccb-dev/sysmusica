@@ -6,7 +6,7 @@
  * Nenhuma escolha global: é apenas informativo.
  */
 import { useEffect, useState } from "react";
-import { CalendarDays, CalendarRange, Clock } from "lucide-react";
+import { CalendarDays, Clock } from "lucide-react";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import { formatarDiaDoEvento, formatarHoraDoEvento } from "@/modules/painel/regras";
 import { listarEventosDoPainel } from "@/modules/painel/services/painel";
@@ -34,20 +34,18 @@ export default function EventoDoTopo() {
 
   if (!permitido || !resumo) return null;
 
+  // Só data e hora do evento, em uma "pílula" discreta (o nome e o local do evento ficam nas telas do evento)
   return (
-    <div className="hidden min-w-0 items-center gap-4 xl:flex" aria-label="Evento do dia">
-      <div className="flex min-w-0 items-center gap-3">
-        <CalendarRange className="h-8 w-8 shrink-0 text-white/90" aria-hidden="true" />
-        <div className="min-w-0 leading-tight">
-          <p className="truncate text-base font-semibold">{resumo.titulo}</p>
-          {resumo.local && <p className="truncate text-xs font-medium tracking-wide text-blue-100">{resumo.local}</p>}
-        </div>
-      </div>
-      <div className="flex items-center gap-2 text-sm">
+    <div
+      className="hidden items-center gap-3 rounded-xl bg-[rgb(255_255_255/0.10)] px-4 py-2 text-sm font-medium ring-1 ring-white/15 md:flex"
+      aria-label="Data e hora do evento"
+    >
+      <div className="flex items-center gap-2">
         <CalendarDays className="h-5 w-5 text-white/90" aria-hidden="true" />
         <span>{formatarDiaDoEvento(resumo.dataIso)}</span>
       </div>
-      <div className="flex items-center gap-2 border-l border-white/20 pl-4 text-sm">
+      <span className="h-5 w-px bg-white/25" aria-hidden="true" />
+      <div className="flex items-center gap-2">
         <Clock className="h-5 w-5 text-white/90" aria-hidden="true" />
         <span>{formatarHoraDoEvento(resumo.dataIso)}</span>
       </div>

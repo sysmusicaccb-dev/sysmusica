@@ -39,7 +39,7 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
   const [origens, setOrigens] = useState<NoOrganizacao[]>([]);
   const [nome, setNome] = useState("");
   const [cargoId, setCargoId] = useState("");
-  const [instrumentoId, setInstrumentoId] = useState("");
+  const [instrumentoDigitado, setInstrumentoId] = useState("");
   const [estadoId, setEstadoId] = useState("");
   const [rrmId, setRrmId] = useState("");
   const [raId, setRaId] = useState("");
@@ -78,6 +78,8 @@ export default function FormularioVisitante({ portariaId, onCadastrado }: Formul
   // Cargo travado no Órgão (Organista, Examinadora, Instrutor e Instrutora): só os instrumentos Órgão aparecem
   const somenteOrgao = cargoSomenteOrgao(cargo);
   const instrumentosDisponiveis = instrumentosDoCargo(opcoes?.instrumentos ?? [], somenteOrgao);
+  // Organista, Examinadora e Instrutora tocam sempre o Órgão: com um único Órgão cadastrado, ele já vem escolhido.
+  const instrumentoId = somenteOrgao && instrumentosDisponiveis.length === 1 ? instrumentosDisponiveis[0].id : instrumentoDigitado;
 
   // Listas encadeadas: cada nível só mostra o que pertence à escolha anterior
   const estados = filhosDe(origens, null, "ESTADO");

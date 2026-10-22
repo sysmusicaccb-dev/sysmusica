@@ -99,7 +99,7 @@ export default function Topbar({
               className={cn(classeAtalho, ativo && "bg-[rgb(255_255_255/0.12)] ring-1 ring-white/70")}
             >
               <Icone className="h-5 w-5" aria-hidden="true" />
-              <span className="hidden xl:inline">{atalho.rotulo}</span>
+              <span className="hidden lg:inline">{atalho.rotulo}</span>
             </Link>
           );
         })}
@@ -112,7 +112,7 @@ export default function Topbar({
           className={classeAtalho}
         >
           <Settings className="h-5 w-5" aria-hidden="true" />
-          <span className="hidden xl:inline">Configurações</span>
+          <span className="hidden lg:inline">Configurações</span>
         </button>
         <div className="ml-1 border-l border-white/20 pl-2">
           <UserMenu noTopo />
