@@ -10,7 +10,7 @@
  * tenta de novo no próximo ciclo. O banco entrega só contagens e respeita a abrangência de cada usuário.
  */
 import { useEffect, useState } from "react";
-import { CalendarDays, Clock, Pause, Play, RefreshCw } from "lucide-react";
+import { Pause, Play, RefreshCw } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import Skeleton from "@/components/ui/Skeleton";
@@ -24,7 +24,7 @@ import {
 } from "../regras";
 import { buscarPainel, listarEventosDoPainel } from "../services/painel";
 import type { DadosPainel, EventoParaEscolher } from "../tipos";
-import ResumoTempoReal from "./ResumoTempoReal";
+import PainelTotais from "./PainelTotais";
 
 // Guarda o intervalo escolhido só neste navegador (se o armazenamento não estiver disponível, apenas não lembra)
 const CHAVE_INTERVALO = "sysmusica.painel.intervalo";
@@ -177,8 +177,6 @@ export default function PainelAoVivo() {
     );
   }
 
-  const evento = dados?.evento;
-
   return (
     <div className="space-y-4">
       {/* Controles: evento, intervalo, pausar e atualizar */}
@@ -278,32 +276,8 @@ export default function PainelAoVivo() {
         )
       ) : (
         <>
-          {/* Cabeçalho do evento */}
-          {evento && (
-            <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-brand-700 px-5 py-4 text-white shadow-sm">
-              <div className="flex min-w-0 items-center gap-3">
-                <CalendarDays className="h-8 w-8 shrink-0" aria-hidden="true" />
-                <div className="min-w-0">
-                  <h2 className="truncate text-lg font-semibold">{evento.tipo}</h2>
-                  <p className="truncate text-sm uppercase tracking-wide text-white/80">
-                    {[evento.local, evento.casa_oracao].filter(Boolean).join(" · ")}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 text-sm font-medium">
-                <span className="inline-flex items-center gap-1.5">
-                  <CalendarDays className="h-4 w-4" aria-hidden="true" />
-                  {formatarDiaDoEvento(evento.data_evento)}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Clock className="h-4 w-4" aria-hidden="true" />
-                  {formatarHoraDoEvento(evento.data_evento)}
-                </span>
-              </div>
-            </section>
-          )}
-
-          <ResumoTempoReal dados={dados} />
+          {/* Painel de Totais: cabeçalho do evento, cartões, gráficos e tabelas */}
+          <PainelTotais dados={dados} />
         </>
       )}
     </div>
