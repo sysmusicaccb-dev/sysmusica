@@ -1,49 +1,106 @@
 "use client";
 
 /**
- * Sysmusica — Resumo lateral do ensaio: o que já foi preenchido, em tempo real, conforme a pessoa digita.
+ * Sysmusica — Resumo lateral do ensaio ("Resumo do Ensaio"): evento, quem atende, palavra, encarregados e hinos,
+ * em tempo real, conforme a pessoa preenche o formulário.
  */
+import type { ReactNode } from "react";
+import { BookOpen, CalendarDays, Clock, MapPin, Music, User, Users } from "lucide-react";
+import { formatarDiaDoEvento, formatarHoraDoEvento } from "@/modules/painel/regras";
 import { rotuloCompleto, type Hino } from "@/modules/hinos/regras";
-import { rotuloDoCargo, rotuloEncarregado, type EstadoEnsaio } from "../regras";
 import type { ModeloEnsaio } from "@/modules/tiposEvento/regras";
+import { rotuloDoCargo, rotuloEncarregado, temPalavra, type EstadoEnsaio } from "../regras";
+import type { EventoDoEnsaio } from "../tipos";
+import { localDoEvento } from "../apresentacao";
+import { partesDoHino } from "../hinosApresentacao";
 
 interface ResumoDoEnsaioProps {
   estado: EstadoEnsaio;
   modelo: ModeloEnsaio;
   hinos: Hino[];
+  evento: EventoDoEnsaio;
 }
 
-export default function ResumoDoEnsaio({ estado, modelo, hinos }: ResumoDoEnsaioProps) {
+const LIMITE_HINOS = 12; // quantos hinos listar no resumo (o restante vira "+ N")
+
+function Linha({ icone: Icone, children }: { icone: typeof User; children: ReactNode }) {
+  return (
+    <li className="flex items-start gap-2.5">
+      <Icone className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" aria-hidden="true" />
+      <div className="min-w-0 flex-1 text-slate-800">{children}</div>
+    </li>
+  );
+}
+
+export default function ResumoDoEnsaio({ estado, modelo, hinos, evento }: ResumoDoEnsaioProps) {
   const abertura = hinos.find((h) => h.id === estado.hinoAberturaId);
   const preenchidos = estado.encarregados.filter((e) => e.nome.trim() !== "");
+  const local = localDoEvento(evento);
+  const hinosPorId = new Map(hinos.map((h) => [h.id, h] as const));
+  const escolhidos = estado.hinosIds.slice(0, LIMITE_HINOS);
+  const cargo = modelo === "REGIONAL" ? "Ancião" : rotuloDoCargo(estado.atendeCargo) || "Quem atende";
 
   return (
-    <section aria-label="Resumo do ensaio" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <h2 className="text-lg font-bold text-slate-900">Resumo do ensaio</h2>
-      <dl className="mt-3 space-y-3 text-sm">
-        <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Quem atende</dt>
-          <dd className="text-slate-800">
-            {estado.atendeNome.trim() ? `${estado.atendeNome.trim()} — ${rotuloDoCargo(estado.atendeCargo)}` : "—"}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {rotuloEncarregado(modelo)} ({preenchidos.length})
-          </dt>
-          <dd className="text-slate-800">
-            {preenchidos.length === 0 ? "—" : preenchidos.map((e) => e.nome.trim() + (e.cidadeUf ? ` (${e.cidadeUf})` : "")).join("; ")}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Hino de abertura</dt>
-          <dd className="text-slate-800">{abertura ? rotuloCompleto(abertura) : "—"}</dd>
-        </div>
-        <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Hinos executados</dt>
-          <dd className="text-2xl font-bold tabular-nums text-slate-900">{estado.hinosIds.length}</dd>
-        </div>
-      </dl>
+    <section aria-label="Resumo do ensaio">
+      <h2 className="mb-2 text-base font-bold text-slate-900">Resumo do Ensaio</h2>
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p className="text-base font-bold text-slate-900">{evento.tipo}</p>
+        {local && <p className="text-xs font-medium tracking-wide text-slate-500">{local}</p>}
+
+        <ul className="mt-3 space-y-2 text-sm">
+          <Linha icone={CalendarDays}>{formatarDiaDoEvento(evento.data_evento)}</Linha>
+          <Linha icone={Clock}>{formatarHoraDoEvento(evento.data_evento)}</Linha>
+          {local && <Linha icone={MapPin}>{local}</Linha>}
+          <Linha icone={User}>
+            {cargo}: {estado.atendeNome.trim() || "—"}
+          </Linha>
+          {temPalavra(modelo) && (
+            <Linha icone={BookOpen}>
+              Palavra: {estado.palavra.trim() ? <span className="break-words">{estado.palavra.trim().slice(0, 120)}{estado.palavra.trim().length > 120 ? "…" : ""}</span> : "—"}
+            </Linha>
+          )}
+          <Linha icone={Users}>
+            <p>
+              {rotuloEncarregado(modelo)} ({preenchidos.length}):
+            </p>
+            {preenchidos.length === 0 ? (
+              <p>—</p>
+            ) : (
+              <ol className="mt-1 space-y-0.5">
+                {preenchidos.map((e, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="w-4 shrink-0 tabular-nums text-slate-500">{i + 1}.</span>
+                    <span className="min-w-0 break-words">
+                      {e.nome.trim()}
+                      {e.cidadeUf ? ` (${e.cidadeUf})` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </Linha>
+          <Linha icone={Music}>
+            <p>Hino de abertura: {abertura ? rotuloCompleto(abertura) : "—"}</p>
+            <p className="mt-1 font-semibold">Hinos executados ({estado.hinosIds.length}):</p>
+            {escolhidos.length === 0 ? (
+              <p>—</p>
+            ) : (
+              <ul className="mt-1 space-y-0.5 text-xs">
+                {escolhidos.map((id) => {
+                  const hino = hinosPorId.get(id);
+                  const partes = hino ? partesDoHino(hino) : null;
+                  return (
+                    <li key={id} className="break-words">
+                      {partes ? `${partes.numero} – ${partes.titulo}` : "Hino removido do cadastro"}
+                    </li>
+                  );
+                })}
+                {estado.hinosIds.length > LIMITE_HINOS && <li>+ {estado.hinosIds.length - LIMITE_HINOS} hino(s)</li>}
+              </ul>
+            )}
+          </Linha>
+        </ul>
+      </div>
     </section>
   );
 }

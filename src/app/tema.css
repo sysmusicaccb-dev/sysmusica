@@ -114,6 +114,10 @@ html[data-fonte="grande"] {
   --color-emerald-100: #08392c;
   --color-emerald-200: #0b5242;
   --color-emerald-700: #6ee7b7;
+  --color-violet-50: #1e1536;
+  --color-violet-100: #2a1d4d;
+  --color-violet-200: #3b2a6b;
+  --color-violet-700: #c4b5fd;
 
   /* Tons claros da cor principal viram tons escuros da mesma cor; o 700 (links) fica mais claro */
   --color-brand-50: color-mix(in srgb, var(--color-brand-600) 14%, #0f172a);
