@@ -7,7 +7,7 @@
 import type { ReactNode } from "react";
 import { formatarDataHora } from "@/lib/datas";
 import { ROTULO_STATUS } from "@/modules/portarias/regras";
-import { opcoesCasaOracao, opcoesRegiao, opcoesSetor } from "../regras";
+import { opcoesAdm, opcoesCasaOracao, opcoesRegiao, opcoesRrm, opcoesSetor } from "../regras";
 import type { CampoFiltro, FiltrosRelatorio, OpcoesFiltros } from "../tipos";
 
 interface FiltrosDoRelatorioProps {
@@ -91,17 +91,55 @@ export default function FiltrosDoRelatorio({ campos, valores, onChange, opcoes, 
         </Campo>
       )}
 
+      {tem("rrm") && (
+        <Campo id="rel-rrm" rotulo="RRM (Reunião Regional Ministerial)">
+          <select
+            id="rel-rrm"
+            value={valores.rrmId ?? ""}
+            onChange={(e) => mudar({ rrmId: e.target.value, regiaoId: "", admId: "", setorId: "", casaOracaoId: "" })}
+            disabled={desabilitado}
+            className={classeCampo}
+          >
+            <option value="">Todas as RRMs</option>
+            {opcoesRrm(organizacao).map((opcao) => (
+              <option key={opcao.id} value={opcao.id}>
+                {opcao.rotulo}
+              </option>
+            ))}
+          </select>
+        </Campo>
+      )}
+
       {tem("regiao") && (
         <Campo id="rel-regiao" rotulo="RA (Regional Administrativa)">
           <select
             id="rel-regiao"
             value={valores.regiaoId}
-            onChange={(e) => mudar({ regiaoId: e.target.value, setorId: "", casaOracaoId: "" })}
+            onChange={(e) => mudar({ regiaoId: e.target.value, admId: "", setorId: "", casaOracaoId: "" })}
             disabled={desabilitado}
             className={classeCampo}
           >
             <option value="">Todas as RAs</option>
-            {opcoesRegiao(organizacao).map((opcao) => (
+            {opcoesRegiao(organizacao, valores.rrmId).map((opcao) => (
+              <option key={opcao.id} value={opcao.id}>
+                {opcao.rotulo}
+              </option>
+            ))}
+          </select>
+        </Campo>
+      )}
+
+      {tem("adm") && (
+        <Campo id="rel-adm" rotulo="ADM (Administração)">
+          <select
+            id="rel-adm"
+            value={valores.admId ?? ""}
+            onChange={(e) => mudar({ admId: e.target.value, setorId: "", casaOracaoId: "" })}
+            disabled={desabilitado || !valores.regiaoId}
+            className={classeCampo}
+          >
+            <option value="">{valores.regiaoId ? "Todas as ADMs" : "Escolha a RA primeiro"}</option>
+            {opcoesAdm(organizacao, valores.regiaoId).map((opcao) => (
               <option key={opcao.id} value={opcao.id}>
                 {opcao.rotulo}
               </option>
@@ -120,7 +158,7 @@ export default function FiltrosDoRelatorio({ campos, valores, onChange, opcoes, 
             className={classeCampo}
           >
             <option value="">{valores.regiaoId ? "Todos os setores" : "Escolha a RA primeiro"}</option>
-            {opcoesSetor(organizacao, valores.regiaoId).map((opcao) => (
+            {opcoesSetor(organizacao, valores.regiaoId, valores.admId).map((opcao) => (
               <option key={opcao.id} value={opcao.id}>
                 {opcao.rotulo}
               </option>
@@ -139,7 +177,7 @@ export default function FiltrosDoRelatorio({ campos, valores, onChange, opcoes, 
             className={classeCampo}
           >
             <option value="">{valores.regiaoId ? "Todas as casas de oração" : "Escolha a RA primeiro"}</option>
-            {opcoesCasaOracao(organizacao, valores.regiaoId, valores.setorId).map((opcao) => (
+            {opcoesCasaOracao(organizacao, valores.regiaoId, valores.setorId, valores.admId).map((opcao) => (
               <option key={opcao.id} value={opcao.id}>
                 {opcao.rotulo}
               </option>

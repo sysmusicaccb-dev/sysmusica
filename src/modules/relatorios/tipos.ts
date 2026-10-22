@@ -16,7 +16,9 @@ export type TipoRelatorioId =
 export type CampoFiltro =
   | "periodo"
   | "evento"
+  | "rrm"
   | "regiao"
+  | "adm"
   | "setor"
   | "casa_oracao"
   | "cargo"
@@ -54,7 +56,9 @@ export interface FiltrosRelatorio {
   inicio: string; // AAAA-MM-DD ("" = sem limite)
   fim: string;
   eventoId: string;
+  rrmId?: string; // RRM escolhida (vazio = todas)
   regiaoId: string;
+  admId?: string; // ADM escolhida (vazio = todas)
   setorId: string;
   casaOracaoId: string;
   cargoId: string;

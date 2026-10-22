@@ -29,7 +29,9 @@ export const FILTROS_VAZIOS: FiltrosRelatorio = {
   inicio: "",
   fim: "",
   eventoId: "",
+  rrmId: "",
   regiaoId: "",
+  admId: "",
   setorId: "",
   casaOracaoId: "",
   cargoId: "",
@@ -135,7 +137,7 @@ export function formatarDataFiltro(dia: string): string {
 }
 
 export type RotulosFiltros = Partial<
-  Record<"evento" | "regiao" | "setor" | "casa_oracao" | "cargo" | "instrumento", string>
+  Record<"evento" | "rrm" | "regiao" | "adm" | "setor" | "casa_oracao" | "cargo" | "instrumento", string>
 >;
 
 /** Nomes (e não identificadores) dos itens escolhidos nos filtros, para o resumo do relatório. */
@@ -147,7 +149,9 @@ export function rotulosDosFiltros(filtros: FiltrosRelatorio, opcoes: OpcoesFiltr
 
   return {
     evento: evento ? `${formatarDataHora(evento.data_evento)} · ${evento.tipo} · ${evento.local}` : undefined,
+    rrm: nomeDe("RRM", filtros.rrmId ?? ""),
     regiao: nomeDe("RA", filtros.regiaoId), // o filtro "regiao" dos relatórios é a RA
+    adm: nomeDe("ADM", filtros.admId ?? ""),
     setor: nomeDe("SETOR", filtros.setorId),
     casa_oracao: nomeDe("CASA_ORACAO", filtros.casaOracaoId),
     cargo: filtros.cargoId ? opcoes?.cargos.find((item) => item.id === filtros.cargoId)?.nome : undefined,
@@ -174,7 +178,9 @@ export function resumoFiltros(
     );
   }
   if (tem("evento") && filtros.eventoId && rotulos.evento) partes.push(`Evento: ${rotulos.evento}`);
+  if (tem("rrm") && filtros.rrmId && rotulos.rrm) partes.push(`RRM: ${rotulos.rrm}`);
   if (tem("regiao") && filtros.regiaoId && rotulos.regiao) partes.push(`RA: ${rotulos.regiao}`);
+  if (tem("adm") && filtros.admId && rotulos.adm) partes.push(`ADM: ${rotulos.adm}`);
   if (tem("setor") && filtros.setorId && rotulos.setor) partes.push(`Setor: ${rotulos.setor}`);
   if (tem("casa_oracao") && filtros.casaOracaoId && rotulos.casa_oracao) partes.push(`Casa de Oração: ${rotulos.casa_oracao}`);
   if (tem("cargo") && filtros.cargoId && rotulos.cargo) partes.push(`Cargo: ${rotulos.cargo}`);
@@ -201,11 +207,25 @@ export interface OpcaoSelecao {
 const porRotulo = (a: OpcaoSelecao, b: OpcaoSelecao) => a.rotulo.localeCompare(b.rotulo, "pt-BR", { numeric: true });
 
 /** RAs para escolher (com o estado na frente se houver mais de um estado). */
-export function opcoesRegiao(nos: NoOrganizacao[]): OpcaoSelecao[] {
+/** RRMs para escolher (com o estado na frente se houver mais de um estado). */
+export function opcoesRrm(nos: NoOrganizacao[]): OpcaoSelecao[] {
   const estados = nos.filter((no) => no.nivel === "ESTADO");
   const porId = new Map(nos.map((no) => [no.id, no] as const));
   return nos
-    .filter((no) => no.nivel === "RA")
+    .filter((no) => no.nivel === "RRM")
+    .map((rrm) => {
+      const estado = rrm.parent_id ? porId.get(rrm.parent_id) : undefined;
+      return { id: rrm.id, rotulo: estados.length > 1 && estado ? `${estado.nome} › ${rrm.nome}` : rrm.nome };
+    })
+    .sort(porRotulo);
+}
+
+/** RAs para escolher; com a RRM escolhida, só as dela. */
+export function opcoesRegiao(nos: NoOrganizacao[], rrmId?: string): OpcaoSelecao[] {
+  const estados = nos.filter((no) => no.nivel === "ESTADO");
+  const porId = new Map(nos.map((no) => [no.id, no] as const));
+  return nos
+    .filter((no) => no.nivel === "RA" && (!rrmId || no.parent_id === rrmId))
     .map((ra) => {
       const rrm = ra.parent_id ? porId.get(ra.parent_id) : undefined;
       const estado = rrm?.parent_id ? porId.get(rrm.parent_id) : undefined;
@@ -214,10 +234,19 @@ export function opcoesRegiao(nos: NoOrganizacao[]): OpcaoSelecao[] {
     .sort(porRotulo);
 }
 
-/** Setores da RA escolhida, com o nome da ADM na frente ("Setor 1" existe em várias ADMs). Vazio sem RA. */
-export function opcoesSetor(nos: NoOrganizacao[], regiaoId: string): OpcaoSelecao[] {
+/** ADMs da RA escolhida. Vazio sem RA. */
+export function opcoesAdm(nos: NoOrganizacao[], regiaoId: string): OpcaoSelecao[] {
   if (!regiaoId) return [];
   return filhosDe(nos, regiaoId, "ADM")
+    .map((adm) => ({ id: adm.id, rotulo: adm.nome }))
+    .sort(porRotulo);
+}
+
+/** Setores da RA escolhida (ou só da ADM escolhida), com o nome da ADM na frente ("Setor 1" existe em várias ADMs). Vazio sem RA. */
+export function opcoesSetor(nos: NoOrganizacao[], regiaoId: string, admId?: string): OpcaoSelecao[] {
+  if (!regiaoId) return [];
+  return filhosDe(nos, regiaoId, "ADM")
+    .filter((adm) => !admId || adm.id === admId)
     .flatMap((adm) => filhosDe(nos, adm.id, "SETOR").map((setor) => ({ id: setor.id, rotulo: `${adm.nome} › ${setor.nome}` })))
     .sort(porRotulo);
 }
@@ -226,11 +255,12 @@ export function opcoesSetor(nos: NoOrganizacao[], regiaoId: string): OpcaoSeleca
  * Casas de Oração para escolher: as do setor escolhido; sem setor, todas as da RA (as ligadas direto à ADM
  * e as que estão dentro de setores). Vazio sem RA.
  */
-export function opcoesCasaOracao(nos: NoOrganizacao[], regiaoId: string, setorId: string): OpcaoSelecao[] {
+export function opcoesCasaOracao(nos: NoOrganizacao[], regiaoId: string, setorId: string, admId?: string): OpcaoSelecao[] {
   const comoOpcao = (no: NoOrganizacao) => ({ id: no.id, rotulo: no.nome });
   if (setorId) return filhosDe(nos, setorId, "CASA_ORACAO").map(comoOpcao);
   if (!regiaoId) return [];
   return filhosDe(nos, regiaoId, "ADM")
+    .filter((adm) => !admId || adm.id === admId)
     .flatMap((adm) => [
       ...filhosDe(nos, adm.id, "CASA_ORACAO"),
       ...filhosDe(nos, adm.id, "SETOR").flatMap((setor) => filhosDe(nos, setor.id, "CASA_ORACAO")),
@@ -385,7 +415,7 @@ export function montarInformacoes(entrada: EntradaInformacoes): ItemInformacao[]
   }
 
   if (itens.localizacao && tem("regiao")) {
-    const partes = [rotulos.regiao, rotulos.setor, rotulos.casa_oracao].filter((parte): parte is string => Boolean(parte));
+    const partes = [rotulos.rrm, rotulos.regiao, rotulos.adm, rotulos.setor, rotulos.casa_oracao].filter((parte): parte is string => Boolean(parte));
     lista.push({ rotulo: "Localização", valor: partes.length > 0 ? partes.join(" › ") : "Toda a sua abrangência" });
   }
 

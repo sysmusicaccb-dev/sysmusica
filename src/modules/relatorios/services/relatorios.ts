@@ -74,7 +74,9 @@ interface LinhaPresencaBanco {
   evento_data: string;
   evento_local: string;
   evento_finalidade: string | null;
+  rrm: string | null;
   regiao: string | null;
+  adm: string | null;
   setor: string | null;
   casa_oracao: string | null;
   membro_nome: string;
@@ -104,6 +106,8 @@ async function buscarPresencas(filtros: FiltrosRelatorio): Promise<ResultadoRela
     p_casa_oracao: filtros.casaOracaoId || null,
     p_status: filtros.statusPresenca || null,
     p_limite: LIMITE_LINHAS,
+    p_rrm: filtros.rrmId || null,
+    p_adm: filtros.admId || null,
   });
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível gerar o relatório de presença."));
 
@@ -114,7 +118,9 @@ async function buscarPresencas(filtros: FiltrosRelatorio): Promise<ResultadoRela
       evento_tipo: linha.evento_tipo,
       evento_local: linha.evento_local,
       evento_finalidade: texto(linha.evento_finalidade),
+      rrm: texto(linha.rrm),
       regiao: texto(linha.regiao),
+      adm: texto(linha.adm),
       setor: texto(linha.setor),
       casa_oracao: texto(linha.casa_oracao),
       membro: linha.membro_nome,
@@ -139,7 +145,9 @@ interface LinhaMembroBanco {
   cargo: string | null;
   instrumento: string | null;
   familia: string | null;
+  rrm: string | null;
   regiao: string | null;
+  adm: string | null;
   setor: string | null;
   casa_oracao: string | null;
   cidade: string | null;
@@ -162,6 +170,8 @@ async function buscarMembros(filtros: FiltrosRelatorio): Promise<ResultadoRelato
     p_status: filtros.situacao || null,
     p_visitante: filtros.visitante || null,
     p_limite: LIMITE_LINHAS,
+    p_rrm: filtros.rrmId || null,
+    p_adm: filtros.admId || null,
   });
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível gerar o relatório de membros."));
 
@@ -172,7 +182,9 @@ async function buscarMembros(filtros: FiltrosRelatorio): Promise<ResultadoRelato
       cargo: texto(linha.cargo),
       instrumento: texto(linha.instrumento),
       familia: texto(linha.familia),
+      rrm: texto(linha.rrm),
       regiao: texto(linha.regiao),
+      adm: texto(linha.adm),
       setor: texto(linha.setor),
       casa_oracao: texto(linha.casa_oracao),
       cidade: texto(linha.cidade),
@@ -193,7 +205,9 @@ interface LinhaEventoBanco {
   local_evento: string;
   finalidade: string | null;
   cidade: string | null;
+  rrm: string | null;
   regiao: string | null;
+  adm: string | null;
   setor: string | null;
   casa_oracao: string | null;
   registros: number | string;
@@ -211,6 +225,8 @@ async function buscarEventos(filtros: FiltrosRelatorio): Promise<ResultadoRelato
     p_setor: filtros.setorId || null,
     p_casa_oracao: filtros.casaOracaoId || null,
     p_limite: LIMITE_LINHAS,
+    p_rrm: filtros.rrmId || null,
+    p_adm: filtros.admId || null,
   });
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível gerar o relatório de eventos."));
 
@@ -222,7 +238,9 @@ async function buscarEventos(filtros: FiltrosRelatorio): Promise<ResultadoRelato
       local: linha.local_evento,
       finalidade: texto(linha.finalidade),
       cidade: texto(linha.cidade),
+      rrm: texto(linha.rrm),
       regiao: texto(linha.regiao),
+      adm: texto(linha.adm),
       setor: texto(linha.setor),
       casa_oracao: texto(linha.casa_oracao),
       registros: String(Number(linha.registros)),
