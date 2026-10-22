@@ -10,6 +10,7 @@ import { clienteAdmin } from "@/modules/administracao/server/clienteAdmin";
 import { ErroHttp } from "@/modules/administracao/server/erros";
 import { respostaDeErro } from "@/modules/administracao/server/resposta";
 import { erroDoBanco, exigirUuid } from "@/modules/cadastroPublico/server/erros";
+import { avisarNovoCadastro } from "@/modules/cadastroPublico/server/avisoTelegram";
 import { extrairIp, hashDoIp } from "@/modules/cadastroPublico/server/ip";
 
 const TAMANHO_MAXIMO = 30_000; // caracteres; o formulário real fica bem abaixo disso
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
       p_ip_hash: ipHash,
     });
     if (error) throw erroDoBanco(error);
+    await avisarNovoCadastro(); // Telegram (se ligado em Backup > Notificações); nunca derruba o cadastro
     return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
   } catch (erro) {
     return respostaDeErro(erro);
