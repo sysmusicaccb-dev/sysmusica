@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+instalar-*.sh
+diag-*.txt
+diag-*.sh
