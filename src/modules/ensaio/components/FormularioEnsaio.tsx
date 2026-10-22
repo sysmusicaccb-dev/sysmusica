@@ -14,6 +14,7 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { BookOpen, Music, RefreshCw, Save, User, Users, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { rotuloCompleto, type Hino } from "@/modules/hinos/regras";
 import type { Cidade } from "../cidades";
 import {
@@ -71,6 +72,8 @@ export default function FormularioEnsaio({ resposta, hinos, cidades, temPermissa
   const [erroGeral, setErroGeral] = useState<string | null>(null);
   const [avisoAbertura, setAvisoAbertura] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  // Janela "Limpar o formulário?": evita apagar sem querer os dados de um ensaio em andamento
+  const [confirmandoLimpar, setConfirmandoLimpar] = useState(false);
 
   const bloqueio = motivoSemEdicao(evento, podeEditar, temPermissaoPreencher);
   const desabilitado = !podeEditar || salvando;
@@ -95,7 +98,15 @@ export default function FormularioEnsaio({ resposta, hinos, cidades, temPermissa
     setAvisoAbertura(r.saiuDaLista ? "Este hino estava na lista de executados e foi retirado de lá (a abertura não conta na lista)." : null);
   }
 
+  // Se já há algo preenchido, pergunta antes; formulário vazio limpa direto
+  function pedirLimpar() {
+    const vazio = JSON.stringify(estado) === JSON.stringify(estadoVazio(modelo)) && textoAbertura === "";
+    if (vazio) limpar();
+    else setConfirmandoLimpar(true);
+  }
+
   function limpar() {
+    setConfirmandoLimpar(false);
     setEstado(estadoVazio(modelo));
     setTextoAbertura("");
     setErros([]);
@@ -135,6 +146,7 @@ export default function FormularioEnsaio({ resposta, hinos, cidades, temPermissa
   const regional = temPalavra(modelo);
 
   return (
+    <>
     <form onSubmit={salvar} className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]" noValidate>
       <div className="space-y-5">
         {bloqueio && (
@@ -356,7 +368,7 @@ export default function FormularioEnsaio({ resposta, hinos, cidades, temPermissa
           <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
             <button
               type="button"
-              onClick={limpar}
+              onClick={pedirLimpar}
               disabled={salvando}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-base font-semibold text-slate-800 transition hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 disabled:opacity-50"
             >
@@ -380,6 +392,19 @@ export default function FormularioEnsaio({ resposta, hinos, cidades, temPermissa
         {lateral}
       </aside>
     </form>
+    <ConfirmDialog
+      aberto={confirmandoLimpar}
+      titulo="Limpar o formulário?"
+      mensagem={
+        <p>
+          Tudo o que foi preenchido e <strong>ainda não foi salvo</strong> será perdido. Esta ação não pode ser desfeita.
+        </p>
+      }
+      textoConfirmar="Limpar"
+      onConfirmar={limpar}
+      onCancelar={() => setConfirmandoLimpar(false)}
+    />
+    </>
   );
 }
 
