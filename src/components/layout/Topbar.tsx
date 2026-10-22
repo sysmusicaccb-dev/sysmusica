@@ -61,7 +61,6 @@ export default function Topbar({
           <LogoMarca altura={34} comFundoBranco className="hidden lg:block" />
           <span className="min-w-0 leading-tight">
             <span className="block truncate text-lg font-bold tracking-tight">Sysmusica</span>
-            <span className="hidden truncate text-xs text-blue-100 sm:block">Controle de Presença Musical</span>
           </span>
         </Link>
       </div>
