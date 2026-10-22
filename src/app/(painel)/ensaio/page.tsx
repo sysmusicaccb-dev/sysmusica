@@ -13,6 +13,7 @@ import ResumoTempoReal from "@/modules/painel/components/ResumoTempoReal";
 import { listarHinos } from "@/modules/hinos/services/hinos";
 import type { Hino } from "@/modules/hinos/regras";
 import FormularioEnsaio from "@/modules/ensaio/components/FormularioEnsaio";
+import BotaoImprimirEnsaio from "@/modules/ensaio/components/BotaoImprimirEnsaio";
 import { carregarCidades } from "@/modules/ensaio/services/cidades";
 import { listarEventosParaEnsaio, obterDadosEnsaio } from "@/modules/ensaio/services/ensaio";
 import type { Cidade } from "@/modules/ensaio/cidades";
@@ -159,6 +160,9 @@ export default function EnsaioPage() {
             )}
             {erroEvento && !carregandoEvento && (
               <ErrorState titulo="Não foi possível abrir este ensaio." mensagem={erroEvento} onTentarNovamente={() => void carregarEvento(eventoId)} />
+            )}
+            {resposta?.dados && !carregandoEvento && (
+              <BotaoImprimirEnsaio resposta={resposta} hinos={hinos} totais={totais} />
             )}
             {resposta && !carregandoEvento && (
               <FormularioEnsaio

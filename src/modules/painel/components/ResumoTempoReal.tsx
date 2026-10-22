@@ -6,6 +6,7 @@
  */
 import { Guitar, Keyboard, Music, Users, type LucideIcon } from "lucide-react";
 import { agruparBlocos, montarFamilias } from "../regras";
+import BotaoImprimirPainel from "./BotaoImprimirPainel";
 import type { BlocoPainel, DadosPainel } from "../tipos";
 
 const VISUAL_BLOCO: Record<BlocoPainel, { icone: LucideIcon; fundo: string; texto: string }> = {
@@ -54,7 +55,10 @@ export default function ResumoTempoReal({ dados }: { dados: DadosPainel }) {
 
   return (
     <div className="mx-auto w-full max-w-md space-y-3">
-      <h2 className="text-lg font-bold text-slate-900">Resumo em tempo real</h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-bold text-slate-900">Resumo em tempo real</h2>
+        <BotaoImprimirPainel dados={dados} />
+      </div>
 
       {/* Total de participantes (cada pessoa conta uma vez só) */}
       <section
