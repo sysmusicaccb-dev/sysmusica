@@ -9,9 +9,8 @@
  * A janela de impressão é aberta já no clique, antes das esperas, para o navegador não bloqueá-la.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Download, Eye, Printer } from "lucide-react";
+import { Download, Eye, FileText, Printer } from "lucide-react";
 import Notificacao from "@/components/ui/Notificacao";
-import PageHeader from "@/components/ui/PageHeader";
 import { abrirJanelaImpressao, baixarCsv, escreverImpressao, gerarCsv } from "@/lib/exportacao";
 import { MARCA } from "@/lib/marca";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
@@ -69,7 +68,12 @@ const classeBotaoPrimario =
   "inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm " +
   "transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60";
 
-const classeSecao = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
+// Cada passo é um cartão com faixa azul-clara no topo e o número do passo em destaque
+const classeSecao = "overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm";
+const classeTituloSecao =
+  "-mx-5 -mt-5 mb-4 flex items-center gap-3 border-b border-slate-200 bg-brand-50 px-5 py-3 text-base font-semibold text-slate-900";
+const classeNumeroSecao =
+  "inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white";
 
 // Endereço da logomarca para a janela de impressão: completo (https) quando possível
 function enderecoDaLogo(): string {
@@ -270,10 +274,16 @@ export default function RelatoriosPage() {
   return (
     <main className="text-slate-900">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <PageHeader
-          titulo="Relatórios"
-          descricao="Monte, visualize, imprima ou exporte. Cada pessoa recebe só o que a sua abrangência permite."
-        />
+        {/* Cabeçalho no padrão do protótipo: ícone, título e descrição */}
+        <header className="mb-5 flex items-center gap-4 rounded-xl border border-slate-200 bg-brand-50 px-5 py-4 shadow-sm">
+          <FileText className="h-10 w-10 shrink-0 text-brand-700" aria-hidden="true" />
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Relatórios</h1>
+            <p className="text-sm text-slate-600">
+              Monte, visualize, imprima ou exporte. Cada pessoa recebe só o que a sua abrangência permite.
+            </p>
+          </div>
+        </header>
 
         {erro && (
           <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -290,7 +300,10 @@ export default function RelatoriosPage() {
           <div className="space-y-6">
             {/* 1) Tipo */}
             <section className={classeSecao}>
-              <h2 className="text-sm font-semibold text-slate-900">1. Tipo de relatório</h2>
+              <h2 className={classeTituloSecao}>
+                <span className={classeNumeroSecao}>1</span>
+                Tipo de relatório
+              </h2>
               <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {disponiveis.map((item) => (
                   <li key={item.id}>
@@ -317,7 +330,10 @@ export default function RelatoriosPage() {
               <>
                 {/* 2) Filtros */}
                 <section className={classeSecao}>
-                  <h2 className="mb-3 text-sm font-semibold text-slate-900">2. Filtros</h2>
+                  <h2 className={classeTituloSecao}>
+                <span className={classeNumeroSecao}>2</span>
+                Filtros
+              </h2>
                   <FiltrosDoRelatorio
                     campos={definicao.filtros}
                     valores={filtros}
@@ -334,7 +350,10 @@ export default function RelatoriosPage() {
 
                 {/* 3) Colunas */}
                 <section className={classeSecao}>
-                  <h2 className="mb-3 text-sm font-semibold text-slate-900">3. Colunas e ordem</h2>
+                  <h2 className={classeTituloSecao}>
+                <span className={classeNumeroSecao}>3</span>
+                Colunas e ordem
+              </h2>
                   <SelecaoColunas
                     colunas={colunasVis}
                     ordem={ordem}
@@ -349,7 +368,10 @@ export default function RelatoriosPage() {
 
                 {/* 4) Página */}
                 <section className={classeSecao}>
-                  <h2 className="mb-3 text-sm font-semibold text-slate-900">4. Página</h2>
+                  <h2 className={classeTituloSecao}>
+                <span className={classeNumeroSecao}>4</span>
+                Página
+              </h2>
                   <OpcoesDaPagina
                     valores={pagina}
                     onChange={setPagina}
@@ -359,7 +381,10 @@ export default function RelatoriosPage() {
 
                 {/* 5) Resultado */}
                 <section className={classeSecao}>
-                  <h2 className="mb-3 text-sm font-semibold text-slate-900">5. Resultado</h2>
+                  <h2 className={classeTituloSecao}>
+                <span className={classeNumeroSecao}>5</span>
+                Resultado
+              </h2>
 
                   {!resultado ? (
                     <p className="text-sm text-slate-500">
