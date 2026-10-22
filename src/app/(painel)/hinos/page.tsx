@@ -5,7 +5,7 @@
  * Permite adicionar, editar, ativar/desativar, excluir (só se nunca foi usado) e importar uma lista colada.
  */
 import { useCallback, useEffect, useState } from "react";
-import { FileUp, Plus } from "lucide-react";
+import { BookOpen, FileUp, Plus } from "lucide-react";
 import { excluirHino, listarHinos, salvarHino } from "@/modules/hinos/services/hinos";
 import FormularioHino from "@/modules/hinos/components/FormularioHino";
 import ImportarHinos from "@/modules/hinos/components/ImportarHinos";
@@ -18,7 +18,6 @@ import Drawer from "@/components/ui/Drawer";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import Notificacao from "@/components/ui/Notificacao";
-import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
 
 type Painel = { tipo: "novo" } | { tipo: "editar"; item: Hino } | { tipo: "importar" };
@@ -98,29 +97,35 @@ export default function HinosPage() {
   return (
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <PageHeader
-          titulo="Hinos"
-          descricao={`Hinário e coros usados nos Dados do Ensaio.${!carregando && !erro ? ` ${hinos.length} cadastrado(s).` : ""}`}
-          acoes={
-            podeCriar ? (
-              <div className="flex flex-wrap gap-2">
-                {/* Botão simples (não usamos uma variante do Button que pode não existir no projeto) */}
-                <button
-                  type="button"
-                  onClick={() => setPainel({ tipo: "importar" })}
-                  disabled={carregando || !!erro}
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <FileUp className="h-4 w-4" aria-hidden="true" />
-                  Importar lista
-                </button>
-                <Button icone={Plus} onClick={() => setPainel({ tipo: "novo" })} disabled={carregando || !!erro}>
-                  Adicionar
-                </Button>
-              </div>
-            ) : undefined
-          }
-        />
+        {/* Cabeçalho no padrão do protótipo: ícone, título, descrição e botões Importar lista e Adicionar */}
+        <header className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-brand-50 px-5 py-4 shadow-sm">
+          <div className="flex min-w-0 items-center gap-4">
+            <BookOpen className="h-10 w-10 shrink-0 text-brand-700" aria-hidden="true" />
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Hinos</h1>
+              <p className="text-sm text-slate-600">
+                {`Hinário e coros usados nos Dados do Ensaio.${!carregando && !erro ? ` ${hinos.length} cadastrado(s).` : ""}`}
+              </p>
+            </div>
+          </div>
+          {podeCriar ? (
+            <div className="flex flex-wrap gap-2">
+              {/* Botão simples (não usamos uma variante do Button que pode não existir no projeto) */}
+              <button
+                type="button"
+                onClick={() => setPainel({ tipo: "importar" })}
+                disabled={carregando || !!erro}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <FileUp className="h-4 w-4" aria-hidden="true" />
+                Importar lista
+              </button>
+              <Button icone={Plus} onClick={() => setPainel({ tipo: "novo" })} disabled={carregando || !!erro}>
+                Adicionar
+              </Button>
+            </div>
+          ) : null}
+        </header>
 
         {carregando ? (
           <div role="status" aria-live="polite" className="space-y-3">
