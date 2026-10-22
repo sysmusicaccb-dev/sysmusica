@@ -1,14 +1,16 @@
 "use client";
 
 /**
- * Sysmusica — Formulário de tipo de evento (novo ou edição) — conteúdo do painel lateral.
- * tipo = null -> criar; preenchido -> editar.
+ * Sysmusica — Formulário de tipo de evento (cartão da direita, sempre visível).
+ * tipo = null -> "Novo Tipo de Evento"; preenchido -> "Editar Tipo de Evento".
+ * A página troca o "key" do componente para recarregar os campos ao escolher outro tipo ou ao limpar.
  *
  * O campo "Dados do Ensaio" diz se os eventos deste tipo usam a tela Dados do Ensaio e em qual modelo
  * (Local ou Regional). O banco não deixa trocar o modelo de um tipo que já tem ensaios preenchidos.
  */
 import { useState, type FormEvent } from "react";
-import Button from "@/components/ui/Button";
+import { Pencil, Plus, RefreshCw, Save } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { DESCRICAO_MAXIMA, NOME_MAXIMO, ROTULO_MODELO, validarTipoEvento, type ModeloEnsaio, type TipoEvento } from "../regras";
 import { salvarTipoEvento } from "../services/tiposEvento";
 
@@ -16,14 +18,15 @@ interface FormularioTipoEventoProps {
   tipo: TipoEvento | null;
   tipos: TipoEvento[]; // todos, para impedir nomes repetidos
   onSalvo: (mensagem: string) => void | Promise<void>;
+  onLimpar: () => void; // "Limpar": descarta a edição e volta ao formulário em branco
 }
 
 const classeInput =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 " +
-  "placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none " +
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 " +
+  "placeholder:text-slate-400 focus:border-brand-500 focus:outline-none " +
   "focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-60";
 
-export default function FormularioTipoEvento({ tipo, tipos, onSalvo }: FormularioTipoEventoProps) {
+export default function FormularioTipoEvento({ tipo, tipos, onSalvo, onLimpar }: FormularioTipoEventoProps) {
   const editando = tipo !== null;
   const [nome, setNome] = useState(tipo?.nome ?? "");
   const [descricao, setDescricao] = useState(tipo?.descricao ?? "");
@@ -56,86 +59,140 @@ export default function FormularioTipoEvento({ tipo, tipos, onSalvo }: Formulari
     }
   }
 
+  const Icone = editando ? Pencil : Plus;
+
   return (
-    <form onSubmit={salvar} className="space-y-5">
-      <div className="space-y-1.5">
-        <label htmlFor="nome-tipo" className="text-sm font-medium text-slate-700">
-          Nome do tipo
-        </label>
-        <input
-          id="nome-tipo"
-          type="text"
-          required
-          maxLength={NOME_MAXIMO}
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          disabled={salvando}
-          placeholder="Ex: Ensaio Regional"
-          className={classeInput}
-        />
-        {editando && (tipo?.em_uso ?? 0) > 0 && (
+    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <header className="flex items-center gap-3 border-b border-slate-200 bg-brand-50 px-5 py-3.5">
+        <span
+          aria-hidden="true"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white"
+        >
+          <Icone className="h-4 w-4" />
+        </span>
+        <h2 className="text-base font-semibold text-slate-900">
+          {editando ? "Editar Tipo de Evento" : "Novo Tipo de Evento"}
+        </h2>
+      </header>
+
+      <form onSubmit={salvar} className="space-y-5 p-5">
+        <div className="space-y-1.5">
+          <label htmlFor="nome-tipo" className="text-sm font-semibold text-slate-800">
+            Nome do Tipo de Evento <span className="text-red-600">*</span>
+          </label>
+          <input
+            id="nome-tipo"
+            type="text"
+            required
+            maxLength={NOME_MAXIMO}
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            disabled={salvando}
+            placeholder="Digite o nome do tipo de evento..."
+            className={classeInput}
+          />
+          {editando && (tipo?.em_uso ?? 0) > 0 && (
+            <p className="text-xs text-slate-500">
+              Ao renomear, os {tipo?.em_uso} evento(s) deste tipo passam a mostrar o novo nome.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="descricao-tipo" className="text-sm font-semibold text-slate-800">
+            Descrição
+          </label>
+          <textarea
+            id="descricao-tipo"
+            rows={5}
+            maxLength={DESCRICAO_MAXIMA}
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+            disabled={salvando}
+            placeholder="Digite uma descrição (opcional)..."
+            className={cn(classeInput, "resize-none")}
+          />
+          <p className="text-right text-xs text-slate-500" aria-live="polite">
+            {descricao.length}/{DESCRICAO_MAXIMA}
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="modelo-tipo" className="text-sm font-semibold text-slate-800">
+            Dados do Ensaio
+          </label>
+          <select
+            id="modelo-tipo"
+            value={modelo}
+            onChange={(e) => setModelo(e.target.value as ModeloEnsaio | "")}
+            disabled={salvando}
+            className={classeInput}
+          >
+            <option value="">Não usa (sem tela de ensaio)</option>
+            <option value="LOCAL">{ROTULO_MODELO.LOCAL}</option>
+            <option value="REGIONAL">{ROTULO_MODELO.REGIONAL}</option>
+          </select>
           <p className="text-xs text-slate-500">
-            Ao renomear, os {tipo?.em_uso} evento(s) deste tipo passam a mostrar o novo nome.
+            Regional: quem atende é sempre Ancião e há a palavra. Local: quem atende pode ser Ancião, Diácono ou
+            Cooperador, sem palavra.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <p id="status-tipo" className="text-sm font-semibold text-slate-800">
+            Status
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={ativo}
+              aria-labelledby="status-tipo"
+              disabled={salvando}
+              onClick={() => setAtivo((atual) => !atual)}
+              className={cn(
+                "relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 disabled:opacity-60",
+                ativo ? "bg-emerald-500" : "bg-slate-300"
+              )}
+            >
+              <span
+                className={cn(
+                  "inline-block h-6 w-6 transform rounded-full bg-white shadow transition",
+                  ativo ? "translate-x-7" : "translate-x-1"
+                )}
+              />
+            </button>
+            <span className="text-base text-slate-700">{ativo ? "Ativo" : "Inativo"}</span>
+          </div>
+          <p className="text-xs text-slate-500">Tipos ativos aparecem na lista ao criar um evento.</p>
+        </div>
+
+        {erro && (
+          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {erro}
           </p>
         )}
-      </div>
 
-      <div className="space-y-1.5">
-        <label htmlFor="descricao-tipo" className="text-sm font-medium text-slate-700">
-          Descrição <span className="font-normal text-slate-400">(opcional)</span>
-        </label>
-        <textarea
-          id="descricao-tipo"
-          rows={3}
-          maxLength={DESCRICAO_MAXIMA}
-          value={descricao}
-          onChange={(e) => setDescricao(e.target.value)}
-          disabled={salvando}
-          className={classeInput}
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <label htmlFor="modelo-tipo" className="text-sm font-medium text-slate-700">
-          Dados do Ensaio
-        </label>
-        <select
-          id="modelo-tipo"
-          value={modelo}
-          onChange={(e) => setModelo(e.target.value as ModeloEnsaio | "")}
-          disabled={salvando}
-          className={classeInput}
-        >
-          <option value="">Não usa (sem tela de ensaio)</option>
-          <option value="LOCAL">{ROTULO_MODELO.LOCAL}</option>
-          <option value="REGIONAL">{ROTULO_MODELO.REGIONAL}</option>
-        </select>
-        <p className="text-xs text-slate-500">
-          Regional: quem atende é sempre Ancião e há a palavra. Local: quem atende pode ser Ancião, Diácono ou
-          Cooperador, sem palavra.
-        </p>
-      </div>
-
-      <label className="flex items-center gap-2 text-sm text-slate-700">
-        <input
-          type="checkbox"
-          checked={ativo}
-          onChange={(e) => setAtivo(e.target.checked)}
-          disabled={salvando}
-          className="h-4 w-4 rounded border-slate-300"
-        />
-        Ativo (aparece na lista de tipos ao criar um evento)
-      </label>
-
-      {erro && (
-        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          {erro}
-        </p>
-      )}
-
-      <Button type="submit" disabled={salvando} className="w-full">
-        {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Criar tipo"}
-      </Button>
-    </form>
+        <div className="space-y-3">
+          <button
+            type="submit"
+            disabled={salvando}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-brand-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Save className="h-5 w-5" aria-hidden="true" />
+            {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Salvar"}
+          </button>
+          <button
+            type="button"
+            onClick={onLimpar}
+            disabled={salvando}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-base font-semibold text-slate-800 transition hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw className="h-5 w-5" aria-hidden="true" />
+            Limpar
+          </button>
+        </div>
+      </form>
+    </section>
   );
 }

@@ -72,3 +72,27 @@ export function filtrarTipos<T extends Pick<TipoEvento, "nome" | "descricao">>(l
 export function tiposParaEscolher<T extends Pick<TipoEvento, "id" | "ativo">>(lista: T[], idAtual: string | null): T[] {
   return lista.filter((tipo) => tipo.ativo || tipo.id === idAtual);
 }
+
+/** Divide a lista em páginas. A página pedida é ajustada ao limite (ex.: depois de excluir o último item). */
+export function paginar<T>(lista: T[], pagina: number, tamanho: number): { itens: T[]; pagina: number; totalPaginas: number } {
+  const totalPaginas = Math.max(1, Math.ceil(lista.length / tamanho));
+  const atual = Math.min(Math.max(1, Math.trunc(pagina) || 1), totalPaginas);
+  const inicio = (atual - 1) * tamanho;
+  return { itens: lista.slice(inicio, inicio + tamanho), pagina: atual, totalPaginas };
+}
+
+/** Números de página a mostrar; null = reticências ("…"). Ex.: 1 … 4 5 6 … 10. */
+export function paginasVisiveis(atual: number, total: number): (number | null)[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const numeros = [...new Set([1, total, atual - 1, atual, atual + 1])]
+    .filter((n) => n >= 1 && n <= total)
+    .sort((a, b) => a - b);
+  const saida: (number | null)[] = [];
+  let anterior = 0;
+  for (const n of numeros) {
+    if (n - anterior > 1) saida.push(null);
+    saida.push(n);
+    anterior = n;
+  }
+  return saida;
+}
