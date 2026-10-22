@@ -111,7 +111,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         permissao: "ensaio.visualizar",
         qualquer: ["ensaio.registrar"], // quem só preenche (sem ver) também acessa
       },
-      { href: "/painel-ao-vivo", rotulo: "Painel de Totais", icone: Activity, permissao: "painel.visualizar" },
+      { href: "/painel-ao-vivo", rotulo: "Painel ao Vivo", icone: Activity, permissao: "painel.visualizar" },
       { href: "/relatorios", rotulo: "Relatórios", icone: FileText, permissao: "relatorios.visualizar" },
     ],
   },
