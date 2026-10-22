@@ -1,16 +1,15 @@
 "use client";
 
 /**
- * Sysmusica — Menu lateral.
+ * Sysmusica — Menu lateral (azul-claro, como no protótipo).
  *
- * Os itens vêm de ./navegacao.ts. No desktop (>= lg) é fixo e pode ser recolhido (só ícones);
- * no celular/tablet é uma gaveta que abre sobre a tela e fecha ao navegar, tocar fora ou apertar Esc.
- * No canto de cima fica a logomarca (emblema da CCB, em uma plaquinha branca por causa do fundo escuro) e o
- * nome do sistema; com o menu recolhido, aparece só o ícone compacto.
+ * Os itens vêm de ./navegacao.ts. No desktop (>= lg) é fixo, fica abaixo do topo e pode ser recolhido (só ícones);
+ * no celular/tablet é uma gaveta que abre sobre a tela (com a marca no alto) e fecha ao navegar, tocar fora ou apertar Esc.
+ * No desktop a marca do sistema fica no topo azul (Topbar), não aqui.
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Music, X } from "lucide-react";
+import { X } from "lucide-react";
 import LogoMarca from "@/components/ui/LogoMarca";
 import { cn } from "@/lib/cn";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
@@ -45,46 +44,27 @@ export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
         id="menu-lateral"
         aria-label="Menu lateral"
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar text-sidebar-fg shadow-xl transition-all duration-200 lg:shadow-none print:hidden",
+          "fixed bottom-0 left-0 top-0 z-50 flex w-64 flex-col border-r border-menu-borda bg-menu text-menu-fg shadow-xl transition-all duration-200 lg:top-16 lg:shadow-none print:hidden",
           aberta ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
           recolhida ? "lg:w-[4.5rem]" : "lg:w-64"
         )}
       >
-        {/* Marca do sistema */}
-        <div className="flex h-16 shrink-0 items-center justify-between px-4">
+        {/* Cabeçalho da gaveta (só celular/tablet): marca e botão de fechar */}
+        <div className="flex h-16 shrink-0 items-center justify-between bg-topo px-4 text-white lg:hidden">
           <Link
             href="/"
             onClick={onFechar}
             title="Sysmusica — Dashboard"
             className="flex min-w-0 items-center gap-3"
           >
-            {/* Menu aberto: logomarca da CCB; recolhido (só no desktop): o ícone compacto */}
-            <LogoMarca altura={30} comFundoBranco className={cn(recolhida && "lg:hidden")} />
-            <span
-              aria-hidden="true"
-              className={cn(
-                "hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white shadow-sm",
-                recolhida && "lg:flex"
-              )}
-            >
-              <Music className="h-5 w-5" />
-            </span>
-            <span
-              className={cn(
-                "truncate text-lg font-bold tracking-tight text-white",
-                recolhida && "lg:hidden"
-              )}
-            >
-              Sysmusica
-            </span>
+            <LogoMarca altura={30} comFundoBranco />
+            <span className="truncate text-lg font-bold tracking-tight">Sysmusica</span>
           </Link>
-
-          {/* Botão de fechar a gaveta (só celular/tablet) */}
           <button
             type="button"
             onClick={onFechar}
             aria-label="Fechar menu"
-            className="rounded-lg p-2 text-sidebar-fg transition hover:bg-sidebar-hover hover:text-white lg:hidden"
+            className="rounded-lg p-2 text-white/90 transition hover:bg-[rgb(255_255_255/0.12)] hover:text-white"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -97,7 +77,7 @@ export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
               {grupo.titulo && (
                 <p
                   className={cn(
-                    "mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500",
+                    "mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-menu-titulo",
                     recolhida && "lg:sr-only"
                   )}
                 >
@@ -119,8 +99,8 @@ export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
                         className={cn(
                           "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300",
                           ativo
-                            ? "bg-brand-600 text-white"
-                            : "hover:bg-sidebar-hover hover:text-white",
+                            ? "bg-menu-ativo font-semibold text-menu-ativo-fg"
+                            : "hover:bg-menu-hover hover:text-menu-ativo-fg",
                           recolhida && "lg:justify-center lg:px-0"
                         )}
                       >

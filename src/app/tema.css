@@ -122,6 +122,32 @@ html[data-fonte="grande"] {
   --color-brand-700: color-mix(in srgb, var(--color-brand-600) 70%, #ffffff);
 }
 
+/* ---------- Moldura (topo e menu lateral): acompanha a cor principal e o modo escuro ---------- */
+:root[data-cor="verde"],
+:root[data-cor="vinho"],
+:root[data-cor="grafite"] {
+  --color-topo: var(--color-brand-900);
+  --color-topo-fim: var(--color-brand-800);
+  --color-menu: var(--color-brand-50);
+  --color-menu-hover: var(--color-brand-100);
+  --color-menu-ativo: var(--color-brand-200);
+  --color-menu-ativo-fg: var(--color-brand-900);
+  --color-menu-fg: var(--color-brand-900);
+  --color-menu-titulo: var(--color-brand-600);
+  --color-menu-borda: var(--color-brand-100);
+}
+:root[data-tema="escuro"] {
+  --color-topo: #06172e;
+  --color-topo-fim: #0a2a52;
+  --color-menu: #0b1626;
+  --color-menu-hover: #14233a;
+  --color-menu-ativo: #1b3558;
+  --color-menu-ativo-fg: #f1f5f9;
+  --color-menu-fg: #cbd5e1;
+  --color-menu-titulo: #7f9bbd;
+  --color-menu-borda: #14233a;
+}
+
 /* Superfícies brancas (cartões, tabelas, campos) viram um azul bem escuro */
 :root[data-tema="escuro"] .bg-white {
   background-color: #0f172a;

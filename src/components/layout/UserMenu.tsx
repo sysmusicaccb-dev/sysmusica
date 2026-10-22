@@ -9,7 +9,8 @@ import { ChevronDown, LogOut } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 
-export default function UserMenu() {
+export default function UserMenu({ noTopo = false }: { noTopo?: boolean }) {
+  // noTopo: o botão fica sobre o topo azul (letras claras); caso contrário, sobre fundo claro
   const { conta, sessao, sair } = useSessao();
   const [aberto, setAberto] = useState(false);
   const raizRef = useRef<HTMLDivElement>(null);
@@ -43,21 +44,25 @@ export default function UserMenu() {
         onClick={() => setAberto((atual) => !atual)}
         aria-haspopup="menu"
         aria-expanded={aberto}
-        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+        className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition focus:outline-none focus-visible:ring-2 ${
+          noTopo ? "text-white hover:bg-[rgb(255_255_255/0.12)] focus-visible:ring-white/70" : "hover:bg-slate-100 focus-visible:ring-brand-300"
+        }`}
       >
         <span
           aria-hidden="true"
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700"
+          className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
+            noTopo ? "bg-[rgb(255_255_255/0.22)] text-white" : "bg-brand-100 text-brand-700"
+          }`}
         >
           {nome.charAt(0).toUpperCase()}
         </span>
         <span className="hidden min-w-0 sm:block">
-          <span className="block max-w-40 truncate text-sm font-medium text-slate-900">{nome}</span>
+          <span className={`block max-w-40 truncate text-sm font-medium ${noTopo ? "text-white" : "text-slate-900"}`}>{nome}</span>
           {conta?.grupo && (
-            <span className="block max-w-40 truncate text-xs text-slate-500">{conta.grupo}</span>
+            <span className={`block max-w-40 truncate text-xs ${noTopo ? "text-blue-100" : "text-slate-500"}`}>{conta.grupo}</span>
           )}
         </span>
-        <ChevronDown className="h-4 w-4 text-slate-500" aria-hidden="true" />
+        <ChevronDown className={`h-4 w-4 ${noTopo ? "text-white/80" : "text-slate-500"}`} aria-hidden="true" />
       </button>
 
       {aberto && (

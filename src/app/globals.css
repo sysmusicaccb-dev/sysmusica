@@ -48,4 +48,15 @@ body {
   --color-sidebar: #0f172a;
   --color-sidebar-hover: #1e293b;
   --color-sidebar-fg: #cbd5e1;
+
+  /* Moldura (topo azul-escuro e menu lateral azul-claro): bg-topo, bg-menu, bg-menu-ativo, text-menu-fg... */
+  --color-topo: #0b3a6e;
+  --color-topo-fim: #0d4f95;
+  --color-menu: #eaf2fb;
+  --color-menu-hover: #dce9f8;
+  --color-menu-ativo: #cfe1f7;
+  --color-menu-ativo-fg: #0b3a6e;
+  --color-menu-fg: #1e3a5f;
+  --color-menu-titulo: #5b7a9d;
+  --color-menu-borda: #d5e3f3;
 }

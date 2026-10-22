@@ -1,13 +1,13 @@
 "use client";
 
 /**
- * Sysmusica — Estrutura do painel: menu lateral + topo + área de conteúdo.
+ * Sysmusica — Estrutura do painel: topo azul (largura total) + menu lateral azul-claro + área de conteúdo.
  *
  * Guarda o estado do menu:
  *  - recolhida: no desktop, o menu fica só com ícones;
  *  - menuAberto: no celular/tablet, o menu vira uma gaveta sobre a tela.
  * Guarda também se a janela de Configurações (aparência) está aberta: ela fica aqui, fora da barra do
- * topo, e o botão que a abre fica na barra.
+ * topo, e os botões que a abrem ficam na barra.
  * O fundo claro fica neste wrapper (e não no <body>) para a interface continuar legível
  * mesmo com o navegador em tema escuro.
  * As páginas internas trazem o próprio <main>, por isso a área de conteúdo é um <div>.
@@ -43,25 +43,25 @@ export default function AppShell({ children }: { children: ReactNode }) {
         Pular para o conteúdo
       </a>
 
+      <Topbar
+        recolhida={recolhida}
+        menuAberto={menuAberto}
+        onAbrirMenu={() => setMenuAberto(true)}
+        onAlternarRecolhimento={() => setRecolhida((atual) => !atual)}
+        onAbrirConfiguracoes={() => setConfiguracoesAbertas(true)}
+      />
+
       <Sidebar recolhida={recolhida} aberta={menuAberto} onFechar={() => setMenuAberto(false)} />
 
       {/* O espaço à esquerda acompanha a largura do menu fixo (só no desktop) */}
       <div
+        id="conteudo"
         className={cn(
-          "flex min-h-screen flex-col transition-[padding] duration-200",
+          "min-h-[calc(100vh-4rem)] transition-[padding] duration-200 print:pl-0",
           recolhida ? "lg:pl-[4.5rem]" : "lg:pl-64"
         )}
       >
-        <Topbar
-          recolhida={recolhida}
-          menuAberto={menuAberto}
-          onAbrirMenu={() => setMenuAberto(true)}
-          onAlternarRecolhimento={() => setRecolhida((atual) => !atual)}
-          onAbrirConfiguracoes={() => setConfiguracoesAbertas(true)}
-        />
-        <div id="conteudo" className="flex-1">
-          {children}
-        </div>
+        {children}
       </div>
 
       <JanelaConfiguracoes aberto={configuracoesAbertas} onFechar={() => setConfiguracoesAbertas(false)} />
