@@ -25,9 +25,10 @@ import ErrorState from "@/components/ui/ErrorState";
 import Notificacao from "@/components/ui/Notificacao";
 import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
-import { Settings } from "lucide-react";
+import { Link2, Settings } from "lucide-react";
 import Button from "@/components/ui/Button";
 import ConfigurarPrazo from "@/modules/cadastrosPendentes/components/ConfigurarPrazo";
+import LinksDeCadastro from "@/modules/cadastrosPendentes/components/LinksDeCadastro";
 
 const FILTROS: { valor: FiltroStatus; rotulo: string }[] = [
   { valor: "PENDENTE", rotulo: "Pendentes" },
@@ -52,6 +53,7 @@ export default function CadastrosPendentesPage() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [casaEscolhida, setCasaEscolhida] = useState(""); // casa escolhida ao aprovar um pedido com casa digitada
   const [configAberta, setConfigAberta] = useState(false); // painel "Prazo dos pedidos" (engrenagem)
+  const [linksAberto, setLinksAberto] = useState(false); // painel "Link de cadastro da região"
 
   const carregar = useCallback(async (status: FiltroStatus) => {
     try {
@@ -134,12 +136,20 @@ export default function CadastrosPendentesPage() {
           titulo="Cadastros Pendentes"
           descricao="Cadastros enviados pelo link público. Nada entra no sistema sem a sua aprovação."
           acoes={
-            // Só quem tem a permissão cadastros.configurar (Administrador) vê o botão do prazo dos pedidos
-            pode("cadastros.configurar") ? (
-              <Button variante="secundario" icone={Settings} onClick={() => setConfigAberta(true)}>
-                Prazo dos pedidos
-              </Button>
-            ) : undefined
+            <div className="flex flex-wrap gap-2">
+              {/* Quem aprova cadastros gera o link da própria região */}
+              {pode("cadastros.aprovar") && (
+                <Button variante="secundario" icone={Link2} onClick={() => setLinksAberto(true)}>
+                  Link de cadastro da região
+                </Button>
+              )}
+              {/* Só quem tem a permissão cadastros.configurar (Administrador) vê o botão do prazo dos pedidos */}
+              {pode("cadastros.configurar") && (
+                <Button variante="secundario" icone={Settings} onClick={() => setConfigAberta(true)}>
+                  Prazo dos pedidos
+                </Button>
+              )}
+            </div>
           }
         />
 
@@ -179,7 +189,7 @@ export default function CadastrosPendentesPage() {
         ) : itens.length === 0 ? (
           <EmptyState
             titulo={filtro === "PENDENTE" ? "Nenhum cadastro aguardando análise." : "Nenhum cadastro nesta situação."}
-            descricao="O link para divulgar é o endereço do sistema seguido de /cadastro (há um botão para copiá-lo em Músicos / Organistas)."
+            descricao="Para divulgar, gere o link da sua região no botão acima. O link geral (endereço do sistema + /cadastro) também continua valendo."
           />
         ) : (
           <TabelaCadastros itens={itens} onAbrir={(item) => void abrir(item)} />
@@ -227,6 +237,16 @@ export default function CadastrosPendentesPage() {
             }}
           />
         )}
+      </Drawer>
+
+      {/* Painel lateral: link do formulário público para a região de quem está logado */}
+      <Drawer
+        aberto={linksAberto}
+        onFechar={() => setLinksAberto(false)}
+        titulo="Link de cadastro da região"
+        descricao="Cada região tem o seu link; os pedidos chegam para quem aprova nela."
+      >
+        {linksAberto && <LinksDeCadastro onMensagem={setAviso} />}
       </Drawer>
 
       <ConfirmDialog

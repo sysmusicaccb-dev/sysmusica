@@ -60,6 +60,8 @@ export interface OpcoesCadastroPublico {
   instrumentos: InstrumentoPublico[];
   familias: FamiliaPublica[];
   casas: CasaPublica[];
+  /** Preenchido quando o formulário foi aberto por um link de região (/cadastro?l=CÓDIGO). */
+  regiao?: { nivel: string; nome: string } | null;
 }
 
 /** Tudo o que a pessoa preenche (textos, para ligar direto nos campos). */

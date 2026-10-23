@@ -87,7 +87,7 @@ function irParaCampo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
-export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPublico }) {
+export default function FormularioPublico({ opcoes, link }: { opcoes: OpcoesCadastroPublico; link?: string }) {
   const [dados, setDados] = useState<DadosFormularioPublico>(() => formularioVazio(CADASTRO_VAZIO));
   const [foto, setFoto] = useState<Blob | null>(null);
   const [frente, setFrente] = useState<Blob | null>(null);
@@ -201,7 +201,7 @@ export default function FormularioPublico({ opcoes }: { opcoes: OpcoesCadastroPu
     setErro(null);
     setEnviando(true);
     try {
-      await enviarCadastroPublico(montarCargaPublica(dadosEfetivos, { cargo, hoje }), { foto, frente, verso }, token);
+      await enviarCadastroPublico(montarCargaPublica(dadosEfetivos, { cargo, hoje }), { foto, frente, verso }, token, link);
       setEnviado(true);
     } catch (ex) {
       setErro(ex instanceof Error ? ex.message : "Não foi possível enviar o cadastro.");

@@ -11,12 +11,19 @@ import type { OpcoesCadastroPublico } from "@/modules/cadastroPublico/regras";
 
 export default function CadastroPublicoPage() {
   const [opcoes, setOpcoes] = useState<OpcoesCadastroPublico | null>(null);
+  const [link, setLink] = useState<string | undefined>(undefined); // código do link da região (?l=...)
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
     let ativo = true;
-    carregarOpcoes()
-      .then((o) => ativo && setOpcoes(o))
+    // Link de região: /cadastro?l=CÓDIGO. Sem código, vale o formulário geral.
+    const codigo = new URLSearchParams(window.location.search).get("l")?.trim() || undefined;
+    carregarOpcoes(codigo)
+      .then((o) => {
+        if (!ativo) return;
+        setLink(codigo);
+        setOpcoes(o);
+      })
       .catch((e: unknown) => ativo && setErro(e instanceof Error ? e.message : "Não foi possível carregar o formulário."));
     return () => {
       ativo = false;
@@ -31,7 +38,12 @@ export default function CadastroPublicoPage() {
       </p>
       {erro && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</p>}
       {!erro && !opcoes && <p className="text-sm text-slate-500">Carregando o formulário...</p>}
-      {opcoes && <FormularioPublico opcoes={opcoes} />}
+      {opcoes?.regiao && (
+        <p className="mb-4 rounded-lg bg-brand-50 px-3 py-2 text-sm text-slate-700">
+          Cadastro da região: <strong>{opcoes.regiao.nome}</strong>
+        </p>
+      )}
+      {opcoes && <FormularioPublico opcoes={opcoes} link={link} />}
     </main>
   );
 }

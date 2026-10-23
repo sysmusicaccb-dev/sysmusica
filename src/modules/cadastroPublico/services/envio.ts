@@ -40,8 +40,12 @@ async function lerResposta<T>(resposta: Response): Promise<T> {
 }
 
 /** Cargos, instrumentos, famílias e Casas de Oração para o formulário (função pública do banco). */
-export async function carregarOpcoes(): Promise<OpcoesCadastroPublico> {
-  const { data, error } = await supabase.rpc("opcoes_cadastro_publico");
+export async function carregarOpcoes(link?: string): Promise<OpcoesCadastroPublico> {
+  // Com link de região: só as Casas de Oração daquela região (a função devolve nulo se o link não estiver ativo)
+  const { data, error } = link
+    ? await supabase.rpc("opcoes_cadastro_link", { p_codigo: link })
+    : await supabase.rpc("opcoes_cadastro_publico");
+  if (link && !error && !data) throw new Error("Este link de cadastro não está mais ativo. Peça um link novo à sua administração.");
   if (error || !data) throw new Error("Não foi possível carregar o formulário. Atualize a página e tente de novo.");
   const o = data as Partial<OpcoesCadastroPublico>;
   return {
@@ -49,6 +53,7 @@ export async function carregarOpcoes(): Promise<OpcoesCadastroPublico> {
     instrumentos: o.instrumentos ?? [],
     familias: o.familias ?? [],
     casas: o.casas ?? [],
+    regiao: o.regiao ?? null,
   };
 }
 
@@ -63,7 +68,8 @@ async function enviarArquivo(endereco: EnderecoDeEnvio, arquivo: Blob): Promise<
 export async function enviarCadastroPublico(
   carga: CargaCadastroPublico,
   arquivos: { foto: Blob; frente: Blob; verso: Blob },
-  tokenTurnstile: string
+  tokenTurnstile: string,
+  link?: string // código do link da região (se o formulário foi aberto por um)
 ): Promise<void> {
   const inicio = await lerResposta<RespostaIniciar>(
     await fetch("/api/cadastro-publico/iniciar", {
@@ -81,7 +87,7 @@ export async function enviarCadastroPublico(
     await fetch("/api/cadastro-publico/enviar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ envio_id: inicio.envio_id, dados: carga }),
+      body: JSON.stringify({ envio_id: inicio.envio_id, dados: link ? { ...carga, link } : carga }),
     })
   );
 }
