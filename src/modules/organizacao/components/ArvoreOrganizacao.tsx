@@ -29,8 +29,8 @@ interface ArvoreOrganizacaoProps {
 
 const plural = (n: number, singular: string, plurais: string) => `${n} ${n === 1 ? singular : plurais}`;
 
-// Níveis que começam abertos (da raiz até a RA); ADM e setor começam fechados
-const ABERTOS_NO_INICIO: NivelOrganizacao[] = ["ESTADO", "RRM", "RA"];
+// Todos os níveis começam abertos: quem administra uma região já vê a estrutura completa (RA, ADM, setores e casas)
+const ABERTOS_NO_INICIO: NivelOrganizacao[] = ["ESTADO", "RRM", "RA", "ADM", "SETOR"];
 
 export default function ArvoreOrganizacao({
   nos,
