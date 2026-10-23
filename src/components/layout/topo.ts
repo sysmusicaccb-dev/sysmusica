@@ -70,3 +70,31 @@ export function resumoEventoDoTopo(evento: unknown): ResumoEventoTopo | null {
   const local = [texto(dados, "cidade"), casa].filter(Boolean).join(" - ").toUpperCase();
   return { titulo, local, dataIso };
 }
+
+/** Resumos de todos os eventos da lista (os que não têm data são ignorados). */
+export function resumosDosEventos(lista: unknown[]): ResumoEventoTopo[] {
+  const resumos: ResumoEventoTopo[] = [];
+  for (const item of lista) {
+    const resumo = resumoEventoDoTopo(item);
+    if (resumo) resumos.push(resumo);
+  }
+  return resumos;
+}
+
+/**
+ * Próximo evento de verdade: o de data e hora mais próximas que ainda NÃO passaram (>= agora).
+ * Evento que já aconteceu não aparece; sem evento futuro, devolve null (o topo não mostra nada).
+ */
+export function proximoEventoDoTopo(resumos: ResumoEventoTopo[], agora: Date): ResumoEventoTopo | null {
+  let melhor: ResumoEventoTopo | null = null;
+  let melhorHora = Infinity;
+  for (const resumo of resumos) {
+    const hora = Date.parse(resumo.dataIso);
+    if (Number.isNaN(hora) || hora < agora.getTime()) continue; // já passou (ou data ilegível)
+    if (hora < melhorHora) {
+      melhor = resumo;
+      melhorHora = hora;
+    }
+  }
+  return melhor;
+}
