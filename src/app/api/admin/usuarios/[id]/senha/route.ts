@@ -6,7 +6,7 @@
  */
 import { NextResponse } from "next/server";
 import { validarSenha } from "@/modules/administracao/regras";
-import { exigirPermissao } from "@/modules/administracao/server/autorizacao";
+import { exigirPermissaoComSessao } from "@/modules/administracao/server/autorizacao";
 import { clienteAdmin } from "@/modules/administracao/server/clienteAdmin";
 import { ErroHttp } from "@/modules/administracao/server/erros";
 import { respostaDeErro } from "@/modules/administracao/server/resposta";
@@ -15,10 +15,20 @@ const REGEX_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 export async function POST(request: Request, contexto: { params: Promise<{ id: string }> }) {
   try {
-    await exigirPermissao(request, "usuarios.editar");
+    const sessao = await exigirPermissaoComSessao(request, "usuarios.editar");
 
     const { id } = await contexto.params;
     if (!REGEX_UUID.test(id)) throw new ErroHttp(400, "Usuário inválido.");
+
+    // Hierarquia: só redefine a senha de quem está na sua abrangência (a própria senha sempre pode)
+    if (id !== sessao.usuarioId) {
+      const { data: naAbrangencia, error: erroAbrangencia } = await sessao.cliente.rpc(
+        "usuario_na_minha_abrangencia",
+        { p_usuario: id }
+      );
+      if (erroAbrangencia) throw erroAbrangencia;
+      if (naAbrangencia !== true) throw new ErroHttp(403, "Este usuário está fora da sua abrangência.");
+    }
 
     const corpo = (await request.json().catch(() => null)) as { senha?: unknown } | null;
     if (typeof corpo?.senha !== "string") throw new ErroHttp(400, "Informe a nova senha.");

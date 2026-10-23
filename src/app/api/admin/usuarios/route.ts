@@ -8,14 +8,14 @@
  */
 import { NextResponse } from "next/server";
 import { validarNovoUsuario } from "@/modules/administracao/regras";
-import { exigirPermissao } from "@/modules/administracao/server/autorizacao";
+import { exigirPermissaoComSessao } from "@/modules/administracao/server/autorizacao";
 import { clienteAdmin } from "@/modules/administracao/server/clienteAdmin";
 import { ErroHttp } from "@/modules/administracao/server/erros";
 import { respostaDeErro } from "@/modules/administracao/server/resposta";
 
 export async function POST(request: Request) {
   try {
-    await exigirPermissao(request, "usuarios.criar");
+    const sessao = await exigirPermissaoComSessao(request, "usuarios.criar");
 
     const validacao = validarNovoUsuario(await request.json().catch(() => null));
     if (!validacao.ok) throw new ErroHttp(400, validacao.erro);
@@ -31,6 +31,13 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (erroGrupo) throw erroGrupo;
     if (!grupo || !grupo.ativo) throw new ErroHttp(400, "Escolha um grupo ativo.");
+
+    // Hierarquia: só concede grupos cujas permissões o próprio usuário possui (o administrador global concede qualquer um)
+    const { data: concedivel, error: erroConcedivel } = await sessao.cliente.rpc("grupo_concedivel", {
+      p_grupo: grupoId,
+    });
+    if (erroConcedivel) throw erroConcedivel;
+    if (concedivel !== true) throw new ErroHttp(403, "Você não pode conceder este grupo.");
 
     // Cria a conta de login (já confirmada: o administrador informa a senha ao usuário)
     const { data: criado, error: erroCriacao } = await admin.auth.admin.createUser({
@@ -49,7 +56,7 @@ export async function POST(request: Request) {
     // Vincula ao grupo (a linha em "usuarios" foi criada pelo gatilho do banco)
     const { error: erroVinculo } = await admin
       .from("usuarios")
-      .update({ nome, grupo_id: grupoId, ativo: true })
+      .update({ nome, grupo_id: grupoId, ativo: true, criado_por: sessao.usuarioId })
       .eq("id", criado.user.id);
     if (erroVinculo) {
       // Desfaz: não deixa uma conta sem grupo para trás
