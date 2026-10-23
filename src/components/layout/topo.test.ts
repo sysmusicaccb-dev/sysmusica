@@ -7,17 +7,16 @@ const podeTudo = () => true;
 const podeSo = (...permitidas: CodigoPermissao[]) => (p: CodigoPermissao) => permitidas.includes(p);
 
 describe("atalhosDoTopo", () => {
-  it("mostra Portaria e Relatório para quem tem as duas permissões", () => {
-    expect(atalhosDoTopo(podeTudo).map((a) => a.rotulo)).toEqual(["Portaria", "Relatório"]);
-  });
-
-  it("mostra só o que o usuário pode abrir", () => {
-    expect(atalhosDoTopo(podeSo("relatorios.visualizar")).map((a) => a.href)).toEqual(["/relatorios"]);
-    expect(atalhosDoTopo(podeSo("portaria.visualizar")).map((a) => a.href)).toEqual(["/portaria"]);
+  it("o topo não tem mais os atalhos Portaria e Relatório, nem para quem pode tudo", () => {
+    expect(atalhosDoTopo(podeTudo)).toEqual([]);
   });
 
   it("não mostra nada sem permissão", () => {
     expect(atalhosDoTopo(podeSo())).toEqual([]);
+  });
+
+  it("nem com as permissões de Portaria e Relatório", () => {
+    expect(atalhosDoTopo(podeSo("portaria.visualizar", "relatorios.visualizar"))).toEqual([]);
   });
 });
 

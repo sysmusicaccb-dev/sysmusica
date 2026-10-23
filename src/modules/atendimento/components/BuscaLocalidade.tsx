@@ -24,6 +24,8 @@ interface BuscaLocalidadeProps {
   cidade: string; // cidade da casa fora da lista (lista oficial do IBGE)
   onCidade: (valor: string) => void;
   desabilitado?: boolean;
+  /** Origem obrigatória: legenda "(obrigatória)" e sem a opção "A casa de oração não está na lista". */
+  obrigatoria?: boolean;
 }
 
 const classeInput =
@@ -41,6 +43,7 @@ export default function BuscaLocalidade({
   cidade,
   onCidade,
   desabilitado = false,
+  obrigatoria = false,
 }: BuscaLocalidadeProps) {
   const [termo, setTermo] = useState("");
   const [resultados, setResultados] = useState<LocalidadeBusca[]>([]);
@@ -92,7 +95,12 @@ export default function BuscaLocalidade({
   return (
     <fieldset className="space-y-3" disabled={desabilitado}>
       <legend className="text-sm font-medium text-slate-700">
-        Casa de Oração <span className="font-normal text-slate-500">(opcional)</span>
+        Casa de Oração{" "}
+        {obrigatoria ? (
+          <span className="font-normal text-red-600">(obrigatória)</span>
+        ) : (
+          <span className="font-normal text-slate-500">(opcional)</span>
+        )}
       </legend>
 
       {escolhida ? (
@@ -110,7 +118,7 @@ export default function BuscaLocalidade({
           </button>
         </div>
       ) : (
-        !outra && (
+        (obrigatoria || !outra) && (
           <div className="space-y-2">
             <label htmlFor="busca-localidade" className="sr-only">
               Buscar a casa de oração pelas primeiras letras
@@ -134,7 +142,11 @@ export default function BuscaLocalidade({
               </p>
             )}
             {!buscando && !erro && termo.trim().length >= 2 && resultados.length === 0 && (
-              <p className="text-xs text-slate-500">Nenhuma casa de oração encontrada. Use &quot;A casa de oração não está na lista&quot;.</p>
+              <p className="text-xs text-slate-500">
+                {obrigatoria
+                  ? "Nenhuma casa de oração encontrada. Ela precisa estar cadastrada em Organização."
+                  : "Nenhuma casa de oração encontrada. Use \"A casa de oração não está na lista\"."}
+              </p>
             )}
             {haNomeRepetido && (
               <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -162,7 +174,7 @@ export default function BuscaLocalidade({
         )
       )}
 
-      {!escolhida && (
+      {!escolhida && !obrigatoria && (
         <label className="flex items-start gap-2 text-sm text-slate-700">
           <input
             type="checkbox"
@@ -174,7 +186,7 @@ export default function BuscaLocalidade({
         </label>
       )}
 
-      {outra && !escolhida && (
+      {outra && !obrigatoria && !escolhida && (
         <div className="space-y-3">
           <div className="space-y-1.5">
             <label htmlFor="localidade-outra" className="text-xs font-medium text-slate-600">

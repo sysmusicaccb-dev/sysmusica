@@ -6,11 +6,10 @@ const criarPode = (permitidas: CodigoPermissao[]) => (permissao: CodigoPermissao
 const rotulos = (permitidas: CodigoPermissao[]) => abasDeEventos(criarPode(permitidas)).map((aba) => aba.rotulo);
 
 describe("abasDeEventos", () => {
-  it("quem tem tudo vê as três abas, na ordem Eventos, Gestão de portarias, Portaria", () => {
+  it("quem tem tudo vê as abas Eventos e Gestão de portarias (a aba Portaria não existe mais)", () => {
     expect(rotulos(["eventos.visualizar", "portarias.visualizar", "portaria.visualizar"])).toEqual([
       "Eventos",
       "Gestão de Portarias",
-      "Portaria",
     ]);
   });
 
@@ -19,8 +18,8 @@ describe("abasDeEventos", () => {
     expect(rotulos(["eventos.visualizar", "portarias.aprovar"])).toEqual(["Eventos", "Gestão de Portarias"]);
   });
 
-  it("só Eventos + Portaria mostra duas abas", () => {
-    expect(rotulos(["eventos.visualizar", "portaria.visualizar"])).toEqual(["Eventos", "Portaria"]);
+  it("só Eventos + Portaria não mostra barra (Portaria não é mais aba)", () => {
+    expect(rotulos(["eventos.visualizar", "portaria.visualizar"])).toEqual([]);
   });
 
   it("uma aba só não mostra barra", () => {
@@ -31,7 +30,7 @@ describe("abasDeEventos", () => {
     expect(rotulos(["eventos.visualizar", "tipoevento.visualizar"])).toEqual(["Eventos", "Tipo do Evento"]);
     expect(
       rotulos(["eventos.visualizar", "tipoevento.visualizar", "portarias.visualizar", "portaria.visualizar"])
-    ).toEqual(["Eventos", "Tipo do Evento", "Gestão de Portarias", "Portaria"]);
+    ).toEqual(["Eventos", "Tipo do Evento", "Gestão de Portarias"]);
   });
 
   it("sem a permissão de Tipo do Evento a aba não aparece; sem Eventos não há barra", () => {

@@ -10,15 +10,14 @@
  * A leitura do QR Code e a busca pelo nome continuam na tela Portaria.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { Check, ChevronRight, Info, Keyboard, Music, Plus, RefreshCw, Users, type LucideIcon } from "lucide-react";
+import { Check, ChevronRight, Info, Keyboard, Music, Plus, QrCode, RefreshCw, Users, type LucideIcon } from "lucide-react";
+import Drawer from "@/components/ui/Drawer";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import Notificacao from "@/components/ui/Notificacao";
 import Skeleton from "@/components/ui/Skeleton";
 import { cn } from "@/lib/cn";
 import { formatarDataHora } from "@/lib/datas";
-import { montarLocalidadeTexto, validarLocalidadeAvulsa } from "@/lib/municipios";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import ResumoTempoReal from "@/modules/painel/components/ResumoTempoReal";
 import { buscarPainel } from "@/modules/painel/services/painel";
@@ -27,7 +26,7 @@ import { descreverJanela, janelaDaPortaria } from "@/modules/portarias/janela";
 import { listarPortarias } from "@/modules/portarias/services/portarias";
 import type { PortariaDetalhada } from "@/modules/portarias/tipos";
 import { horaCurta, ordenarPorProximidade } from "../regras";
-import { descreverAvulsa, precisaInstrumento, precisaPerguntar, textoDaLocalidade, validarEntradaAvulsa } from "../regrasEntrada";
+import { descreverAvulsa, precisaInstrumento, precisaPerguntar, validarEntradaAvulsa } from "../regrasEntrada";
 import {
   BLOCOS_ENTRADA,
   SINGULAR_BLOCO,
@@ -40,6 +39,7 @@ import {
 import { desfazerEntradaAvulsa, entradasAvulsasDaPortaria, opcoesEntrada, registrarEntradaAvulsa } from "../services/entrada";
 import type { BlocoEntrada, EntradaAvulsa, LinhaEntrada, LocalidadeBusca, OpcoesEntrada } from "../tiposEntrada";
 import BuscaLocalidade from "./BuscaLocalidade";
+import RegistrarComQr from "./RegistrarComQr";
 import SelecaoPortaria from "./SelecaoPortaria";
 
 // Mesma chave da tela Portaria: a portaria escolhida vale nas duas telas
@@ -137,6 +137,7 @@ export default function RegistrarPresenca() {
   const [salvando, setSalvando] = useState(false);
   const [erroForm, setErroForm] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [qrAberto, setQrAberto] = useState(false); // popup "Registrar Presença com QR Code"
 
   const disponiveis = useMemo(
     () => portarias.filter((portaria) => janelaDaPortaria(portaria.evento_data, agora)?.situacao !== "encerrada"),
@@ -294,16 +295,10 @@ export default function RegistrarPresenca() {
   async function registrar() {
     if (!portaria || salvando) return;
 
-    // Casa fora da lista: nome, estado e cidade; o texto final é "Casa - Cidade/UF"
-    const foraDaLista = outra && !localidade;
-    if (foraDaLista) {
-      const erroLocal = validarLocalidadeAvulsa({ casa: texto, cidade, uf });
-      if (erroLocal) return setErroForm(erroLocal);
-    }
-    const textoOutra = foraDaLista ? montarLocalidadeTexto(texto, cidade, uf) : "";
-
-    const mensagem = validarEntradaAvulsa({ linha, toca, instrumentoId, outraLocalidade: outra, localidadeTexto: textoOutra });
+    const mensagem = validarEntradaAvulsa({ linha, toca, instrumentoId, outraLocalidade: false, localidadeTexto: "" });
     if (mensagem) return setErroForm(mensagem);
+    // A Casa de Oração de origem é obrigatória (não existe mais a opção "não está na lista")
+    if (!localidade) return setErroForm("Escolha a Casa de Oração de origem.");
 
     setSalvando(true);
     setErroForm(null);
@@ -313,7 +308,7 @@ export default function RegistrarPresenca() {
         toca: perguntar ? toca : null,
         instrumentoId: pedirInstrumento ? instrumentoId : null,
         origemCasaOracaoId: localidade?.casa_oracao_id ?? null,
-        origemTexto: localidade ? null : textoDaLocalidade(outra, textoOutra),
+        origemTexto: null,
       });
       setAviso(`Presença registrada: ${linha?.rotulo ?? "participante"}.`);
       limpar(); // mantém o tipo de participante: o próximo registro costuma ser do mesmo tipo
@@ -619,11 +614,11 @@ export default function RegistrarPresenca() {
                   </p>
                 ) : null}
 
-                {/* Origem (opcional) */}
-                <details className="rounded-lg border border-slate-200 px-4 py-3">
-                  <summary className="cursor-pointer text-sm font-semibold text-slate-800">
-                    Casa de Oração de origem (opcional)
-                  </summary>
+                {/* Origem (obrigatória, sempre aberta) */}
+                <section className="rounded-lg border border-slate-200 px-4 py-3">
+                  <h3 className="text-sm font-semibold text-slate-800">
+                    Casa de Oração de origem <span className="font-normal text-red-600">(obrigatória)</span>
+                  </h3>
                   <div className="mt-3" key={versaoOrigem}>
                     <BuscaLocalidade
                       escolhida={localidade}
@@ -637,9 +632,10 @@ export default function RegistrarPresenca() {
                       cidade={cidade}
                       onCidade={setCidade}
                       desabilitado={salvando}
+                      obrigatoria
                     />
                   </div>
-                </details>
+                </section>
 
                 {erroForm && (
                   <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -671,7 +667,7 @@ export default function RegistrarPresenca() {
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[rgb(255_255_255/0.25)]" aria-hidden="true">
                       <Plus className="h-4 w-4" />
                     </span>
-                    {salvando ? "Registrando..." : "Registrar Presença"}
+                    {salvando ? "Registrando..." : "Registrar Presença sem Cadastro"}
                   </button>
                 </div>
               </div>
@@ -710,13 +706,16 @@ export default function RegistrarPresenca() {
             </section>
           )}
 
-          <p className="text-sm text-slate-600">
-            Para ler o QR Code ou buscar um membro pelo nome, use a{" "}
-            <Link href="/portaria" className="font-semibold text-brand-700 hover:underline">
-              Portaria
-            </Link>
-            .
-          </p>
+          {/* Membro cadastrado: lê o QR Code (ou busca pelo nome) em um popup e volta para esta tela */}
+          <button
+            type="button"
+            onClick={() => setQrAberto(true)}
+            disabled={!podeRegistrar || opcoes === null}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-brand-600 bg-white px-4 py-3 text-base font-semibold text-brand-700 shadow-sm transition hover:bg-brand-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <QrCode className="h-5 w-5" aria-hidden="true" />
+            Registrar Presença com QR Code
+          </button>
         </div>
 
         {verResumo && (
@@ -733,6 +732,25 @@ export default function RegistrarPresenca() {
           </aside>
         )}
       </div>
+
+      <Drawer
+        aberto={qrAberto}
+        onFechar={() => setQrAberto(false)}
+        titulo="Registrar Presença com QR Code"
+        descricao="Aponte a câmera para o QR Code do membro (ou busque pelo nome), confira a foto e confirme."
+      >
+        {qrAberto && portaria && (
+          <RegistrarComQr
+            portariaId={portaria.id}
+            opcoes={opcoes}
+            onRegistrado={async (mensagem) => {
+              setQrAberto(false); // registrou: fecha o popup e volta para esta tela
+              setAviso(mensagem);
+              if (verResumo) await atualizarResumo(portaria.evento_id);
+            }}
+          />
+        )}
+      </Drawer>
 
       <Notificacao mensagem={aviso} onFechar={() => setAviso(null)} />
     </div>

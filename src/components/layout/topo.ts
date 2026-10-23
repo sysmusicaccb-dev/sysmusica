@@ -1,8 +1,8 @@
 /**
- * Sysmusica — Regras do topo azul: atalhos (Portaria, Relatório) e resumo do evento do dia.
+ * Sysmusica — Regras do topo azul: atalhos e resumo do evento do dia. (Portaria e Relatório saíram do topo.)
  * Funções puras (sem React), para poderem ser testadas.
  */
-import { DoorOpen, FileText, type LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { CodigoPermissao } from "@/lib/permissoes";
 
 export interface AtalhoTopo {
@@ -13,10 +13,7 @@ export interface AtalhoTopo {
 }
 
 /** Atalhos fixos do topo (a engrenagem de Configurações é um botão à parte). */
-export const ATALHOS_TOPO: AtalhoTopo[] = [
-  { href: "/portaria", rotulo: "Portaria", icone: DoorOpen, permissao: "portaria.visualizar" },
-  { href: "/relatorios", rotulo: "Relatório", icone: FileText, permissao: "relatorios.visualizar" },
-];
+export const ATALHOS_TOPO: AtalhoTopo[] = [];
 
 /** Só os atalhos que o usuário pode abrir. */
 export function atalhosDoTopo(pode: (permissao: CodigoPermissao) => boolean): AtalhoTopo[] {
