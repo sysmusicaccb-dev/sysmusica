@@ -12,6 +12,7 @@ import { cn } from "@/lib/cn";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import { itemAtivo } from "./navegacao";
 import EventoDoTopo from "./EventoDoTopo";
+import RelogioDoTopo from "./RelogioDoTopo";
 import { atalhosDoTopo } from "./topo";
 import UserMenu from "./UserMenu";
 
@@ -81,7 +82,8 @@ export default function Topbar({
         )}
       </button>
 
-      <div className="ml-4 min-w-0">
+      {/* Próximo evento no centro do topo */}
+      <div className="ml-4 flex min-w-0 flex-1 justify-center">
         <EventoDoTopo />
       </div>
 
@@ -103,6 +105,8 @@ export default function Topbar({
             </Link>
           );
         })}
+        {/* Dia da semana, data e hora de agora, ao lado da engrenagem */}
+        <RelogioDoTopo />
         <button
           type="button"
           onClick={onAbrirConfiguracoes}
