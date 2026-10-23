@@ -614,12 +614,9 @@ export default function RegistrarPresenca() {
                   </p>
                 ) : null}
 
-                {/* Origem (obrigatória, sempre aberta) */}
+                {/* Origem (obrigatória, sempre aberta): o título "Casa de Oração (obrigatória)" vem do próprio campo */}
                 <section className="rounded-lg border border-slate-200 px-4 py-3">
-                  <h3 className="text-sm font-semibold text-slate-800">
-                    Casa de Oração de origem <span className="font-normal text-red-600">(obrigatória)</span>
-                  </h3>
-                  <div className="mt-3" key={versaoOrigem}>
+                  <div key={versaoOrigem}>
                     <BuscaLocalidade
                       escolhida={localidade}
                       onEscolher={setLocalidade}
