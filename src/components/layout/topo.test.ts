@@ -1,7 +1,7 @@
 /** Sysmusica — Testes do topo azul: atalhos por permissão e resumo do evento do dia. */
 import { describe, expect, it } from "vitest";
 import type { CodigoPermissao } from "@/lib/permissoes";
-import { atalhosDoTopo, resumoEventoDoTopo } from "./topo";
+import { atalhosDoTopo, formatarRelogioDoTopo, resumoEventoDoTopo } from "./topo";
 
 const podeTudo = () => true;
 const podeSo = (...permitidas: CodigoPermissao[]) => (p: CodigoPermissao) => permitidas.includes(p);
@@ -17,6 +17,22 @@ describe("atalhosDoTopo", () => {
 
   it("nem com as permissões de Portaria e Relatório", () => {
     expect(atalhosDoTopo(podeSo("portaria.visualizar", "relatorios.visualizar"))).toEqual([]);
+  });
+});
+
+describe("formatarRelogioDoTopo", () => {
+  it("mostra dia da semana, data e hora em 24h no fuso da Bahia", () => {
+    // 04:04 UTC = 01:04 na Bahia (UTC-3), sexta-feira
+    expect(formatarRelogioDoTopo(new Date("2026-10-23T04:04:00Z"))).toEqual({ dia: "Sex, 23/10/2026", hora: "01:04" });
+  });
+
+  it("meia-noite é 00:00 (nunca 24:00) e à tarde usa 24 horas", () => {
+    expect(formatarRelogioDoTopo(new Date("2026-10-23T03:00:00Z")).hora).toBe("00:00");
+    expect(formatarRelogioDoTopo(new Date("2026-10-23T21:30:00Z")).hora).toBe("18:30");
+  });
+
+  it("usa a data da Bahia, não a do servidor (02:00 UTC ainda é o dia anterior aqui)", () => {
+    expect(formatarRelogioDoTopo(new Date("2026-10-23T02:00:00Z")).dia).toBe("Qui, 22/10/2026");
   });
 });
 

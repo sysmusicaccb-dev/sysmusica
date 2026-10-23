@@ -20,6 +20,30 @@ export function atalhosDoTopo(pode: (permissao: CodigoPermissao) => boolean): At
   return ATALHOS_TOPO.filter((atalho) => pode(atalho.permissao));
 }
 
+/** Fuso do sistema: Bahia (UTC-3, o mesmo de Brasília). */
+const FUSO_TOPO = "America/Bahia";
+
+/**
+ * Dia da semana, data e hora ATUAIS para o topo, sempre no fuso da Bahia e em 24 horas.
+ * Ex.: { dia: "Sex, 23/10/2026", hora: "01:04" }. (hourCycle h23 evita "24:04" depois da meia-noite.)
+ */
+export function formatarRelogioDoTopo(data: Date): { dia: string; hora: string } {
+  const partes = (opcoes: Intl.DateTimeFormatOptions) =>
+    Object.fromEntries(
+      new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO_TOPO, ...opcoes })
+        .formatToParts(data)
+        .map((parte) => [parte.type, parte.value])
+    ) as Record<string, string>;
+
+  const d = partes({ weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
+  const semana = d.weekday.replace(".", "");
+  const h = partes({ hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  return {
+    dia: `${semana.charAt(0).toUpperCase()}${semana.slice(1)}, ${d.day}/${d.month}/${d.year}`,
+    hora: `${h.hour}:${h.minute}`,
+  };
+}
+
 export interface ResumoEventoTopo {
   titulo: string; // ex.: "Ensaio Regional"
   local: string; // ex.: "GANDÚ - CENTRAL"
