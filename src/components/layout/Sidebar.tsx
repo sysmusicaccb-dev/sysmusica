@@ -14,6 +14,8 @@ import LogoMarca from "@/components/ui/LogoMarca";
 import { cn } from "@/lib/cn";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import { useContadorCadastros } from "@/modules/cadastrosPendentes/useContador";
+import { rotuloEfetivo } from "@/modules/menu/regras";
+import { useRotulosMenu } from "@/modules/menu/useRotulosMenu";
 import { GRUPOS_MENU, filtrarMenu, itemMenuAtivo } from "./navegacao";
 
 interface SidebarProps {
@@ -25,7 +27,9 @@ interface SidebarProps {
 export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
   const caminho = usePathname() ?? "";
   const { pode } = useSessao();
-  const gruposVisiveis = filtrarMenu(GRUPOS_MENU, pode); // só o que o grupo do usuário pode ver
+  // Nomes personalizados pelo Master (valem para todos) e se este usuário é o Master
+  const { rotulos, master } = useRotulosMenu();
+  const gruposVisiveis = filtrarMenu(GRUPOS_MENU, pode, master); // só o que o grupo do usuário pode ver
   // Quantos cadastros públicos aguardam análise (0 para quem não tem a permissão); vira um selo no menu
   const pendentes = useContadorCadastros();
 
@@ -95,7 +99,7 @@ export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
                         href={item.href}
                         onClick={onFechar}
                         aria-current={ativo ? "page" : undefined}
-                        title={recolhida ? item.rotulo : undefined}
+                        title={recolhida ? rotuloEfetivo(item.href, item.rotulo, rotulos) : undefined}
                         className={cn(
                           "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300",
                           ativo
@@ -107,7 +111,7 @@ export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
                         <Icone className="h-5 w-5 shrink-0" aria-hidden="true" />
                         {/* Recolhido: o texto continua disponível para leitores de tela */}
                         <span className={cn("truncate", recolhida && "lg:sr-only")}>
-                          {item.rotulo}
+                          {rotuloEfetivo(item.href, item.rotulo, rotulos)}
                         </span>
                         {item.href === "/cadastros-pendentes" && pendentes > 0 && (
                           <span

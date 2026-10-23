@@ -9,13 +9,15 @@ import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
+import { useRotulosMenu } from "@/modules/menu/useRotulosMenu";
 import { migalhasVisiveis, montarMigalhas } from "./navegacao";
 
 export default function Breadcrumbs() {
   const caminho = usePathname() ?? "";
   const { pode } = useSessao();
   // Quem não acessa o dashboard (ex: grupo Portaria) não vê o "Início" nos breadcrumbs
-  const migalhas = migalhasVisiveis(montarMigalhas(caminho), pode);
+  const { rotulos } = useRotulosMenu(); // nomes personalizados pelo Master
+  const migalhas = migalhasVisiveis(montarMigalhas(caminho, rotulos), pode);
 
   return (
     <nav aria-label="Você está em" className="min-w-0">

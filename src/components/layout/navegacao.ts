@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   Tag,
   UserPlus,
+  Type,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -38,6 +39,7 @@ export interface ItemMenu {
   qualquer?: CodigoPermissao[]; // ...a não ser que tenha QUALQUER uma destas
   ocultoSe?: CodigoPermissao; // o item SOME do menu para quem tem esta permissão (acessa por aba de outro item)
   tambemAtivoEm?: string[]; // rotas que também deixam este item marcado no menu (ex.: abas de Eventos)
+  somenteMaster?: boolean; // o item só aparece no menu para o administrador Master (ver Sidebar)
 }
 
 export interface GrupoMenu {
@@ -151,12 +153,21 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         permissao: "grupos.visualizar",
         ocultoSe: "usuarios.visualizar", // quem vê Usuários acessa por aba; quem só tem Grupos continua vendo o item
       },
+      // Troca o texto dos itens do menu para todos os usuários (só o Master vê este item)
+      {
+        href: "/administracao/nomes-do-menu",
+        rotulo: "Nomes do Menu",
+        icone: Type,
+        permissao: "usuarios.visualizar",
+        somenteMaster: true,
+      },
     ],
   },
 ];
 
 /** O usuário pode ver o item? (a permissão principal ou qualquer uma das alternativas) */
-function itemPermitido(item: ItemMenu, pode: (permissao: CodigoPermissao) => boolean): boolean {
+function itemPermitido(item: ItemMenu, pode: (permissao: CodigoPermissao) => boolean, master = false): boolean {
+  if (item.somenteMaster && !master) return false; // item exclusivo do administrador Master
   // Itens que viraram aba de outro item somem do menu de quem já tem esse outro item
   if (item.ocultoSe && pode(item.ocultoSe)) return false;
   return pode(item.permissao) || (item.qualquer ?? []).some((permissao) => pode(permissao));
@@ -165,10 +176,11 @@ function itemPermitido(item: ItemMenu, pode: (permissao: CodigoPermissao) => boo
 /** Filtra o menu pelas permissões do usuário, removendo também os grupos que ficarem vazios. */
 export function filtrarMenu(
   grupos: GrupoMenu[],
-  pode: (permissao: CodigoPermissao) => boolean
+  pode: (permissao: CodigoPermissao) => boolean,
+  master = false // true só para o administrador Master (itens somenteMaster)
 ): GrupoMenu[] {
   return grupos
-    .map((grupo) => ({ ...grupo, itens: grupo.itens.filter((item) => itemPermitido(item, pode)) }))
+    .map((grupo) => ({ ...grupo, itens: grupo.itens.filter((item) => itemPermitido(item, pode, master)) }))
     .filter((grupo) => grupo.itens.length > 0);
 }
 
@@ -199,17 +211,18 @@ export interface Migalha {
 }
 
 /** Monta o caminho exibido nos breadcrumbs: Início > Grupo > Página. */
-export function montarMigalhas(caminho: string): Migalha[] {
+export function montarMigalhas(caminho: string, rotulos: Record<string, string> = {}): Migalha[] {
   for (const grupo of GRUPOS_MENU) {
     for (const item of grupo.itens) {
       if (!itemAtivo(item.href, caminho)) continue;
 
       // Na raiz, o próprio Dashboard é o único nível
-      if (item.href === "/") return [{ rotulo: item.rotulo }];
+      const nome = rotulos[item.href]?.trim() || item.rotulo; // nome personalizado pelo Master, se houver
+      if (item.href === "/") return [{ rotulo: nome }];
 
       const migalhas: Migalha[] = [{ rotulo: "Início", href: "/" }];
       if (grupo.titulo) migalhas.push({ rotulo: grupo.titulo });
-      migalhas.push({ rotulo: item.rotulo });
+      migalhas.push({ rotulo: nome });
       return migalhas;
     }
   }
