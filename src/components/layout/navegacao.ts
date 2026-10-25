@@ -17,6 +17,7 @@ import {
   ClipboardList,
   CreditCard,
   DoorOpen,
+  FolderOpen,
   Guitar,
   Inbox,
   KeyRound,
@@ -115,6 +116,13 @@ export const GRUPOS_MENU: GrupoMenu[] = [
       },
       { href: "/painel-ao-vivo", rotulo: "Painel ao Vivo", icone: Activity, permissao: "painel.visualizar" },
       { href: "/relatorios", rotulo: "Relatórios", icone: FileText, permissao: "relatorios.visualizar" },
+    ],
+  },
+  {
+    // Fichas e formulários da Comissão Musical (M01, M02, M03, M05...). O grupo só aparece quando há tela com permissão
+    titulo: "Administrativo",
+    itens: [
+      { href: "/fichas", rotulo: "Fichas Musicais", icone: FolderOpen, permissao: "fichas.visualizar" },
     ],
   },
   {

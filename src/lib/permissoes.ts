@@ -69,6 +69,11 @@ export const CATALOGO_PERMISSOES = [
   { codigo: "cadastros.visualizar", modulo: "Cadastros pendentes", acao: "Visualizar" },
   { codigo: "cadastros.aprovar", modulo: "Cadastros pendentes", acao: "Aprovar" },
   { codigo: "cartoes.visualizar", modulo: "Cartões", acao: "Visualizar" },
+  { codigo: "fichas.visualizar", modulo: "Fichas Musicais", acao: "Visualizar" },
+  { codigo: "fichas.criar", modulo: "Fichas Musicais", acao: "Criar" },
+  { codigo: "fichas.editar", modulo: "Fichas Musicais", acao: "Editar" },
+  { codigo: "fichas.excluir", modulo: "Fichas Musicais", acao: "Excluir" },
+  { codigo: "fichas.resultado", modulo: "Fichas Musicais", acao: "Marcar resultado" },
   { codigo: "cadastros.configurar", modulo: "Cadastros pendentes", acao: "Configurar" },
 ] as const;
 
