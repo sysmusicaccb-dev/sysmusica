@@ -3,7 +3,7 @@ import { GRUPOS_DADOS, TABELAS, ordenarParaGravar } from "./tabelas";
 
 // Auditoria: tabelas acrescentadas ao backup (migração 0047)
 describe("backup — tabelas da auditoria", () => {
-  const novas = ["cadastro_publico_config", "qr_historico", "usuario_cidades", "usuario_preferencias", "casas_oracao_historico"] as const;
+  const novas = ["cadastro_publico_config", "qr_historico", "usuario_preferencias", "casas_oracao_historico"] as const;
 
   it("estão na lista e em exatamente um grupo de dados", () => {
     for (const nome of novas) {
@@ -20,8 +20,8 @@ describe("backup — tabelas da auditoria", () => {
   });
 
   it("os pais vêm antes dos filhos na gravação", () => {
-    const ordem = ordenarParaGravar(["qr_historico", "membros", "usuario_cidades", "usuarios"]);
+    const ordem = ordenarParaGravar(["qr_historico", "membros", "usuario_preferencias", "usuarios"]);
     expect(ordem.indexOf("membros")).toBeLessThan(ordem.indexOf("qr_historico"));
-    expect(ordem.indexOf("usuarios")).toBeLessThan(ordem.indexOf("usuario_cidades"));
+    expect(ordem.indexOf("usuarios")).toBeLessThan(ordem.indexOf("usuario_preferencias"));
   });
 });

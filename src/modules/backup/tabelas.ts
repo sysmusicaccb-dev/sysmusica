@@ -44,7 +44,6 @@ export type NomeTabela =
   | "portarias_historico"
   | "presencas"
   | "presencas_avulsas"
-  | "usuario_cidades"
   | "usuario_preferencias"
   | "casas_oracao_historico"
   | "qr_historico"
@@ -128,10 +127,6 @@ export const TABELAS: DefinicaoTabela[] = [
   }),
   tabela("usuario_vinculos", "Vínculos dos usuários", "usuarios", {
     pk: ["usuario_id", "nivel", "alvo_id"],
-    referencias: [{ coluna: "usuario_id", tabela: "usuarios" }],
-  }),
-  tabela("usuario_cidades", "Cidades dos usuários", "usuarios", {
-    pk: ["usuario_id", "cidade"],
     referencias: [{ coluna: "usuario_id", tabela: "usuarios" }],
   }),
   tabela("usuario_preferencias", "Preferências dos usuários (tema, cor, fonte)", "usuarios", {
@@ -271,8 +266,8 @@ export const GRUPOS_DADOS: DefinicaoGrupo[] = [
   {
     id: "usuarios",
     rotulo: "Usuários",
-    descricao: "Perfil, grupos, vínculos, cidades e preferências (a senha não é guardada no backup)",
-    tabelas: ["usuarios", "usuario_grupos", "usuario_vinculos", "usuario_cidades", "usuario_preferencias"],
+    descricao: "Perfil, grupos, vínculos e preferências (a senha não é guardada no backup)",
+    tabelas: ["usuarios", "usuario_grupos", "usuario_vinculos", "usuario_preferencias"],
   },
   {
     id: "membros",
