@@ -370,7 +370,6 @@ export default function RegistrarPresenca() {
   const visual = bloco ? VISUAL_BLOCO[bloco] : null;
   const linhasBloco = bloco ? linhasDoBloco(linhas, bloco) : [];
   const familias = familiasDosInstrumentos(instrumentos);
-  const instrumentosFamilia = instrumentosDaFamilia(instrumentos, familia);
   const passos = [
     { n: 1, titulo: "Tipo de participante", sub: "Escolha a aba correta" },
     { n: 2, titulo: "Categoria", sub: "Selecione a categoria" },
@@ -523,7 +522,7 @@ export default function RegistrarPresenca() {
                 {/* Instrumento: só quando a categoria pede */}
                 {linha && (perguntar || pedirInstrumento) ? (
                   <div className="space-y-3">
-                    <h3 className="text-lg font-bold text-slate-900">2. Selecionar família e instrumento</h3>
+                    <h3 className="text-lg font-bold text-slate-900">2. Selecionar instrumento e família</h3>
 
                     {perguntar && (
                       <fieldset disabled={salvando} className="space-y-2">
@@ -564,28 +563,7 @@ export default function RegistrarPresenca() {
 
                     {pedirInstrumento && (
                       <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-1.5">
-                          <label htmlFor="presenca-familia" className="text-sm font-semibold text-slate-800">
-                            Família musical
-                          </label>
-                          <select
-                            id="presenca-familia"
-                            value={familia}
-                            onChange={(e) => {
-                              setFamilia(e.target.value);
-                              setInstrumentoId("");
-                            }}
-                            disabled={salvando}
-                            className={classeSelect}
-                          >
-                            <option value="">Selecione a família</option>
-                            {familias.map((nome) => (
-                              <option key={nome} value={nome}>
-                                {nome}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                        {/* Instrumento primeiro: ao escolher, a família é preenchida sozinha */}
                         <div className="space-y-1.5">
                           <label htmlFor="presenca-instrumento" className="text-sm font-semibold text-slate-800">
                             Instrumento
@@ -593,17 +571,41 @@ export default function RegistrarPresenca() {
                           <select
                             id="presenca-instrumento"
                             value={instrumentoId}
-                            onChange={(e) => setInstrumentoId(e.target.value)}
-                            disabled={salvando || familia === ""}
+                            onChange={(e) => {
+                              const escolhido = e.target.value;
+                              setInstrumentoId(escolhido);
+                              // A família vem do instrumento escolhido (vazia se nenhum)
+                              setFamilia(instrumentos.find((item) => item.id === escolhido)?.familia ?? "");
+                            }}
+                            disabled={salvando}
                             className={classeSelect}
                           >
-                            <option value="">{familia === "" ? "Escolha primeiro a família" : "Selecione o instrumento"}</option>
-                            {instrumentosFamilia.map((item) => (
-                              <option key={item.id} value={item.id}>
-                                {item.nome}
-                              </option>
+                            <option value="">Selecione o instrumento</option>
+                            {familias.map((nome) => (
+                              <optgroup key={nome} label={nome}>
+                                {instrumentosDaFamilia(instrumentos, nome).map((item) => (
+                                  <option key={item.id} value={item.id}>
+                                    {item.nome}
+                                  </option>
+                                ))}
+                              </optgroup>
                             ))}
                           </select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label htmlFor="presenca-familia" className="text-sm font-semibold text-slate-800">
+                            Família musical
+                          </label>
+                          {/* Só mostra: quem define a família é o instrumento */}
+                          <input
+                            id="presenca-familia"
+                            type="text"
+                            readOnly
+                            tabIndex={-1}
+                            value={familia}
+                            placeholder="Preenchida ao escolher o instrumento"
+                            className={classeSelect + " cursor-default bg-slate-50! text-slate-700"}
+                          />
                         </div>
                       </div>
                     )}
