@@ -44,7 +44,7 @@ describe("outros", () => {
   });
   it("temFormulario e dataBr", () => {
     expect(temFormulario("M07")).toBe(true);
-    expect(temFormulario("EXAME_ORGANISTA")).toBe(false);
+    expect(temFormulario("TIPO_INEXISTENTE")).toBe(false);
     expect(dataBr("2026-10-05")).toBe("05/10/2026");
     expect(dataBr("x")).toBe("");
   });

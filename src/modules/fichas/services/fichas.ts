@@ -48,8 +48,8 @@ export async function obterFicha(id: string): Promise<FichaCompleta> {
 }
 
 /** Cria (id nulo) ou altera a ficha. A Casa de Oração vem do cadastro da pessoa escolhida. */
-export async function salvarFicha(id: string | null, tipo: TipoFicha, membroId: string, dados: DadosFicha): Promise<string> {
-  const { data, error } = await supabase.rpc("salvar_ficha", { p_id: id, p_tipo: tipo, p_membro: membroId, p_casa: null, p_dados: dados });
+export async function salvarFicha(id: string | null, tipo: TipoFicha, membroId: string | null, dados: DadosFicha, casaId: string | null = null): Promise<string> {
+  const { data, error } = await supabase.rpc("salvar_ficha", { p_id: id, p_tipo: tipo, p_membro: membroId, p_casa: casaId, p_dados: dados });
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível salvar a ficha."));
   return data as string;
 }
@@ -64,6 +64,13 @@ export async function definirResultadoFicha(id: string, resultado: ResultadoFich
   const { data, error } = await supabase.rpc("definir_resultado_ficha", { p_id: id, p_resultado: resultado });
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível registrar o resultado."));
   return ((data as { mensagem?: string } | null)?.mensagem) ?? "Resultado registrado.";
+}
+
+/** Casas de Oração da região de quem consulta (para fichas de quem ainda não está no cadastro). */
+export async function listarCasasParaFicha(): Promise<{ id: string; nome: string }[]> {
+  const { data, error } = await supabase.rpc("listar_casas_para_ficha");
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar as Casas de Oração."));
+  return (data ?? []) as { id: string; nome: string }[];
 }
 
 export async function buscarMembrosParaFicha(termo: string): Promise<MembroBusca[]> {

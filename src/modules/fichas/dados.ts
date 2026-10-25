@@ -22,8 +22,11 @@ export const MOTIVOS_M07: { valor: Exclude<MotivoTroca, "">; rotulo: string }[] 
 ];
 
 /** Tipos que já têm formulário pronto. */
-export type TipoComFormulario = "M01" | "M02" | "M03" | "M05" | "M07" | "AVALIACAO_RJM";
-export const TIPOS_COM_FORMULARIO: TipoFicha[] = ["M01", "M02", "M03", "M05", "M07", "AVALIACAO_RJM"];
+export type TipoComFormulario = "M01" | "M02" | "M03" | "M05" | "M07" | "AVALIACAO_RJM" | "AVALIACAO_CANDIDATO" | "PRE_AVALIACAO_ORGANISTA" | "EXAME_ORGANISTA" | "ACOMPANHAMENTO_GEM" | "NECESSIDADE_INSTRUMENTO";
+export const TIPOS_COM_FORMULARIO: TipoFicha[] = [
+  "M01", "M02", "M03", "M05", "M07", "AVALIACAO_RJM", "AVALIACAO_CANDIDATO",
+  "PRE_AVALIACAO_ORGANISTA", "EXAME_ORGANISTA", "ACOMPANHAMENTO_GEM", "NECESSIDADE_INSTRUMENTO",
+];
 
 /** Confere se o tipo tem formulário (e informa isso ao TypeScript). */
 export function temFormulario(tipo: string): tipo is TipoComFormulario {
@@ -53,6 +56,8 @@ export interface DadosFicha {
   instrumento_novo: string; // nome do instrumento novo (texto para o papel)
   instrumento_novo_id: string; // id do instrumento novo (é o que o "Apto" grava no cadastro)
   motivo: MotivoTroca;
+  // --- M10, M11, organistas e necessidade de instrumentos: campos variados (chave -> texto), ver layouts.ts
+  notas: Record<string, string>;
 }
 
 /** Dia de hoje em Salvador (AAAA-MM-DD), independente do fuso do computador. */
@@ -64,8 +69,19 @@ export function dadosIniciais(hoje: string = hojeEmSalvador()): DadosFicha {
   return {
     nome: "", comum: "", instrumento: "", local: "", data: hoje, para: "", professora_nome: "", professora_comum: "",
     nascimento: "", estado_civil: "", telefone: "", inicio_gem: "", responsavel_nome: "", parentesco: "",
-    data_oficializacao: "", instrumento_atual: "", instrumento_novo: "", instrumento_novo_id: "", motivo: "",
+    data_oficializacao: "", instrumento_atual: "", instrumento_novo: "", instrumento_novo_id: "", motivo: "", notas: {},
   };
+}
+
+/** Lê o mapa "notas" do jsonb: só entram valores que são texto. */
+function lerNotas(bruto: unknown): Record<string, string> {
+  const saida: Record<string, string> = {};
+  if (bruto && typeof bruto === "object" && !Array.isArray(bruto)) {
+    for (const [chave, valor] of Object.entries(bruto as Record<string, unknown>)) {
+      if (typeof valor === "string") saida[chave] = valor;
+    }
+  }
+  return saida;
 }
 
 /** Lê o jsonb vindo do banco de forma tolerante (campo que faltar vira texto vazio). */
@@ -85,6 +101,7 @@ export function lerDados(bruto: unknown): DadosFicha {
     data_oficializacao: t("data_oficializacao"), instrumento_atual: t("instrumento_atual"),
     instrumento_novo: t("instrumento_novo"), instrumento_novo_id: t("instrumento_novo_id"),
     motivo: motivo === "NECESSIDADE_ORQUESTRA" || motivo === "SAUDE" ? motivo : "",
+    notas: lerNotas(o.notas),
   };
 }
 

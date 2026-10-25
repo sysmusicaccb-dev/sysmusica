@@ -3,6 +3,7 @@
  * A lista abaixo é o catálogo das fichas da Comissão Musical; "disponivel" fica true quando a tela de
  * preenchimento da ficha existe (as demais aparecem como "em breve").
  */
+import { rotulosResultado } from "./layouts";
 import type { ResultadoFicha, TipoFicha } from "./tipos";
 
 export interface DefinicaoFicha {
@@ -20,11 +21,11 @@ export const FICHAS: DefinicaoFicha[] = [
   { tipo: "M01", codigo: "M01", titulo: "Cadastro para ingresso no GEM", descricao: "Ingresso do aluno no Grupo de Estudos Musicais.", disponivel: true },
   { tipo: "M07", codigo: "M07", titulo: "Pedido de troca de instrumento", descricao: "Apto: o instrumento do cadastro é trocado.", disponivel: true },
   { tipo: "AVALIACAO_RJM", codigo: "RJM", titulo: "Avaliação de músico para RJM", descricao: "Avaliação para a Reunião de Jovens e Menores.", disponivel: true },
-  { tipo: "AVALIACAO_CANDIDATO", codigo: "Ficha", titulo: "Ficha de avaliação de candidato a músico", descricao: "Leitura rítmica/métrica e prática instrumental.", disponivel: false },
-  { tipo: "PRE_AVALIACAO_ORGANISTA", codigo: "Ficha", titulo: "Pré-avaliação de candidatas a organistas", descricao: "Avaliação teórica e prática da candidata, antes do exame.", disponivel: false },
-  { tipo: "EXAME_ORGANISTA", codigo: "Ficha", titulo: "Testes e exames de organistas", descricao: "Teste e exame em cada fase (jovens, Culto Oficial, Oficialização).", disponivel: false },
-  { tipo: "ACOMPANHAMENTO_GEM", codigo: "Ficha", titulo: "Ficha de acompanhamento do GEM", descricao: "Aulas, presença e avaliações do aluno.", disponivel: false },
-  { tipo: "NECESSIDADE_INSTRUMENTO", codigo: "Formulário", titulo: "Necessidade e entrega de instrumentos e acessórios", descricao: "Pedido, orçamentos, deliberação e recibo de entrega.", disponivel: false },
+  { tipo: "AVALIACAO_CANDIDATO", codigo: "Ficha", titulo: "Ficha de avaliação de candidato a músico", descricao: "Leitura rítmica/métrica e prática instrumental.", disponivel: true },
+  { tipo: "PRE_AVALIACAO_ORGANISTA", codigo: "Ficha", titulo: "Pré-avaliação de candidatas a organistas", descricao: "Avaliação teórica e prática da candidata, antes do exame.", disponivel: true },
+  { tipo: "EXAME_ORGANISTA", codigo: "Ficha", titulo: "Testes e exames de organistas", descricao: "Teste e exame em cada fase (jovens, Culto Oficial, Oficialização).", disponivel: true },
+  { tipo: "ACOMPANHAMENTO_GEM", codigo: "Ficha", titulo: "Ficha de acompanhamento do GEM", descricao: "Aulas, presença e avaliações do aluno.", disponivel: true },
+  { tipo: "NECESSIDADE_INSTRUMENTO", codigo: "Formulário", titulo: "Necessidade e entrega de instrumentos e acessórios", descricao: "Pedido, orçamentos, deliberação e recibo de entrega.", disponivel: true },
 ];
 
 /** Título curto da ficha pelo tipo (usado na lista). */
@@ -34,8 +35,9 @@ export function tituloDaFicha(tipo: string): string {
 }
 
 /** Texto do resultado: "Apto", "Não apto" ou "Aguardando". */
-export function rotuloDoResultado(resultado: ResultadoFicha | null): string {
-  if (resultado === "APTO") return "Apto";
-  if (resultado === "NAO_APTO") return "Não apto";
+export function rotuloDoResultado(resultado: ResultadoFicha | null, tipo?: string): string {
+  const r = rotulosResultado(tipo ?? "");
+  if (resultado === "APTO") return r.sim;
+  if (resultado === "NAO_APTO") return r.nao;
   return "Aguardando";
 }

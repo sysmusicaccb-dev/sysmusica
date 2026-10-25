@@ -2,6 +2,7 @@
  * Sysmusica — Folha impressa dos formulários M01, M02, M03, M05, M07 e Avaliação RJM (mesmo texto e ordem dos PDFs da Comissão Musical).
  * Função pura: devolve o HTML completo da folha (testada em impressao.test.ts). Tudo que vem do usuário é escapado.
  */
+import { montarHtmlExtra } from "./impressaoExtra";
 import { DESTINOS_M05, MOTIVOS_M07, dataBr, dataPorExtenso, type DadosFicha, type TipoComFormulario } from "./dados";
 import type { ResultadoFicha } from "./tipos";
 
@@ -114,6 +115,8 @@ ${assinatura("Encarregado regional")}`;
 }
 
 export function montarHtmlFicha(e: EntradaFichaImpressao): string {
+  const extra = montarHtmlExtra(e);
+  if (extra !== null) return extra;
   if (e.tipo === "M01") return htmlM01(e);
   if (e.tipo === "M07") return htmlM07(e);
   return htmlPedidoAvaliacao(e);

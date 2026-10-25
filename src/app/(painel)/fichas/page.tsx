@@ -16,7 +16,9 @@ import { abrirJanelaImpressao } from "@/lib/exportacao";
 import { formatarDataHora } from "@/lib/datas";
 import { opcoesMarca } from "@/lib/impressaoMarca";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
+import FormularioExtra from "@/modules/fichas/components/FormularioExtra";
 import FormularioFicha from "@/modules/fichas/components/FormularioFicha";
+import { ehTipoExtra, rotulosResultado } from "@/modules/fichas/layouts";
 import { TIPOS_COM_FORMULARIO, lerDados, temFormulario } from "@/modules/fichas/dados";
 import { montarHtmlFicha } from "@/modules/fichas/impressao";
 import { FICHAS, rotuloDoResultado, tituloDaFicha } from "@/modules/fichas/regras";
@@ -208,7 +210,7 @@ export default function FichasPage() {
                       <td className="px-4 py-3 tabular-nums">{formatarDataHora(ficha.criado_em)}</td>
                       <td className="px-4 py-3">
                         <Badge variante={ficha.resultado === "APTO" ? "sucesso" : ficha.resultado === "NAO_APTO" ? "perigo" : "neutro"}>
-                          {rotuloDoResultado(ficha.resultado)}
+                          {rotuloDoResultado(ficha.resultado, ficha.tipo)}
                         </Badge>
                       </td>
                       <td className="px-4 py-3">
@@ -220,8 +222,8 @@ export default function FichasPage() {
                             )}
                             {!ficha.resultado && pode("fichas.resultado") && (
                               <>
-                                <button type="button" className={BOTAO} disabled={ocupado} onClick={() => void marcar(ficha, "APTO")}>Apto</button>
-                                <button type="button" className={BOTAO} disabled={ocupado} onClick={() => void marcar(ficha, "NAO_APTO")}>Não apto</button>
+                                <button type="button" className={BOTAO} disabled={ocupado} onClick={() => void marcar(ficha, "APTO")}>{rotulosResultado(ficha.tipo).sim}</button>
+                                <button type="button" className={BOTAO} disabled={ocupado} onClick={() => void marcar(ficha, "NAO_APTO")}>{rotulosResultado(ficha.tipo).nao}</button>
                               </>
                             )}
                             {!ficha.aplicado_em && pode("fichas.excluir") && (
@@ -245,18 +247,30 @@ export default function FichasPage() {
         descricao="Preencha os dados do pedido. Depois de salvar, use Imprimir na lista."
         onFechar={() => setEditor(null)}
       >
-        {editor && (
-          <FormularioFicha
-            tipo={editor.tipo}
-            ficha={editor.ficha}
-            onCancelar={() => setEditor(null)}
-            onSalvo={(mensagem) => {
-              setEditor(null);
-              setAviso({ texto: mensagem, erro: false });
-              void carregar();
-            }}
-          />
-        )}
+        {editor &&
+          (ehTipoExtra(editor.tipo) ? (
+            <FormularioExtra
+              tipo={editor.tipo}
+              ficha={editor.ficha}
+              onCancelar={() => setEditor(null)}
+              onSalvo={(mensagem) => {
+                setEditor(null);
+                setAviso({ texto: mensagem, erro: false });
+                void carregar();
+              }}
+            />
+          ) : (
+            <FormularioFicha
+              tipo={editor.tipo}
+              ficha={editor.ficha}
+              onCancelar={() => setEditor(null)}
+              onSalvo={(mensagem) => {
+                setEditor(null);
+                setAviso({ texto: mensagem, erro: false });
+                void carregar();
+              }}
+            />
+          ))}
       </Drawer>
     </main>
   );
