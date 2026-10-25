@@ -1,13 +1,14 @@
 "use client";
 
 /**
- * Sysmusica — Formulário de preenchimento das fichas M02, M03 e M05 (dentro do painel lateral).
+ * Sysmusica — Formulário de preenchimento das fichas M01, M02, M03, M05, M07 e Avaliação RJM (dentro do painel lateral).
  * A pessoa é escolhida no cadastro (busca por nome): nome, Casa de Oração e instrumento já vêm preenchidos,
  * mas podem ser ajustados para o papel. O painel só monta este componente quando está aberto, então ele
  * sempre começa limpo (ou com a ficha que está sendo editada).
  */
-import { useRef, useState } from "react";
-import { DESTINOS_M05, dadosIniciais, lerDados, validarFicha, type DadosFicha, type DestinoOrganista } from "../dados";
+import { useEffect, useRef, useState } from "react";
+import { buscarInstrumentosEFamilias } from "@/modules/instrumentos/services/instrumentos";
+import { DESTINOS_M05, MOTIVOS_M07, dadosIniciais, lerDados, validarFicha, type DadosFicha, type DestinoOrganista } from "../dados";
 import { buscarMembrosParaFicha, salvarFicha, type FichaCompleta, type MembroBusca } from "../services/fichas";
 import type { TipoFicha } from "../tipos";
 
@@ -31,6 +32,25 @@ export default function FormularioFicha({ tipo, ficha, onSalvo, onCancelar }: Fo
   const [erro, setErro] = useState<string | null>(null);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
   const organista = tipo === "M05";
+  const ingresso = tipo === "M01"; // M01 (GEM) tem campos próprios e não tem cidade/data do pedido
+  const troca = tipo === "M07"; // M07 (troca de instrumento) escolhe o instrumento novo
+  const [instrumentos, setInstrumentos] = useState<{ id: string; nome: string }[]>([]);
+
+  // M07: carrega a lista de instrumentos para escolher o novo (o setState roda só depois do await)
+  useEffect(() => {
+    if (!troca) return;
+    let ativo = true;
+    buscarInstrumentosEFamilias()
+      .then((r) => {
+        if (ativo) setInstrumentos(r.instrumentos.map((i) => ({ id: i.id, nome: i.nome })));
+      })
+      .catch(() => {
+        if (ativo) setErro("Não foi possível carregar a lista de instrumentos.");
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [troca]);
 
   function alterar<K extends keyof DadosFicha>(chave: K, valor: DadosFicha[K]) {
     setDados((atual) => ({ ...atual, [chave]: valor }));
@@ -65,6 +85,7 @@ export default function FormularioFicha({ tipo, ficha, onSalvo, onCancelar }: Fo
       nome: m.nome,
       comum: m.casa_nome ?? atual.comum,
       instrumento: organista ? atual.instrumento : (m.instrumento_nome ?? atual.instrumento),
+      instrumento_atual: m.instrumento_nome ?? atual.instrumento_atual, // M07
     }));
     setAchados([]);
     setTermo("");
@@ -127,7 +148,7 @@ export default function FormularioFicha({ tipo, ficha, onSalvo, onCancelar }: Fo
           <label htmlFor="ficha-comum" className="text-sm font-medium text-slate-700">Comum Congregação</label>
           <input id="ficha-comum" value={dados.comum} onChange={(ev) => alterar("comum", ev.target.value)} className={CLASSE_CAMPO} />
         </div>
-        {!organista && (
+        {!organista && !troca && (
           <div>
             <label htmlFor="ficha-instrumento" className="text-sm font-medium text-slate-700">Instrumento e tonalidade</label>
             <input id="ficha-instrumento" value={dados.instrumento} onChange={(ev) => alterar("instrumento", ev.target.value)} placeholder="Ex.: Trompete em Si bemol" className={CLASSE_CAMPO} />
@@ -161,6 +182,84 @@ export default function FormularioFicha({ tipo, ficha, onSalvo, onCancelar }: Fo
         </>
       )}
 
+      {ingresso && (
+        <>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <label htmlFor="ficha-nasc" className="text-sm font-medium text-slate-700">Data de nascimento</label>
+              <input id="ficha-nasc" type="date" value={dados.nascimento} onChange={(ev) => alterar("nascimento", ev.target.value)} className={CLASSE_CAMPO} />
+            </div>
+            <div>
+              <label htmlFor="ficha-civil" className="text-sm font-medium text-slate-700">Estado civil</label>
+              <input id="ficha-civil" value={dados.estado_civil} onChange={(ev) => alterar("estado_civil", ev.target.value)} className={CLASSE_CAMPO} />
+            </div>
+            <div>
+              <label htmlFor="ficha-tel" className="text-sm font-medium text-slate-700">Telefone / Celular</label>
+              <input id="ficha-tel" value={dados.telefone} onChange={(ev) => alterar("telefone", ev.target.value)} className={CLASSE_CAMPO} />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="ficha-inicio" className="text-sm font-medium text-slate-700">Data de início no GEM</label>
+            <input id="ficha-inicio" type="date" value={dados.inicio_gem} onChange={(ev) => alterar("inicio_gem", ev.target.value)} className={CLASSE_CAMPO} />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="ficha-resp" className="text-sm font-medium text-slate-700">Responsável (só para menores de 18 anos)</label>
+              <input id="ficha-resp" value={dados.responsavel_nome} onChange={(ev) => alterar("responsavel_nome", ev.target.value)} className={CLASSE_CAMPO} />
+            </div>
+            <div>
+              <label htmlFor="ficha-parent" className="text-sm font-medium text-slate-700">Grau de parentesco</label>
+              <input id="ficha-parent" value={dados.parentesco} onChange={(ev) => alterar("parentesco", ev.target.value)} className={CLASSE_CAMPO} />
+            </div>
+          </div>
+        </>
+      )}
+
+      {troca && (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="ficha-ofic" className="text-sm font-medium text-slate-700">Data da oficialização</label>
+              <input id="ficha-ofic" type="date" value={dados.data_oficializacao} onChange={(ev) => alterar("data_oficializacao", ev.target.value)} className={CLASSE_CAMPO} />
+            </div>
+            <div>
+              <label htmlFor="ficha-atual" className="text-sm font-medium text-slate-700">Instrumento e tonalidade atual</label>
+              <input id="ficha-atual" value={dados.instrumento_atual} onChange={(ev) => alterar("instrumento_atual", ev.target.value)} className={CLASSE_CAMPO} />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="ficha-novo" className="text-sm font-medium text-slate-700">Instrumento que deseja tocar</label>
+            <select
+              id="ficha-novo"
+              value={dados.instrumento_novo_id}
+              onChange={(ev) => {
+                const achado = instrumentos.find((i) => i.id === ev.target.value);
+                setDados((atual) => ({ ...atual, instrumento_novo_id: ev.target.value, instrumento_novo: achado?.nome ?? "" }));
+              }}
+              className={CLASSE_CAMPO}
+            >
+              <option value="">Selecione...</option>
+              {instrumentos.map((i) => (
+                <option key={i.id} value={i.id}>{i.nome}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-slate-500">Quando o resultado for Apto, o instrumento do cadastro passa a ser este.</p>
+          </div>
+          <fieldset>
+            <legend className="text-sm font-medium text-slate-700">Motivo da troca</legend>
+            <div className="mt-1 flex flex-wrap gap-4">
+              {MOTIVOS_M07.map((m) => (
+                <label key={m.valor} className="flex items-center gap-2 text-sm">
+                  <input type="radio" name="ficha-motivo" checked={dados.motivo === m.valor} onChange={() => alterar("motivo", m.valor)} />
+                  {m.rotulo}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        </>
+      )}
+
+      {!ingresso && (
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label htmlFor="ficha-local" className="text-sm font-medium text-slate-700">Cidade (localidade)</label>
@@ -171,6 +270,7 @@ export default function FormularioFicha({ tipo, ficha, onSalvo, onCancelar }: Fo
           <input id="ficha-data" type="date" value={dados.data} onChange={(ev) => alterar("data", ev.target.value)} className={CLASSE_CAMPO} />
         </div>
       </div>
+      )}
 
       {erro && <p role="alert" className="text-sm text-red-600">{erro}</p>}
       <div className="flex justify-end gap-2 pt-2">

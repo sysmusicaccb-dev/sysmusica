@@ -17,7 +17,7 @@ import { formatarDataHora } from "@/lib/datas";
 import { opcoesMarca } from "@/lib/impressaoMarca";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import FormularioFicha from "@/modules/fichas/components/FormularioFicha";
-import { TIPOS_COM_FORMULARIO, lerDados } from "@/modules/fichas/dados";
+import { TIPOS_COM_FORMULARIO, lerDados, temFormulario } from "@/modules/fichas/dados";
 import { montarHtmlFicha } from "@/modules/fichas/impressao";
 import { FICHAS, rotuloDoResultado, tituloDaFicha } from "@/modules/fichas/regras";
 import {
@@ -75,7 +75,8 @@ export default function FichasPage() {
 
   // Abre a janela já no clique (antes de esperar o banco) para o navegador não bloquear como pop-up
   async function imprimir(linha: LinhaFicha) {
-    if (linha.tipo !== "M02" && linha.tipo !== "M03" && linha.tipo !== "M05") return;
+    const tipo = linha.tipo;
+    if (!temFormulario(tipo)) return;
     const janela = abrirJanelaImpressao();
     if (!janela) {
       setAviso({ texto: "O navegador bloqueou a janela de impressão. Permita pop-ups para este site e tente de novo.", erro: true });
@@ -83,7 +84,7 @@ export default function FichasPage() {
     }
     try {
       const ficha = await obterFicha(linha.id);
-      const html = montarHtmlFicha({ tipo: linha.tipo, dados: lerDados(ficha.dados), resultado: ficha.resultado, marca: opcoesMarca().marca });
+      const html = montarHtmlFicha({ tipo, dados: lerDados(ficha.dados), resultado: ficha.resultado, marca: opcoesMarca().marca });
       janela.document.open();
       janela.document.write(html);
       janela.document.close();
