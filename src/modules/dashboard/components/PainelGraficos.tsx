@@ -2,6 +2,8 @@
  * Sysmusica — Painel de gráficos do dashboard (componente de apresentação).
  * Recebe os dados prontos de buscarDadosGraficos e organiza os cartões em grade responsiva.
  */
+import type { ReactNode } from "react";
+import { BarChart3, Building2, Guitar, Music, PieChart, Users } from "lucide-react";
 import Card from "@/components/ui/Card";
 import GraficoBarras from "@/components/charts/GraficoBarras";
 import GraficoColunasEmpilhadas, {
@@ -17,7 +19,13 @@ const LEGENDA_FREQUENCIA = [
   { rotulo: "Justificado", corFundo: "bg-amber-500" },
 ];
 
-export default function PainelGraficos({ dados }: { dados: DadosGraficos }) {
+interface PainelGraficosProps {
+  dados: DadosGraficos;
+  proximosEventos?: ReactNode; // vai no fim da 2ª linha
+  atalhos?: ReactNode; // vai no fim da 3ª linha
+}
+
+export default function PainelGraficos({ dados, proximosEventos, atalhos }: PainelGraficosProps) {
   // Uma coluna por evento, com um trecho empilhado para cada status
   const colunas: ColunaEmpilhada[] = dados.frequencia.map((evento) => ({
     rotulo: evento.rotulo,
@@ -34,11 +42,14 @@ export default function PainelGraficos({ dados }: { dados: DadosGraficos }) {
       ? `Frequência média: ${dados.frequenciaMedia}% nos últimos ${dados.frequencia.length} evento(s).`
       : "Registros de presença dos últimos eventos realizados.";
 
+  // As colunas das linhas 2 e 3 têm as mesmas proporções, como no desenho
+  const linhaDeTres = "grid gap-4 lg:grid-cols-[1.35fr_1.2fr_1fr]";
+
   return (
-    <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-3">
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
         <Card
-          className="lg:col-span-2"
+          icone={BarChart3}
           titulo="Frequência nos últimos eventos"
           descricao={descricaoFrequencia}
         >
@@ -48,7 +59,7 @@ export default function PainelGraficos({ dados }: { dados: DadosGraficos }) {
             vazio="Ainda não há presenças registradas em eventos realizados."
           />
         </Card>
-        <Card titulo="Presenças por status" descricao="Todos os registros de presença.">
+        <Card icone={PieChart} titulo="Presenças por status" descricao="Todos os registros de presença.">
           <GraficoRosca
             dados={dados.presencasPorStatus}
             rotuloCentro="registros"
@@ -57,11 +68,12 @@ export default function PainelGraficos({ dados }: { dados: DadosGraficos }) {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card titulo="Membros por cargo" descricao="Distribuição dos membros pelos cargos.">
+      <div className={linhaDeTres}>
+        <Card icone={Users} titulo="Membros por cargo" descricao="Distribuição dos membros pelos cargos.">
           <GraficoBarras dados={dados.porCargo} vazio="Nenhum membro cadastrado ainda." />
         </Card>
         <Card
+          icone={Music}
           titulo="Membros por família de instrumento"
           descricao="A família vem do instrumento de cada membro."
         >
@@ -71,18 +83,20 @@ export default function PainelGraficos({ dados }: { dados: DadosGraficos }) {
             vazio="Nenhum membro cadastrado ainda."
           />
         </Card>
+        {proximosEventos}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card titulo="Instrumentos mais usados" descricao="Quantidade de membros por instrumento.">
+      <div className={linhaDeTres}>
+        <Card icone={Guitar} titulo="Instrumentos mais usados" descricao="Quantidade de membros por instrumento.">
           <GraficoBarras
             dados={dados.porInstrumento}
             vazio="Nenhum membro com instrumento cadastrado."
           />
         </Card>
-        <Card titulo="Membros por Casa de Oração" descricao="As Casas de Oração com mais membros.">
+        <Card icone={Building2} titulo="Membros por Casa de Oração" descricao="As Casas de Oração com mais membros.">
           <GraficoBarras dados={dados.porCongregacao} vazio="Nenhum membro cadastrado ainda." />
         </Card>
+        {atalhos}
       </div>
     </div>
   );

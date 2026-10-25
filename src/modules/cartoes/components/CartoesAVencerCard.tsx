@@ -9,6 +9,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { ArrowRight, CreditCard } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Skeleton from "@/components/ui/Skeleton";
 import { cn } from "@/lib/cn";
@@ -19,7 +20,7 @@ import type { ResumoCartoes } from "../tipos";
 
 function Numero({ valor, rotulo, classe }: { valor: number; rotulo: string; classe: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 p-3 text-center">
+    <div className="rounded-xl border border-slate-200 p-4 text-center">
       <p className={cn("text-2xl font-bold tabular-nums", classe)}>{valor}</p>
       <p className="mt-0.5 text-xs text-slate-600">{rotulo}</p>
     </div>
@@ -60,8 +61,18 @@ export default function CartoesAVencerCard() {
 
   return (
     <Card
+      icone={CreditCard}
       titulo="Cartões de identificação"
       descricao={`Vencidos e a vencer nos próximos ${PRAZO_PADRAO_DIAS} dias.`}
+      acao={
+        <Link
+          href="/cartoes"
+          className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-brand-700 hover:underline"
+        >
+          Ver a lista completa
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      }
     >
       {carregando ? (
         <div role="status" aria-live="polite">
@@ -89,15 +100,12 @@ export default function CartoesAVencerCard() {
               Nenhum cartão vencido, a vencer ou sem validade informada.
             </p>
           ) : (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-3">
               <Numero valor={resumo.vencidos} rotulo="Vencidos" classe="text-red-600" />
               <Numero valor={resumo.a_vencer} rotulo="A vencer" classe="text-amber-600" />
               <Numero valor={resumo.sem_validade} rotulo="Sem validade" classe="text-slate-600" />
             </div>
           )}
-          <Link href="/cartoes" className="inline-block text-sm font-semibold text-brand-700 hover:underline">
-            Ver a lista completa
-          </Link>
         </div>
       )}
     </Card>

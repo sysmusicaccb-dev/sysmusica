@@ -10,24 +10,31 @@ interface StatCardProps {
   detalhe?: string;
   icone: LucideIcon;
   href: string;
+  tom?: "azul" | "verde" | "roxo"; // cor do quadro do ícone (só visual)
 }
 
-export default function StatCard({ rotulo, valor, detalhe, icone: Icone, href }: StatCardProps) {
+const TONS = {
+  azul: "bg-brand-50 text-brand-700 group-hover:bg-brand-100",
+  verde: "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100",
+  roxo: "bg-violet-50 text-violet-600 group-hover:bg-violet-100",
+};
+
+export default function StatCard({ rotulo, valor, detalhe, icone: Icone, href, tom = "azul" }: StatCardProps) {
   return (
     <Link
       href={href}
-      className="group flex items-start justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+      className="group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-brand-200 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
     >
-      <div>
-        <p className="text-sm font-medium text-slate-500">{rotulo}</p>
-        <p className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
+      <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition ${TONS[tom]}`}>
+        <Icone className="h-7 w-7" aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-slate-900">{rotulo}</p>
+        <p className="text-3xl font-bold leading-tight tracking-tight text-slate-900">
           {valor.toLocaleString("pt-BR")}
         </p>
-        {detalhe && <p className="mt-1 text-xs text-slate-500">{detalhe}</p>}
+        {detalhe && <p className="text-xs text-slate-500">{detalhe}</p>}
       </div>
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 transition group-hover:bg-brand-100">
-        <Icone className="h-5 w-5" aria-hidden="true" />
-      </span>
     </Link>
   );
 }

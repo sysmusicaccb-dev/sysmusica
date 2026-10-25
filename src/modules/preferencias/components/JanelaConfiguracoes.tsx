@@ -19,6 +19,7 @@ export default function JanelaConfiguracoes({ aberto, onFechar }: JanelaConfigur
       aberto={aberto}
       onFechar={onFechar}
       titulo="Configurações"
+      larguraMaxima="max-w-[39rem]"
       descricao="Aparência do sistema: modo, cor e tamanho da letra. As mudanças valem na hora."
     >
       {aberto && <PainelAparencia />}

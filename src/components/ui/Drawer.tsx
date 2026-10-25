@@ -16,10 +16,11 @@ interface DrawerProps {
   titulo: string;
   descricao?: string;
   onFechar: () => void;
+  larguraMaxima?: string; // classe de largura máxima (padrão: max-w-lg)
   children: ReactNode;
 }
 
-export default function Drawer({ aberto, titulo, descricao, onFechar, children }: DrawerProps) {
+export default function Drawer({ aberto, titulo, descricao, onFechar, larguraMaxima = "max-w-lg", children }: DrawerProps) {
   const dialogoRef = useRef<HTMLDialogElement>(null);
 
   // Abre/fecha o <dialog> conforme a propriedade "aberto"
@@ -39,7 +40,7 @@ export default function Drawer({ aberto, titulo, descricao, onFechar, children }
         if (evento.target === evento.currentTarget) onFechar();
       }}
       aria-labelledby="titulo-painel"
-      className="fixed inset-y-0 left-auto right-0 m-0 h-full max-h-none w-full max-w-lg overflow-y-auto bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-slate-900/50"
+      className={`fixed inset-y-0 left-auto right-0 m-0 h-full max-h-none w-full ${larguraMaxima} overflow-y-auto bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-slate-900/50`}
     >
       {/* Este contêiner ocupa todo o painel: assim só o fundo escurecido gera o clique "fora" */}
       <div className="flex min-h-full flex-col">

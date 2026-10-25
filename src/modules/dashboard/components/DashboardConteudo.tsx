@@ -70,7 +70,7 @@ export default function DashboardConteudo() {
 
   return (
     <main className="text-slate-900">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[96rem] px-4 py-8 sm:px-6 lg:px-6">
         <PageHeader titulo="Dashboard" descricao="Visão geral do Sysmusica." />
 
         {carregando ? (
@@ -98,7 +98,7 @@ export default function DashboardConteudo() {
             onTentarNovamente={tentarNovamente}
           />
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Indicadores (cada cartão leva à tela correspondente) */}
             <section aria-label="Indicadores" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <StatCard
@@ -114,6 +114,7 @@ export default function DashboardConteudo() {
                 detalhe={`${indicadores.eventosFuturos} agendado(s)`}
                 icone={CalendarDays}
                 href="/eventos"
+                tom="azul"
               />
               <StatCard
                 rotulo="Presenças"
@@ -121,6 +122,7 @@ export default function DashboardConteudo() {
                 detalhe="registros no total"
                 icone={ClipboardCheck}
                 href="/portaria"
+                tom="verde"
               />
               <StatCard
                 rotulo="Instrumentos"
@@ -128,20 +130,19 @@ export default function DashboardConteudo() {
                 detalhe={`${indicadores.instrumentosSemFamilia} sem família`}
                 icone={Guitar}
                 href="/instrumentos"
+                tom="roxo"
               />
             </section>
 
             {/* Alerta de cartões de identificação (só aparece para quem tem a permissão cartoes.visualizar) */}
             <CartoesAVencerCard />
 
-            <PainelGraficos dados={graficos} />
-
-            <div className="grid gap-6 lg:grid-cols-3">
-              <div className="lg:col-span-2">
-                <ProximosEventos eventos={proximosEventos} />
-              </div>
-              <AtalhosRapidos />
-            </div>
+            {/* Gráficos, próximos eventos e atalhos: organizados em linhas, como no desenho */}
+            <PainelGraficos
+              dados={graficos}
+              proximosEventos={<ProximosEventos eventos={proximosEventos} />}
+              atalhos={<AtalhosRapidos />}
+            />
           </div>
         )}
       </div>

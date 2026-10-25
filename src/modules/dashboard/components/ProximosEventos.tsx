@@ -3,6 +3,7 @@
  * Recebe a lista pronta; se estiver vazia, orienta o usuário a cadastrar um evento.
  */
 import Link from "next/link";
+import { CalendarDays } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
@@ -23,13 +24,16 @@ function varianteTipo(tipo: string): "marca" | "alerta" | "neutro" {
 
 export default function ProximosEventos({ eventos }: ProximosEventosProps) {
   return (
-    <Card titulo="Próximos eventos" descricao="Eventos agendados a partir de agora.">
+    <Card icone={CalendarDays} titulo="Próximos eventos" descricao="Eventos agendados a partir de agora.">
       {eventos.length === 0 ? (
         <EmptyState
           titulo="Nenhum evento agendado"
           descricao="Cadastre o próximo ensaio ou culto para ele aparecer aqui."
           acao={
-            <Link href="/eventos" className="text-sm font-semibold text-brand-700 hover:underline">
+            <Link
+              href="/eventos"
+              className="inline-flex rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
+            >
               Cadastrar evento
             </Link>
           }
