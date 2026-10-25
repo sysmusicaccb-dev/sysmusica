@@ -8,7 +8,8 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { buscarInstrumentosEFamilias } from "@/modules/instrumentos/services/instrumentos";
-import { DESTINOS_M05, MOTIVOS_M07, dadosIniciais, lerDados, validarFicha, type DadosFicha, type DestinoOrganista } from "../dados";
+import { DESTINOS_M05, MOTIVOS_M07, dadosIniciais, lerDados, preencherDoCadastro, validarFicha, type DadosFicha, type DestinoOrganista } from "../dados";
+import { obterDadosDoMembro } from "../services/cadastro";
 import { buscarMembrosParaFicha, salvarFicha, type FichaCompleta, type MembroBusca } from "../services/fichas";
 import type { TipoFicha } from "../tipos";
 
@@ -89,6 +90,10 @@ export default function FormularioFicha({ tipo, ficha, onSalvo, onCancelar }: Fo
     }));
     setAchados([]);
     setTermo("");
+    // Puxa do cadastro tudo o que a ficha usa (estado civil, telefone, nascimento...). Se falhar, a pessoa preenche na mão.
+    void obterDadosDoMembro(m.id)
+      .then((cadastro) => setDados((atual) => preencherDoCadastro(tipo, atual, cadastro)))
+      .catch(() => undefined);
   }
 
   async function salvar() {

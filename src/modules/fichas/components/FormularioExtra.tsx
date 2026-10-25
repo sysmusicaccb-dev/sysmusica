@@ -7,7 +7,8 @@
  * Os valores ficam em dados.notas (chave -> texto); as listas de campos vêm de layouts.ts (as mesmas da impressão).
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { dadosIniciais, lerDados, type DadosFicha } from "../dados";
+import { dadosIniciais, lerDados, preencherDoCadastro, type DadosFicha } from "../dados";
+import { obterDadosDoMembro } from "../services/cadastro";
 import {
   AREAS_GEM, COLUNAS_ORGANISTA, DESTINOS_ATENDIMENTO, ESCALA, FASES_NECESSIDADE, ITENS_NECESSIDADE, JUSTIFICATIVAS, M10_LEITURA, M10_PRATICA,
   ORG_HINARIO, ORG_METODO, ORG_PRATICA, ORG_TEORIA, PRESENCAS, TOTAL_AULAS_GEM, TOTAL_AVALIACOES_GEM, chaveAula, chaveAval, chaveOrg,
@@ -118,6 +119,10 @@ export default function FormularioExtra({ tipo, ficha, onSalvo, onCancelar }: Pr
     setDados((a) => ({ ...a, nome: m.nome, comum: m.casa_nome ?? a.comum, instrumento: m.instrumento_nome ?? a.instrumento }));
     setAchados([]);
     setTermo("");
+    // Puxa do cadastro tudo o que a ficha usa. Se falhar, a pessoa preenche na mão.
+    void obterDadosDoMembro(m.id)
+      .then((cadastro) => setDados((a) => preencherDoCadastro(tipo, a, cadastro)))
+      .catch(() => undefined);
   }
 
   async function salvar() {

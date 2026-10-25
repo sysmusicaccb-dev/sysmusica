@@ -156,3 +156,79 @@ export function dataBr(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
 }
+
+/** Dados do cadastro da pessoa (função dados_do_membro_para_ficha). Qualquer campo pode faltar. */
+export interface CadastroParaFicha {
+  nome?: string | null;
+  casa_nome?: string | null;
+  cargo?: string | null;
+  instrumento_nome?: string | null;
+  categoria?: string | null;
+  data_nascimento?: string | null;
+  cidade?: string | null;
+  bairro?: string | null;
+  estado_civil?: string | null;
+  sexo?: string | null;
+  ddd?: string | null;
+  telefone?: string | null;
+  email?: string | null;
+}
+
+/** Idade em anos completos na data "hoje" (AAAA-MM-DD). Nulo se alguma data for inválida. */
+export function idadeEm(nascimento: string, hoje: string): number | null {
+  if (!ISO.test(nascimento) || !ISO.test(hoje)) return null;
+  const [an, mn, dn] = nascimento.split("-").map(Number);
+  const [ah, mh, dh] = hoje.split("-").map(Number);
+  let idade = ah - an;
+  if (mh < mn || (mh === mn && dh < dn)) idade -= 1;
+  return idade;
+}
+
+/** "71" + "999998888" -> "(71) 99999-8888"; sem DDD -> "99999-8888"; vazio se não há número. */
+export function formatarTelefone(ddd: string, numero: string): string {
+  const n = numero.replace(/\D/g, "");
+  if (n.length < 8) return "";
+  const corte = n.length - 4;
+  const base = `${n.slice(0, corte)}-${n.slice(corte)}`;
+  const d = ddd.replace(/\D/g, "");
+  return d.length === 2 ? `(${d}) ${base}` : base;
+}
+
+/**
+ * Preenche a ficha com o que o cadastro da pessoa já tem. Só escreve campos que o cadastro traz
+ * (o que faltar fica como estava), e a pessoa pode alterar tudo depois na tela.
+ */
+export function preencherDoCadastro(tipo: TipoFicha, atual: DadosFicha, c: CadastroParaFicha): DadosFicha {
+  const t = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
+  const nome = t(c.nome);
+  const casa = t(c.casa_nome);
+  const instrumento = t(c.instrumento_nome);
+  const cidade = t(c.cidade);
+  const nascimento = t(c.data_nascimento).slice(0, 10);
+  const civil = t(c.estado_civil);
+  const fone = formatarTelefone(t(c.ddd), t(c.telefone));
+
+  const novo: DadosFicha = { ...atual, notas: { ...atual.notas } };
+  if (nome) novo.nome = nome;
+  if (casa) novo.comum = casa;
+  if (instrumento) {
+    novo.instrumento = instrumento;
+    novo.instrumento_atual = instrumento; // M07
+  }
+  if (ISO.test(nascimento)) novo.nascimento = nascimento;
+  if (civil) novo.estado_civil = civil;
+  if (fone) novo.telefone = fone;
+
+  if (tipo === "AVALIACAO_CANDIDATO") {
+    // M10: "Localidade" é a Casa e "Município" é a cidade
+    if (casa) novo.local = casa;
+    if (cidade) novo.notas.municipio = cidade;
+  } else if (cidade && atual.local.trim() === "") {
+    novo.local = cidade; // cidade do pedido (pode ser trocada na tela)
+  }
+  if (tipo === "NECESSIDADE_INSTRUMENTO") {
+    const idade = idadeEm(nascimento, hojeEmSalvador());
+    if (idade !== null) novo.notas.idade = String(idade);
+  }
+  return novo;
+}
