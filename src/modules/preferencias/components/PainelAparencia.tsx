@@ -4,6 +4,7 @@
  * Sysmusica — Painel de aparência (dentro do botão de Configurações): modo, cor principal e tamanho da
  * letra. Cada escolha vale na hora e é salva na conta (e neste aparelho).
  */
+import LogoDoSistema from "@/modules/marca/components/LogoDoSistema";
 import { CORES, FONTES, TEMAS } from "../regras";
 import { usePreferencias, type EstadoSalvamento } from "./PreferenciasProvider";
 
@@ -107,6 +108,9 @@ export default function PainelAparencia() {
           Restaurar o padrão
         </button>
       </div>
+
+      {/* Logo do sistema: só o administrador Master vê esta parte */}
+      <LogoDoSistema />
     </div>
   );
 }
