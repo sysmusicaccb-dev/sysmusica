@@ -26,7 +26,7 @@ export default function RelogioDoTopo() {
 
   return (
     <div
-      className="mr-2 hidden items-center gap-3 rounded-xl bg-[rgb(255_255_255/0.10)] px-3 py-1.5 text-sm font-medium ring-1 ring-white/15 md:flex"
+      className="mr-3 hidden items-center gap-5 text-sm font-medium md:flex"
       aria-label="Data e hora de agora (horário da Bahia)"
       title="Horário da Bahia"
     >
@@ -34,7 +34,6 @@ export default function RelogioDoTopo() {
         <CalendarDays className="h-4 w-4 text-white/90" aria-hidden="true" />
         <span>{relogio.dia}</span>
       </div>
-      <span className="h-4 w-px bg-white/25" aria-hidden="true" />
       <div className="flex items-center gap-2">
         <Clock className="h-4 w-4 text-white/90" aria-hidden="true" />
         <span className="tabular-nums">{relogio.hora}</span>

@@ -6,7 +6,7 @@
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, PanelLeftClose, PanelLeftOpen, Settings } from "lucide-react";
+import { LayoutGrid, Menu, Settings } from "lucide-react";
 import LogoMarca from "@/components/ui/LogoMarca";
 import { cn } from "@/lib/cn";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
@@ -75,11 +75,7 @@ export default function Topbar({
         aria-expanded={!recolhida}
         className={cn(classeBotao, "ml-3 hidden lg:inline-flex")}
       >
-        {recolhida ? (
-          <PanelLeftOpen className="h-5 w-5" aria-hidden="true" />
-        ) : (
-          <PanelLeftClose className="h-5 w-5" aria-hidden="true" />
-        )}
+        <LayoutGrid className="h-5 w-5" aria-hidden="true" />
       </button>
 
       {/* Próximo evento no centro do topo */}

@@ -6,11 +6,17 @@
  * (O relógio com a data e a hora atuais é o RelogioDoTopo, ao lado da engrenagem.)
  * Nenhuma escolha global: é apenas informativo.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import { formatarDiaDoEvento, formatarHoraDoEvento } from "@/modules/painel/regras";
 import { listarEventosDoPainel } from "@/modules/painel/services/painel";
-import { proximoEventoDoTopo, resumosDosEventos, type ResumoEventoTopo } from "./topo";
+import {
+  TROCA_EVENTO_MS,
+  proximoIndiceDoCarrossel,
+  proximosEventosDoTopo,
+  resumosDosEventos,
+  type ResumoEventoTopo,
+} from "./topo";
 
 export default function EventoDoTopo() {
   const { pode } = useSessao();
@@ -43,15 +49,39 @@ export default function EventoDoTopo() {
     };
   }, [permitido]);
 
-  // Só mostra um evento que ainda vai acontecer; passou da hora, o bloco some sozinho
-  const resumo = agora ? proximoEventoDoTopo(resumos, agora) : null;
-  if (!permitido || !resumo) return null;
+  // Só entram eventos que ainda vão acontecer (do mais próximo ao mais distante); o que passou sai sozinho
+  const futuros = useMemo(() => (agora ? proximosEventosDoTopo(resumos, agora) : []), [resumos, agora]);
+  const total = futuros.length;
+  const [indice, setIndice] = useState(0);
+  const [pausado, setPausado] = useState(false);
+
+  // Com mais de um evento, passa para o seguinte a cada 5 segundos, em loop. Mouse em cima: pausa para ler.
+  useEffect(() => {
+    if (total < 2 || pausado) return;
+    const ciclo = setInterval(() => setIndice((atual) => proximoIndiceDoCarrossel(atual, total)), TROCA_EVENTO_MS);
+    return () => clearInterval(ciclo);
+  }, [total, pausado]);
+
+  if (!permitido || total === 0) return null;
+  const posicao = indice % total; // se a lista encolher, nunca aponta para um evento que não existe
+  const resumo = futuros[posicao];
 
   // Texto maior e em destaque, com o rótulo para não ser confundido com a hora atual
   return (
-    <p className="hidden truncate text-lg font-semibold tracking-wide md:block" aria-label="Próximo evento">
-      <span className="font-medium text-blue-100">Próximo evento:</span>{" "}
-      {formatarDiaDoEvento(resumo.dataIso)} às {formatarHoraDoEvento(resumo.dataIso)}
+    <p
+      key={posicao}
+      onMouseEnter={() => setPausado(true)}
+      onMouseLeave={() => setPausado(false)}
+      className="hidden max-w-full animate-evento-topo truncate text-lg font-semibold tracking-wide motion-reduce:animate-none md:block"
+      aria-label={posicao === 0 ? "Próximo evento" : "Evento seguinte"}
+    >
+      <span className="font-medium text-blue-100">{posicao === 0 ? "Próximo evento:" : "Em seguida:"}</span>{" "}
+      {resumo.titulo} · {formatarDiaDoEvento(resumo.dataIso)} às {formatarHoraDoEvento(resumo.dataIso)}
+      {total > 1 && (
+        <span className="ml-2 text-sm font-medium text-blue-200">
+          ({posicao + 1}/{total})
+        </span>
+      )}
     </p>
   );
 }

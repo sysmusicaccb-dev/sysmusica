@@ -60,4 +60,17 @@ body {
   --color-menu-fg: #1e3a5f;
   --color-menu-titulo: #5b7a9d;
   --color-menu-borda: #d5e3f3;
+
+  /* Entrada suave do evento no topo (animate-evento-topo) */
+  --animate-evento-topo: evento-topo 0.45s ease-out;
+  @keyframes evento-topo {
+    from {
+      opacity: 0;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }

@@ -103,7 +103,7 @@ export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
                         className={cn(
                           "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300",
                           ativo
-                            ? "bg-menu-ativo font-semibold text-menu-ativo-fg"
+                            ? "bg-menu-ativo font-semibold text-menu-ativo-fg shadow-[inset_3px_0_0_var(--color-brand-600)]"
                             : "hover:bg-menu-hover hover:text-menu-ativo-fg",
                           recolhida && "lg:justify-center lg:px-0"
                         )}
@@ -116,7 +116,7 @@ export default function Sidebar({ recolhida, aberta, onFechar }: SidebarProps) {
                         {item.href === "/cadastros-pendentes" && pendentes > 0 && (
                           <span
                             className={cn(
-                              "ml-auto rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white",
+                              "ml-auto rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white",
                               recolhida && "lg:hidden"
                             )}
                             aria-label={`${pendentes} aguardando análise`}

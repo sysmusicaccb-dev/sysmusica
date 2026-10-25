@@ -98,3 +98,28 @@ export function proximoEventoDoTopo(resumos: ResumoEventoTopo[], agora: Date): R
   }
   return melhor;
 }
+
+/** Quantos eventos entram no revezamento do topo. */
+export const MAXIMO_EVENTOS_NO_TOPO = 10;
+/** A cada quantos milissegundos o topo passa para o próximo evento. */
+export const TROCA_EVENTO_MS = 5000;
+
+/** Todos os eventos que ainda vão acontecer, do mais próximo ao mais distante (os que já passaram saem). */
+export function proximosEventosDoTopo(
+  resumos: ResumoEventoTopo[],
+  agora: Date,
+  maximo: number = MAXIMO_EVENTOS_NO_TOPO
+): ResumoEventoTopo[] {
+  return resumos
+    .map((resumo) => ({ resumo, hora: Date.parse(resumo.dataIso) }))
+    .filter((item) => !Number.isNaN(item.hora) && item.hora >= agora.getTime())
+    .sort((a, b) => a.hora - b.hora)
+    .slice(0, Math.max(0, maximo))
+    .map((item) => item.resumo);
+}
+
+/** Posição do próximo evento no revezamento: volta ao primeiro depois do último (loop). */
+export function proximoIndiceDoCarrossel(atual: number, total: number): number {
+  if (total < 2) return 0;
+  return (atual + 1) % total;
+}
