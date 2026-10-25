@@ -14,9 +14,9 @@ export interface DefinicaoFicha {
 }
 
 export const FICHAS: DefinicaoFicha[] = [
-  { tipo: "M02", codigo: "M02", titulo: "Pedido de avaliação de músico — Culto Oficial", descricao: "Avalia o músico para tocar em Culto Oficial. Apto: a categoria do cadastro passa a Culto Oficial.", disponivel: false },
-  { tipo: "M03", codigo: "M03", titulo: "Pedido de avaliação de músico — Oficialização", descricao: "Avalia o músico para a Oficialização. Apto: a categoria do cadastro passa a Oficializado.", disponivel: false },
-  { tipo: "M05", codigo: "M05", titulo: "Pedido de avaliação de organista", descricao: "Reunião de jovens, Culto Oficial ou Oficialização. Apta: a categoria do cadastro muda conforme o pedido.", disponivel: false },
+  { tipo: "M02", codigo: "M02", titulo: "Pedido de avaliação de músico — Culto Oficial", descricao: "Avalia o músico para tocar em Culto Oficial. Apto: a categoria do cadastro passa a Culto Oficial.", disponivel: true },
+  { tipo: "M03", codigo: "M03", titulo: "Pedido de avaliação de músico — Oficialização", descricao: "Avalia o músico para a Oficialização. Apto: a categoria do cadastro passa a Oficializado.", disponivel: true },
+  { tipo: "M05", codigo: "M05", titulo: "Pedido de avaliação de organista", descricao: "Reunião de jovens, Culto Oficial ou Oficialização. Apta: a categoria do cadastro muda conforme o pedido.", disponivel: true },
   { tipo: "M01", codigo: "M01", titulo: "Cadastro para ingresso no GEM", descricao: "Ingresso do aluno no Grupo de Estudos Musicais.", disponivel: false },
   { tipo: "M07", codigo: "M07", titulo: "Pedido de troca de instrumento", descricao: "Apto: o instrumento do cadastro é trocado.", disponivel: false },
   { tipo: "AVALIACAO_RJM", codigo: "RJM", titulo: "Avaliação de músico para RJM", descricao: "Avaliação para a Reunião de Jovens e Menores.", disponivel: false },
