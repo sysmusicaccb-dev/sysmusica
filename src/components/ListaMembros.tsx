@@ -156,7 +156,6 @@ export default function ListaMembros({
   });
   const filtrosAtivos = termo !== "" || cargoFiltroId !== "" || familiaFiltroId !== "" || fotoFiltro !== "";
   const pag = paginar(membrosFiltrados, pagina, TAMANHO_PAGINA);
-  const inicio = (pag.pagina - 1) * TAMANHO_PAGINA;
   const semFoto = membros.filter((membro) => !membro.foto_path).length;
 
   function limparFiltros() {
@@ -278,9 +277,6 @@ export default function ListaMembros({
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th scope="col" className={cn(classeCabecalho, "hidden w-14 md:table-cell")}>
-                  N°
-                </th>
                 <th scope="col" className={classeCabecalho}>
                   Nome
                 </th>
@@ -311,12 +307,12 @@ export default function ListaMembros({
               {pag.itens.length === 0 ? (
                 // Filtros sem resultado
                 <tr>
-                  <td colSpan={mostrarAcoes ? 8 : 7} className="px-4 py-10 text-center text-sm text-slate-500">
+                  <td colSpan={mostrarAcoes ? 7 : 6} className="px-4 py-10 text-center text-sm text-slate-500">
                     Nenhum membro encontrado com os filtros atuais.
                   </td>
                 </tr>
               ) : (
-                pag.itens.map((membro, indice) => {
+                pag.itens.map((membro) => {
                   const nomeCargo = cargoPorId.get(membro.cargo_id)?.nome ?? "Cargo não encontrado";
                   const nomeInstrumento = membro.instrumento_id
                     ? (instrumentoPorId.get(membro.instrumento_id)?.nome ?? null)
@@ -333,7 +329,6 @@ export default function ListaMembros({
 
                   return (
                     <tr key={membro.id} className="transition hover:bg-slate-50">
-                      <td className="hidden px-4 py-3 tabular-nums text-slate-600 md:table-cell">{inicio + indice + 1}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           {/* Miniatura da fotografia; sem foto, a inicial do nome */}
