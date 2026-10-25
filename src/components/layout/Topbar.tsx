@@ -59,7 +59,7 @@ export default function Topbar({
           <Menu className="h-5 w-5" aria-hidden="true" />
         </button>
         <Link href="/" title="Sysmusica — Dashboard" className="flex min-w-0 items-center gap-3">
-          <LogoMarca altura={34} comFundoBranco className="hidden lg:block" />
+          <LogoMarca altura={40} comFundoBranco className="hidden lg:block" />
           <span className="min-w-0 leading-tight">
             <span className="block truncate text-lg font-bold tracking-tight">Sysmusica</span>
           </span>

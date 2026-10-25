@@ -35,7 +35,7 @@ export default function LogoMarca({ altura = 40, className }: LogoMarcaProps) {
     return (
       <span
         aria-hidden="true"
-        className={cn("inline-flex shrink-0 items-center justify-center rounded-xl bg-white shadow-sm", className)}
+        className={cn("relative inline-block shrink-0 rounded-xl bg-white shadow-sm", className)}
         style={{ height: altura, width: altura }}
       >
         <Image
@@ -45,21 +45,29 @@ export default function LogoMarca({ altura = 40, className }: LogoMarcaProps) {
           height={lado}
           unoptimized
           onError={() => setUrlComErro(url)}
-          style={{ height: lado, width: lado, objectFit: "contain" }}
+          style={{ height: lado, width: lado, objectFit: "contain", position: "absolute", inset: 0, margin: "auto" }}
         />
       </span>
     );
   }
 
   // Padrão do sistema: clave de sol branca sobre a cor da marca
-  const lado = Math.round(altura * 0.66);
+  // O desenho ocupa x de 6,16 a 17,16 e y de 1 a 23 (dentro de 24 x 24): o viewBox recorta exatamente essa área, então
+  // as margens ficam iguais dos dois lados. Altura de 70% da placa (par), largura na proporção 1 : 2.
+  const alturaDoDesenho = Math.round((altura * 0.7) / 2) * 2;
+  const larguraDoDesenho = alturaDoDesenho / 2;
   return (
     <span
       aria-hidden="true"
-      className={cn("inline-flex shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm", className)}
+      className={cn("relative inline-block shrink-0 rounded-xl bg-brand-600 text-white shadow-sm", className)}
       style={{ height: altura, width: altura }}
     >
-      <svg viewBox="0 0 24 24" fill="currentColor" style={{ height: lado, width: lado }}>
+      <svg
+        viewBox="6.16 1 11 22"
+        fill="currentColor"
+        shapeRendering="geometricPrecision"
+        style={{ position: "absolute", inset: 0, margin: "auto", height: alturaDoDesenho, width: larguraDoDesenho }}
+      >
         <path d={DESENHO_CLAVE_DE_SOL} />
       </svg>
     </span>
