@@ -18,6 +18,7 @@ import { opcoesMarca } from "@/lib/impressaoMarca";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import FormularioExtra from "@/modules/fichas/components/FormularioExtra";
 import FormularioFicha from "@/modules/fichas/components/FormularioFicha";
+import { quemPode } from "@/modules/fichas/quemPode";
 import { ehTipoExtra, rotulosResultado } from "@/modules/fichas/layouts";
 import { TIPOS_COM_FORMULARIO, lerDados, temFormulario } from "@/modules/fichas/dados";
 import { montarHtmlFicha } from "@/modules/fichas/impressao";
@@ -155,7 +156,8 @@ export default function FichasPage() {
                   </h2>
                   <Badge variante={pronta ? "sucesso" : "neutro"}>{pronta ? "Disponível" : "Em breve"}</Badge>
                 </div>
-                <p className="flex-1 text-xs text-slate-500">{ficha.descricao}</p>
+                <p className="text-xs text-slate-500">{ficha.descricao}</p>
+                <p className="mt-1 flex-1 text-xs font-medium text-slate-600">Quem pode: {quemPode(ficha.tipo)}</p>
                 {pronta && pode("fichas.criar") && (
                   <button type="button" onClick={() => setEditor({ tipo: ficha.tipo, ficha: null })} className="mt-3 self-start rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-500">
                     Nova ficha

@@ -68,7 +68,7 @@ export default function FormularioFicha({ tipo, ficha, onSalvo, onCancelar }: Fo
     temporizador.current = setTimeout(async () => {
       setBuscando(true);
       try {
-        setAchados(await buscarMembrosParaFicha(texto));
+        setAchados(await buscarMembrosParaFicha(texto, tipo, dados.para || null));
         setErro(null);
       } catch (e) {
         setErro(e instanceof Error ? e.message : "Não foi possível buscar no cadastro.");
@@ -129,9 +129,11 @@ export default function FormularioFicha({ tipo, ficha, onSalvo, onCancelar }: Fo
           <ul className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white text-sm shadow-sm">
             {achados.map((m) => (
               <li key={m.id}>
-                <button type="button" onClick={() => escolher(m)} className="block w-full px-3 py-2 text-left hover:bg-slate-50">
+                {/* Quem não pode entrar nesta ficha (trava de etapa) aparece, mas não pode ser escolhido */}
+                <button type="button" disabled={Boolean(m.motivo)} onClick={() => escolher(m)} className="block w-full px-3 py-2 text-left hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70">
                   <span className="font-medium">{m.nome}</span>
                   <span className="ml-2 text-xs text-slate-500">{[m.casa_nome, m.instrumento_nome].filter(Boolean).join(" · ")}</span>
+                  {m.motivo && <span className="mt-0.5 block text-xs text-red-600">Não pode: {m.motivo}</span>}
                 </button>
               </li>
             ))}

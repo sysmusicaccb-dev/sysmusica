@@ -39,6 +39,9 @@ export interface MembroBusca {
   instrumento_id: string | null;
   instrumento_nome: string | null;
   categoria: string | null;
+  nivel?: string | null; // etapa: NENHUM, RJM, CULTO_OFICIAL ou OFICIALIZADO
+  organista?: boolean | null;
+  motivo?: string | null; // preenchido quando a pessoa NÃO pode entrar nesta ficha (trava de etapa, migração 0073)
 }
 
 export async function obterFicha(id: string): Promise<FichaCompleta> {
@@ -73,8 +76,8 @@ export async function listarCasasParaFicha(): Promise<{ id: string; nome: string
   return (data ?? []) as { id: string; nome: string }[];
 }
 
-export async function buscarMembrosParaFicha(termo: string): Promise<MembroBusca[]> {
-  const { data, error } = await supabase.rpc("buscar_membros_para_ficha", { p_termo: termo });
+export async function buscarMembrosParaFicha(termo: string, tipo: string | null = null, para: string | null = null): Promise<MembroBusca[]> {
+  const { data, error } = await supabase.rpc("buscar_membros_para_ficha", { p_termo: termo, p_tipo: tipo, p_para: para });
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível buscar no cadastro."));
   return (data ?? []) as MembroBusca[];
 }
