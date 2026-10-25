@@ -5,9 +5,6 @@
 import { MARCA } from "@/lib/marca";
 
 export function opcoesMarca(): { marca: string; logoUrl: string } {
-  const https = typeof window !== "undefined" && window.location.protocol === "https:";
-  return {
-    marca: MARCA.nome,
-    logoUrl: https ? `${window.location.origin}${MARCA.logoCaminho}` : MARCA.logoCaminho,
-  };
+  // Sem logomarca: endereço vazio (a folha leva só o nome do sistema)
+  return { marca: MARCA.nome, logoUrl: "" };
 }

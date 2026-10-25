@@ -4,7 +4,6 @@
  * Sysmusica — Painel de aparência (dentro do botão de Configurações): modo, cor principal e tamanho da
  * letra. Cada escolha vale na hora e é salva na conta (e neste aparelho).
  */
-import LogoMarca from "@/components/ui/LogoMarca";
 import { CORES, FONTES, TEMAS } from "../regras";
 import { usePreferencias, type EstadoSalvamento } from "./PreferenciasProvider";
 
@@ -108,18 +107,6 @@ export default function PainelAparencia() {
           Restaurar o padrão
         </button>
       </div>
-
-      {/* Marca do sistema */}
-      <section className="border-t border-slate-200 pt-5">
-        <h3 className="text-sm font-medium text-slate-700">Marca do sistema</h3>
-        <div className="mt-3 flex items-center gap-4">
-          <LogoMarca altura={56} comFundoBranco />
-          <p className="text-xs text-slate-500">
-            Emblema da Congregação Cristã no Brasil. Aparece nos relatórios impressos. Para trocar a imagem, substitua o
-            arquivo logo-ccb.png da pasta public.
-          </p>
-        </div>
-      </section>
     </div>
   );
 }

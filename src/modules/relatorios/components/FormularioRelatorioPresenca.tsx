@@ -43,7 +43,6 @@ const GRUPOS: Grupo[] = [
   {
     titulo: "Folha",
     itens: [
-      { chave: "logoCcb", rotulo: "Logomarca da CCB no topo" },
       { chave: "assinaturas", rotulo: "Linhas de assinatura no fim" },
       { chave: "emitidoEm", rotulo: "Data e hora da emissão no rodapé" },
       { chave: "emitidoPor", rotulo: "Nome de quem emitiu no rodapé" },

@@ -277,7 +277,7 @@ export const NOME_DO_SISTEMA = "Sysmusica";
 
 /** Itens do quadro do cabeçalho, na ordem em que aparecem. */
 export const ITENS_CABECALHO: { id: ItemCabecalho; rotulo: string }[] = [
-  { id: "marca", rotulo: "Marca do sistema (logomarca ou nome)" },
+  { id: "marca", rotulo: "Nome do sistema (Sysmusica)" },
   { id: "evento", rotulo: "Evento escolhido (nome, data, hora e local)" },
   { id: "periodo", rotulo: "Período" },
   { id: "localizacao", rotulo: "RA, setor e casa de oração" },

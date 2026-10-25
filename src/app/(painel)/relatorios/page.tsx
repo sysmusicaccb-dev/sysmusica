@@ -12,7 +12,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Download, Eye, FileText, Printer } from "lucide-react";
 import Notificacao from "@/components/ui/Notificacao";
 import { abrirJanelaImpressao, baixarCsv, escreverImpressao, gerarCsv } from "@/lib/exportacao";
-import { MARCA } from "@/lib/marca";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import { registrarUso } from "@/modules/auditoria/services/auditoria";
 import { DEFINICOES_RELATORIO } from "@/modules/relatorios/catalogo";
@@ -74,13 +73,6 @@ const classeTituloSecao =
   "-mx-5 -mt-5 mb-4 flex items-center gap-3 border-b border-slate-200 bg-brand-50 px-5 py-3 text-base font-semibold text-slate-900";
 const classeNumeroSecao =
   "inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white";
-
-// Endereço da logomarca para a janela de impressão: completo (https) quando possível
-function enderecoDaLogo(): string {
-  return window.location.protocol === "https:"
-    ? `${window.location.origin}${MARCA.logoCaminho}`
-    : MARCA.logoCaminho;
-}
 
 export default function RelatoriosPage() {
   const { pode, conta } = useSessao();
@@ -241,7 +233,6 @@ export default function RelatoriosPage() {
           informacoes,
           rodapeItens,
           marca: pagina.cabecalho.marca ? NOME_DO_SISTEMA : undefined,
-          logoUrl: pagina.cabecalho.marca ? enderecoDaLogo() : undefined,
           paginacao: pagina.rodapeMarcado.paginacao,
           assinaturas: lerAssinaturas(pagina.assinaturas, pagina.nomesAssinaturas),
           margem: margemEmMm(pagina.margem),

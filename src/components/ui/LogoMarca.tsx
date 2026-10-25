@@ -1,12 +1,10 @@
 /**
- * Sysmusica — Logomarca (emblema da Congregação Cristã no Brasil).
- * A imagem é escura sobre fundo claro. Por isso, em locais escuros ou no modo escuro, use "comFundoBranco":
- * ela aparece em uma plaquinha branca (cor fixa, que não muda com o tema).
- * Troque o arquivo em public/logo-ccb.png para mudar a imagem em todo o sistema.
+ * Sysmusica — Símbolo do sistema (nota musical em um quadrado de cor da marca). NÃO usa mais a logomarca da
+ * Congregação Cristã no Brasil. O nome do componente e a propriedade "comFundoBranco" ficam só por compatibilidade
+ * (a propriedade é ignorada), para as telas que o usam não precisarem mudar.
  */
-import Image from "next/image";
+import { Music } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { MARCA } from "@/lib/marca";
 
 interface LogoMarcaProps {
   /** Altura da imagem em pixels (a largura acompanha a proporção original). */
@@ -16,22 +14,14 @@ interface LogoMarcaProps {
   className?: string;
 }
 
-export default function LogoMarca({ altura = 40, comFundoBranco = false, className }: LogoMarcaProps) {
-  const largura = Math.round((altura * MARCA.logoLargura) / MARCA.logoAltura);
-
+export default function LogoMarca({ altura = 40, className }: LogoMarcaProps) {
   return (
     <span
-      className={cn("inline-flex shrink-0", comFundoBranco && "rounded-lg p-1.5", className)}
-      style={comFundoBranco ? { backgroundColor: "#ffffff" } : undefined}
+      aria-hidden="true"
+      className={cn("inline-flex shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm", className)}
+      style={{ height: altura, width: altura }}
     >
-      <Image
-        src={MARCA.logoCaminho}
-        alt={MARCA.logoDescricao}
-        width={largura}
-        height={altura}
-        unoptimized
-        style={{ height: altura, width: largura }}
-      />
+      <Music style={{ height: Math.round(altura * 0.55), width: Math.round(altura * 0.55) }} />
     </span>
   );
 }

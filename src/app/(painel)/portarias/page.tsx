@@ -32,7 +32,6 @@ import type {
 import AbasDeLista from "@/components/AbasDeLista";
 import { janelaDaPortaria } from "@/modules/portarias/janela";
 import { abrirJanelaImpressao, escreverImpressao } from "@/lib/exportacao";
-import { MARCA } from "@/lib/marca";
 import { registrarUso } from "@/modules/auditoria/services/auditoria";
 import FormularioRelatorioPresenca from "@/modules/relatorios/components/FormularioRelatorioPresenca";
 import {
@@ -52,11 +51,6 @@ import Notificacao from "@/components/ui/Notificacao";
 import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
 import { formatarDataHora } from "@/lib/datas";
-
-// Endereço da logomarca para a janela de impressão: completo (https) quando possível
-function enderecoDaLogo(): string {
-  return window.location.protocol === "https:" ? `${window.location.origin}${MARCA.logoCaminho}` : MARCA.logoCaminho;
-}
 
 // Qual painel lateral está aberto
 type Painel =
@@ -162,7 +156,6 @@ export default function PortariasPage() {
         montarImpressaoPresenca(dados, {
           emitidoPor: conta?.nome ?? "usuário",
           geradoEm: agoraEmSalvador(),
-          logoUrl: enderecoDaLogo(),
           abrirImpressao: false, // mostra a folha para conferir; o botão Imprimir da janela imprime
         }, opcoes)
       );
