@@ -44,7 +44,7 @@ describe("montarMigalhas", () => {
     ]);
     expect(montarMigalhas("/portaria")).toEqual([
       { rotulo: "Início", href: "/" },
-      { rotulo: "Operações" },
+      { rotulo: "Eventos Musicais" },
       { rotulo: "Portaria" },
     ]);
   });
@@ -61,7 +61,7 @@ describe("montarMigalhas", () => {
 describe("filtrarMenu", () => {
   it("o grupo Portaria enxerga apenas Portaria e Registrar Presença", () => {
     const menu = filtrarMenu(GRUPOS_MENU, criarPode(["portaria.visualizar", "portaria.registrar"]));
-    expect(menu.map((grupo) => grupo.titulo)).toEqual(["Operações"]);
+    expect(menu.map((grupo) => grupo.titulo)).toEqual(["Eventos Musicais"]);
     expect(menu[0].itens.map((item) => item.rotulo)).toEqual(["Portaria", "Registrar Presença"]);
   });
 
@@ -125,12 +125,12 @@ describe("migalhasVisiveis", () => {
 
   it("quem acessa o dashboard continua vendo o 'Início'", () => {
     const visiveis = migalhasVisiveis(caminho, criarPode(["dashboard.visualizar", "portaria.visualizar"]));
-    expect(visiveis.map((migalha) => migalha.rotulo)).toEqual(["Início", "Operações", "Portaria"]);
+    expect(visiveis.map((migalha) => migalha.rotulo)).toEqual(["Início", "Eventos Musicais", "Portaria"]);
   });
 
   it("quem só tem a Portaria não vê o 'Início'", () => {
     const visiveis = migalhasVisiveis(caminho, criarPode(["portaria.visualizar", "portaria.registrar"]));
-    expect(visiveis.map((migalha) => migalha.rotulo)).toEqual(["Operações", "Portaria"]);
+    expect(visiveis.map((migalha) => migalha.rotulo)).toEqual(["Eventos Musicais", "Portaria"]);
   });
 });
 

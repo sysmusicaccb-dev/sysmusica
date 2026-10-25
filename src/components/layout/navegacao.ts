@@ -59,25 +59,10 @@ export const GRUPOS_MENU: GrupoMenu[] = [
     itens: [
       { href: "/membros", rotulo: "Músicos e Organistas", icone: Users, permissao: "membros.visualizar" },
       {
-        href: "/eventos",
-        rotulo: "Eventos",
-        icone: CalendarDays,
-        permissao: "eventos.visualizar",
-        // Tipo do Evento, Gestão de portarias e Portaria são ABAS dentro de Eventos: o item continua marcado nessas telas
-        tambemAtivoEm: ["/tipos-evento", "/portarias", "/portaria"],
-      },
-      {
         href: "/instrumentos",
         rotulo: "Instrumentos e Famílias",
         icone: Guitar,
         permissao: "instrumentos.visualizar",
-      },
-      {
-        href: "/tipos-evento",
-        rotulo: "Tipo do Evento",
-        icone: Tag,
-        permissao: "tipoevento.visualizar",
-        ocultoSe: "eventos.visualizar", // quem vê Eventos acessa por aba; quem só tem Tipo do Evento continua vendo o item
       },
       { href: "/hinos", rotulo: "Hinos", icone: Music2, permissao: "hinos.visualizar" },
       // Fila de cadastros enviados pelo link público (/cadastro); o número pendente aparece no menu (Sidebar)
@@ -87,8 +72,23 @@ export const GRUPOS_MENU: GrupoMenu[] = [
     ],
   },
   {
-    titulo: "Operações",
+    titulo: "Eventos Musicais",
     itens: [
+      {
+        href: "/eventos",
+        rotulo: "Eventos",
+        icone: CalendarDays,
+        permissao: "eventos.visualizar",
+        // Tipo do Evento, Gestão de portarias e Portaria são ABAS dentro de Eventos: o item continua marcado nessas telas
+        tambemAtivoEm: ["/tipos-evento", "/portarias", "/portaria"],
+      },
+      {
+        href: "/tipos-evento",
+        rotulo: "Tipo do Evento",
+        icone: Tag,
+        permissao: "tipoevento.visualizar",
+        ocultoSe: "eventos.visualizar", // quem vê Eventos acessa por aba; quem só tem Tipo do Evento continua vendo o item
+      },
       {
         href: "/portarias",
         rotulo: "Gestão de Portarias",
