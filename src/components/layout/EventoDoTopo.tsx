@@ -34,18 +34,30 @@ export default function EventoDoTopo() {
     };
   }, []);
 
+  // Busca os eventos agora, de novo a cada 60 segundos e ao voltar para esta aba do navegador. Só este bloco do
+  // topo é atualizado (a tela não recarrega): um evento novo entra no revezamento sozinho.
   useEffect(() => {
     if (!permitido) return;
     let cancelado = false;
-    listarEventosDoPainel()
-      .then((lista) => {
-        if (!cancelado) setResumos(resumosDosEventos(lista));
-      })
-      .catch(() => {
-        /* o topo é só informativo: sem evento, o bloco simplesmente não aparece */
-      });
+    function carregar() {
+      listarEventosDoPainel()
+        .then((lista) => {
+          if (!cancelado) setResumos(resumosDosEventos(lista));
+        })
+        .catch(() => {
+          /* o topo é só informativo: sem evento, o bloco simplesmente não aparece */
+        });
+    }
+    carregar();
+    const ciclo = setInterval(carregar, 60_000);
+    function aoVoltarParaAAba() {
+      if (document.visibilityState === "visible") carregar();
+    }
+    document.addEventListener("visibilitychange", aoVoltarParaAAba);
     return () => {
       cancelado = true;
+      clearInterval(ciclo);
+      document.removeEventListener("visibilitychange", aoVoltarParaAAba);
     };
   }, [permitido]);
 
