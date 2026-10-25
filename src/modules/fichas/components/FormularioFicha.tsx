@@ -143,14 +143,11 @@ export default function FormularioFicha({ tipo, ficha, paraInicial, onSalvo, onC
         {membroId ? (
           <p className="mt-1 text-xs text-emerald-700">Pessoa escolhida: {dados.nome}</p>
         ) : (
-          <p className="mt-1 text-xs text-slate-500">Escolha a pessoa para ligar a ficha ao cadastro (é isso que permite mudar a categoria quando for Apto).</p>
+          <p className="mt-1 text-xs text-slate-500">Obrigatório: a ficha só pode ser preenchida para quem já está no cadastro do sistema (candidato, músico ou organista). O nome vem de lá.</p>
         )}
       </div>
 
-      <div>
-        <label htmlFor="ficha-nome" className="text-sm font-medium text-slate-700">Nome completo (sem abreviações)</label>
-        <input id="ficha-nome" value={dados.nome} onChange={(ev) => alterar("nome", ev.target.value)} className={CLASSE_CAMPO} />
-      </div>
+      {/* O nome vem do cadastro (pessoa escolhida acima); não se digita aqui */}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label htmlFor="ficha-comum" className="text-sm font-medium text-slate-700">Comum Congregação</label>

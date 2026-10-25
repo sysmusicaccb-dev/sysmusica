@@ -126,6 +126,8 @@ export default function FormularioExtra({ tipo, ficha, onSalvo, onCancelar }: Pr
   }
 
   async function salvar() {
+    // Só se preenche ficha para quem está no cadastro; a Necessidade de instrumentos (pedido da Casa) é a exceção
+    if (tipo !== "NECESSIDADE_INSTRUMENTO" && !membroId) return setErro("Busque e escolha a pessoa no cadastro: a ficha só pode ser preenchida para quem está cadastrado.");
     if (dados.nome.trim() === "") return setErro("Informe o nome completo.");
     if (!membroId && casaId === "") return setErro("Escolha a Casa de Oração da ficha (ou uma pessoa do cadastro).");
     if (t === "NECESSIDADE_INSTRUMENTO" && nota("fase") === "") return setErro("Marque a fase do beneficiário.");
@@ -161,7 +163,7 @@ export default function FormularioExtra({ tipo, ficha, onSalvo, onCancelar }: Pr
       {/* Pessoa (opcional) e Casa de Oração */}
       <Bloco titulo="Pessoa e Casa de Oração">
         <div>
-          <label htmlFor={`${idBase}-busca`} className="text-sm font-medium text-slate-700">Buscar no cadastro (opcional)</label>
+          <label htmlFor={`${idBase}-busca`} className="text-sm font-medium text-slate-700">{tipo === "NECESSIDADE_INSTRUMENTO" ? "Buscar no cadastro (opcional)" : "Pessoa do cadastro (obrigatório)"}</label>
           <input id={`${idBase}-busca`} type="search" value={termo} onChange={(ev) => aoDigitarBusca(ev.target.value)} placeholder="Digite parte do nome" className={CAMPO} autoComplete="off" />
           {achados.length > 0 && (
             <ul className="mt-1 max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-white text-sm shadow-sm">
@@ -179,7 +181,7 @@ export default function FormularioExtra({ tipo, ficha, onSalvo, onCancelar }: Pr
           )}
           {membroId && <p className="mt-1 text-xs text-emerald-700">Ligada ao cadastro de {dados.nome}.</p>}
         </div>
-        {!membroId && (
+        {!membroId && tipo === "NECESSIDADE_INSTRUMENTO" && (
           <div>
             <label htmlFor={`${idBase}-casa`} className="text-sm font-medium text-slate-700">Casa de Oração da ficha</label>
             <select id={`${idBase}-casa`} value={casaId} onChange={(ev) => setCasaId(ev.target.value)} className={CAMPO}>
@@ -196,7 +198,7 @@ export default function FormularioExtra({ tipo, ficha, onSalvo, onCancelar }: Pr
       {t === "AVALIACAO_CANDIDATO" && (
         <>
           <Bloco titulo="Candidato">
-            <Entrada id={`${idBase}-nome`} rotulo="Nome do candidato" valor={dados.nome} onChange={(v) => campo("nome", v)} />
+            <p className="text-sm text-slate-700"><span className="font-medium">Candidato:</span> {dados.nome || "escolha a pessoa no cadastro, acima"}</p>
             <div className="grid gap-2 sm:grid-cols-2">
               <Entrada id={`${idBase}-inst`} rotulo="Instrumento" valor={dados.instrumento} onChange={(v) => campo("instrumento", v)} />
               <Entrada id={`${idBase}-data`} rotulo="Data do teste" tipo="date" valor={dados.data} onChange={(v) => campo("data", v)} />
@@ -227,7 +229,7 @@ export default function FormularioExtra({ tipo, ficha, onSalvo, onCancelar }: Pr
       {t === "ACOMPANHAMENTO_GEM" && (
         <>
           <Bloco titulo="Aluno">
-            <Entrada id={`${idBase}-nome`} rotulo="Aluno" valor={dados.nome} onChange={(v) => campo("nome", v)} />
+            <p className="text-sm text-slate-700"><span className="font-medium">Aluno:</span> {dados.nome || "escolha a pessoa no cadastro, acima"}</p>
             <div className="grid gap-2 sm:grid-cols-2">
               <Entrada id={`${idBase}-inst`} rotulo="Instrumento" valor={dados.instrumento} onChange={(v) => campo("instrumento", v)} />
               <Entrada id={`${idBase}-fase`} rotulo="Fase" valor={nota("fase")} onChange={(v) => setNota("fase", v)} />
@@ -283,7 +285,7 @@ export default function FormularioExtra({ tipo, ficha, onSalvo, onCancelar }: Pr
         <>
           <Bloco titulo="Candidata e professora">
             <div className="grid gap-2 sm:grid-cols-2">
-              <Entrada id={`${idBase}-nome`} rotulo="Nome da candidata" valor={dados.nome} onChange={(v) => campo("nome", v)} />
+              <p className="text-sm text-slate-700"><span className="font-medium">Candidata:</span> {dados.nome || "escolha a pessoa no cadastro, acima"}</p>
               <Entrada id={`${idBase}-comum`} rotulo="Congregação" valor={dados.comum} onChange={(v) => campo("comum", v)} />
               <Entrada id={`${idBase}-prof`} rotulo="Nome da professora" valor={nota("professora")} onChange={(v) => setNota("professora", v)} />
               <Entrada id={`${idBase}-profc`} rotulo="Congregação da professora" valor={nota("professora_comum")} onChange={(v) => setNota("professora_comum", v)} />
