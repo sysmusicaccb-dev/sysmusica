@@ -17,10 +17,12 @@ import { formatarDataHora } from "@/lib/datas";
 import { opcoesMarca } from "@/lib/impressaoMarca";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import FormularioExtra from "@/modules/fichas/components/FormularioExtra";
+import AbasDeFichas from "@/modules/fichas/components/AbasDeFichas";
 import FormularioFicha from "@/modules/fichas/components/FormularioFicha";
+import { GUIA_PADRAO, acharGuia, acharSubguia, tiposDaSubguia } from "@/modules/fichas/abasFichas";
 import { quemPode } from "@/modules/fichas/quemPode";
 import { ehTipoExtra, rotulosResultado } from "@/modules/fichas/layouts";
-import { TIPOS_COM_FORMULARIO, lerDados, temFormulario } from "@/modules/fichas/dados";
+import { TIPOS_COM_FORMULARIO, lerDados, temFormulario, type DestinoOrganista } from "@/modules/fichas/dados";
 import { montarHtmlFicha } from "@/modules/fichas/impressao";
 import { FICHAS, rotuloDoResultado, tituloDaFicha } from "@/modules/fichas/regras";
 import {
@@ -41,7 +43,12 @@ export default function FichasPage() {
   const [carregando, setCarregando] = useState(true); // inicia true: primeira busca no mount
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
-  const [editor, setEditor] = useState<{ tipo: TipoFicha; ficha: FichaCompleta | null } | null>(null);
+  const [editor, setEditor] = useState<{ tipo: TipoFicha; ficha: FichaCompleta | null; para?: DestinoOrganista } | null>(null);
+  // Guia e etapa escolhidas (Músicos > Oficialização, GEM > Organistas...)
+  const [guia, setGuia] = useState<string>(GUIA_PADRAO);
+  const [subguia, setSubguia] = useState<string>(acharGuia(GUIA_PADRAO).subguias[0].id);
+  const cartoes = acharSubguia(guia, subguia).itens;
+  const tiposDaGuia = tiposDaSubguia(guia, subguia);
   const [ocupado, setOcupado] = useState(false);
 
   const carregar = useCallback(async () => {
@@ -143,12 +150,17 @@ export default function FichasPage() {
           </p>
         )}
 
-        {/* Catálogo das fichas */}
+        {/* Guias: Músicos | Organistas | GEM | Outros, com as etapas logo abaixo */}
+        <AbasDeFichas guia={guia} subguia={subguia} onMudar={(g, s) => { setGuia(g); setSubguia(s); }} />
+
+        {/* Catálogo das fichas da guia escolhida */}
         <section aria-label="Fichas disponíveis" className="mb-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {FICHAS.map((ficha) => {
+          {cartoes.map(({ tipo, para }) => {
+            const ficha = FICHAS.find((f) => f.tipo === tipo);
+            if (!ficha) return null;
             const pronta = TIPOS_COM_FORMULARIO.includes(ficha.tipo);
             return (
-              <article key={ficha.tipo} className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <article key={`${ficha.tipo}-${para ?? ""}`} className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="mb-1 flex items-start justify-between gap-2">
                   <h2 className="text-sm font-bold text-slate-900">
                     {ficha.codigo === "Ficha" || ficha.codigo === "Formulário" ? "" : `${ficha.codigo} · `}
@@ -159,7 +171,7 @@ export default function FichasPage() {
                 <p className="text-xs text-slate-500">{ficha.descricao}</p>
                 <p className="mt-1 flex-1 text-xs font-medium text-slate-600">Quem pode: {quemPode(ficha.tipo)}</p>
                 {pronta && pode("fichas.criar") && (
-                  <button type="button" onClick={() => setEditor({ tipo: ficha.tipo, ficha: null })} className="mt-3 self-start rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-500">
+                  <button type="button" onClick={() => setEditor({ tipo: ficha.tipo, ficha: null, para })} className="mt-3 self-start rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-500">
                     Nova ficha
                   </button>
                 )}
@@ -186,7 +198,7 @@ export default function FichasPage() {
               void carregar();
             }}
           />
-        ) : itens.length === 0 ? (
+        ) : itens.filter((i) => tiposDaGuia.includes(i.tipo)).length === 0 ? (
           <EmptyState titulo="Nenhuma ficha preenchida ainda." descricao="As fichas preenchidas na sua região aparecem aqui." />
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -202,7 +214,7 @@ export default function FichasPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {itens.map((ficha) => {
+                {itens.filter((i) => tiposDaGuia.includes(i.tipo)).map((ficha) => {
                   const comFormulario = TIPOS_COM_FORMULARIO.includes(ficha.tipo);
                   return (
                     <tr key={ficha.id}>
@@ -264,6 +276,7 @@ export default function FichasPage() {
           ) : (
             <FormularioFicha
               tipo={editor.tipo}
+              paraInicial={editor.para}
               ficha={editor.ficha}
               onCancelar={() => setEditor(null)}
               onSalvo={(mensagem) => {

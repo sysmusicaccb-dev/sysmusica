@@ -16,6 +16,7 @@ import type { TipoFicha } from "../tipos";
 interface FormularioFichaProps {
   tipo: TipoFicha;
   ficha: FichaCompleta | null; // ficha em edição (nula = nova)
+  paraInicial?: DestinoOrganista; // M05 nova: destino já marcado pela guia (Organistas > etapa)
   onSalvo: (mensagem: string) => void;
   onCancelar: () => void;
 }
@@ -23,9 +24,9 @@ interface FormularioFichaProps {
 const CLASSE_CAMPO =
   "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200";
 
-export default function FormularioFicha({ tipo, ficha, onSalvo, onCancelar }: FormularioFichaProps) {
+export default function FormularioFicha({ tipo, ficha, paraInicial, onSalvo, onCancelar }: FormularioFichaProps) {
   const [membroId, setMembroId] = useState<string | null>(ficha?.membro_id ?? null);
-  const [dados, setDados] = useState<DadosFicha>(() => (ficha ? lerDados(ficha.dados) : dadosIniciais()));
+  const [dados, setDados] = useState<DadosFicha>(() => (ficha ? lerDados(ficha.dados) : { ...dadosIniciais(), para: paraInicial ?? "" }));
   const [termo, setTermo] = useState("");
   const [achados, setAchados] = useState<MembroBusca[]>([]);
   const [buscando, setBuscando] = useState(false);
