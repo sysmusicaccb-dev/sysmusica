@@ -16,6 +16,7 @@ import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import ErrorState from "@/components/ui/ErrorState";
 import Notificacao from "@/components/ui/Notificacao";
+import { IconeDeCabecalho } from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
 
 export default function TiposEventoPage() {
@@ -114,8 +115,8 @@ export default function TiposEventoPage() {
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <header className="flex items-center gap-4 rounded-xl border border-slate-200 bg-brand-50 px-5 py-4 shadow-sm">
-            <CalendarDays className="h-10 w-10 shrink-0 text-brand-700" aria-hidden="true" />
+          <header className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-brand-50/60 px-5 py-4 shadow-sm">
+            <IconeDeCabecalho icone={CalendarDays} />
             <div className="min-w-0">
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">Tipo do Evento</h1>
               <p className="text-sm text-slate-600">

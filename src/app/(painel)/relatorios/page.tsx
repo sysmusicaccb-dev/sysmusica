@@ -11,6 +11,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Download, Eye, FileText, Printer } from "lucide-react";
 import Notificacao from "@/components/ui/Notificacao";
+import { IconeDeCabecalho } from "@/components/ui/PageHeader";
 import { abrirJanelaImpressao, baixarCsv, escreverImpressao, gerarCsv } from "@/lib/exportacao";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import { registrarUso } from "@/modules/auditoria/services/auditoria";
@@ -266,8 +267,8 @@ export default function RelatoriosPage() {
     <main className="text-slate-900">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Cabeçalho no padrão do protótipo: ícone, título e descrição */}
-        <header className="mb-5 flex items-center gap-4 rounded-xl border border-slate-200 bg-brand-50 px-5 py-4 shadow-sm">
-          <FileText className="h-10 w-10 shrink-0 text-brand-700" aria-hidden="true" />
+        <header className="mb-5 flex items-center gap-4 rounded-2xl border border-slate-200 bg-brand-50/60 px-5 py-4 shadow-sm">
+          <IconeDeCabecalho icone={FileText} />
           <div className="min-w-0">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Relatórios</h1>
             <p className="text-sm text-slate-600">

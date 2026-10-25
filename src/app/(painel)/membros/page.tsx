@@ -25,6 +25,7 @@ import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Drawer from "@/components/ui/Drawer";
 import Notificacao from "@/components/ui/Notificacao";
+import { IconeDeCabecalho } from "@/components/ui/PageHeader";
 import BotaoCopiarLinkCadastro from "@/modules/cadastroPublico/components/BotaoCopiarLink";
 import FormularioMembro from "@/components/FormularioMembro";
 import ListaMembros from "@/components/ListaMembros";
@@ -177,9 +178,9 @@ export default function MembrosPage() {
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Cabeçalho no padrão do protótipo: ícone, título, descrição, copiar link de cadastro e Adicionar */}
-        <header className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-brand-50 px-5 py-4 shadow-sm">
+        <header className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-brand-50/60 px-5 py-4 shadow-sm">
           <div className="flex min-w-0 items-center gap-4">
-            <Users className="h-10 w-10 shrink-0 text-brand-700" aria-hidden="true" />
+            <IconeDeCabecalho icone={Users} />
             <div className="min-w-0">
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">Músicos e Organistas</h1>
               <p className="text-sm text-slate-600">

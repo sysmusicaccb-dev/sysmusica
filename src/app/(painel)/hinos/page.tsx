@@ -18,6 +18,7 @@ import Drawer from "@/components/ui/Drawer";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import Notificacao from "@/components/ui/Notificacao";
+import { IconeDeCabecalho } from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
 
 type Painel = { tipo: "novo" } | { tipo: "editar"; item: Hino } | { tipo: "importar" };
@@ -98,9 +99,9 @@ export default function HinosPage() {
     <main className="text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Cabeçalho no padrão do protótipo: ícone, título, descrição e botões Importar lista e Adicionar */}
-        <header className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-brand-50 px-5 py-4 shadow-sm">
+        <header className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-brand-50/60 px-5 py-4 shadow-sm">
           <div className="flex min-w-0 items-center gap-4">
-            <BookOpen className="h-10 w-10 shrink-0 text-brand-700" aria-hidden="true" />
+            <IconeDeCabecalho icone={BookOpen} />
             <div className="min-w-0">
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">Hinos</h1>
               <p className="text-sm text-slate-600">
