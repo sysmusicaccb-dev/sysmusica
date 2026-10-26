@@ -20,7 +20,7 @@ import { listarPortarias } from "@/modules/portarias/services/portarias";
 import { descreverJanela, janelaDaPortaria } from "@/modules/portarias/janela";
 import type { PortariaDetalhada } from "@/modules/portarias/tipos";
 import { ordenarPorProximidade, pareceQrSysMusica } from "../regras";
-import { buscarMembroPorQr, entradasDaPortaria, recarregarCartao, registrarEntrada } from "../services/atendimento";
+import { buscarMembroPorQr, entradasDaPortaria, excluirEntrada, recarregarCartao, registrarEntrada } from "../services/atendimento";
 import { valoresDaEntrada } from "../regrasEntrada";
 import { desfazerEntradaAvulsa, entradasAvulsasDaPortaria, infoEntrada, opcoesEntrada } from "../services/entrada";
 import type { CartaoMembro, EntradaRecente, OrigemEntrada } from "../tipos";
@@ -248,6 +248,19 @@ export default function AtendimentoPortaria() {
     if (portariaId) await carregarEntradas(portariaId);
   }
 
+  // Exclui um registro de presença (pede confirmação; o banco confere a permissão e a região)
+  async function excluirRegistro(entrada: EntradaRecente) {
+    if (!portariaId) return;
+    if (!window.confirm(`Excluir o registro de presença de ${entrada.membro_nome}? Ele some da portaria e dos relatórios.`)) return;
+    try {
+      await excluirEntrada(entrada.presenca_id);
+      setAviso(`Registro excluído: ${entrada.membro_nome}`);
+      await carregarEntradas(portariaId);
+    } catch (e) {
+      setErroLeitura(e instanceof Error ? e.message : "Não foi possível excluir o registro.");
+    }
+  }
+
   // Desfaz uma entrada sem cadastro (pede confirmação)
   async function desfazerSemCadastro(id: string) {
     if (!portariaId || !window.confirm("Desfazer esta entrada sem cadastro?")) return;
@@ -376,7 +389,12 @@ export default function AtendimentoPortaria() {
             </div>
 
             <aside>
-              <EntradasRecentes entradas={entradas} avulsas={avulsas} onDesfazerAvulsa={(id) => void desfazerSemCadastro(id)} />
+              <EntradasRecentes
+                entradas={entradas}
+                avulsas={avulsas}
+                onDesfazerAvulsa={(id) => void desfazerSemCadastro(id)}
+                onExcluir={pode("portaria.excluir") ? (entrada) => void excluirRegistro(entrada) : undefined}
+              />
             </aside>
           </div>
         </>

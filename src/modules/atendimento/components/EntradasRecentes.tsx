@@ -8,9 +8,10 @@ interface EntradasRecentesProps {
   entradas: EntradaRecente[];
   avulsas?: EntradaAvulsa[]; // entradas sem cadastro
   onDesfazerAvulsa?: (id: string) => void;
+  onExcluir?: (entrada: EntradaRecente) => void; // só vem preenchido para quem tem a permissão portaria.excluir
 }
 
-export default function EntradasRecentes({ entradas, avulsas = [], onDesfazerAvulsa }: EntradasRecentesProps) {
+export default function EntradasRecentes({ entradas, avulsas = [], onDesfazerAvulsa, onExcluir }: EntradasRecentesProps) {
   const total = entradas[0]?.total ?? 0;
 
   return (
@@ -30,7 +31,14 @@ export default function EntradasRecentes({ entradas, avulsas = [], onDesfazerAvu
                   {entrada.origem === "QR" ? "QR Code" : entrada.origem === "ANTIGO" ? "Registro antigo" : "Pelo nome"} · {entrada.status}
                 </p>
               </div>
-              <span className="shrink-0 text-sm tabular-nums text-slate-600">{horaCurta(entrada.hora_entrada)}</span>
+              <div className="flex shrink-0 items-center gap-3">
+                <span className="text-sm tabular-nums text-slate-600">{horaCurta(entrada.hora_entrada)}</span>
+                {onExcluir && (
+                  <button type="button" onClick={() => onExcluir(entrada)} className="text-xs font-semibold text-red-700 hover:underline">
+                    Excluir
+                  </button>
+                )}
+              </div>
             </li>
           ))}
         </ul>

@@ -142,3 +142,9 @@ export async function entradasDaPortaria(portariaId: string): Promise<EntradaRec
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar as entradas."));
   return (data ?? []) as EntradaRecente[];
 }
+
+/** Exclui um registro de presença (exclusão lógica: some da portaria e dos relatórios e fica guardado no banco). */
+export async function excluirEntrada(presencaId: string): Promise<void> {
+  const { error } = await supabase.rpc("excluir_presenca", { p_id: presencaId });
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível excluir o registro."));
+}

@@ -38,6 +38,9 @@ import {
 } from "../regrasPresenca";
 import { desfazerEntradaAvulsa, entradasAvulsasDaPortaria, opcoesEntrada, registrarEntradaAvulsa } from "../services/entrada";
 import type { BlocoEntrada, EntradaAvulsa, LinhaEntrada, LocalidadeBusca, OpcoesEntrada } from "../tiposEntrada";
+import { entradasDaPortaria, excluirEntrada } from "../services/atendimento";
+import type { EntradaRecente } from "../tipos";
+import EntradasRecentes from "./EntradasRecentes";
 import BuscaLocalidade from "./BuscaLocalidade";
 import RegistrarComQr from "./RegistrarComQr";
 import SelecaoPortaria from "./SelecaoPortaria";
@@ -111,6 +114,7 @@ export default function RegistrarPresenca() {
   const controleTotal = pode("portarias.controle_total");
   const verResumo = pode("painel.visualizar");
   const podeRegistrar = pode("portaria.registrar");
+  const podeExcluir = pode("portaria.excluir"); // quem pode excluir registros de presença (definido nos Grupos)
 
   // ---------- Portaria ----------
   const [portarias, setPortarias] = useState<PortariaDetalhada[]>([]);
@@ -120,6 +124,7 @@ export default function RegistrarPresenca() {
   const [agora, setAgora] = useState(0); // relógio da tela (30 s): abre e fecha a janela sozinho
   const [opcoes, setOpcoes] = useState<OpcoesEntrada | null>(null);
   const [avulsas, setAvulsas] = useState<EntradaAvulsa[]>([]);
+  const [entradas, setEntradas] = useState<EntradaRecente[]>([]); // últimas entradas de membros cadastrados
   const [dados, setDados] = useState<DadosPainel | null>(null); // resumo em tempo real
 
   // ---------- Passo a passo ----------
@@ -180,6 +185,15 @@ export default function RegistrarPresenca() {
     }
   }, []);
 
+  const carregarEntradas = useCallback(async (id: string) => {
+    try {
+      setEntradas(await entradasDaPortaria(id));
+    } catch (e) {
+      // A lista é apenas informativa: se falhar, o registro continua funcionando
+      console.error("Falha ao carregar as entradas:", e);
+    }
+  }, []);
+
   const atualizarResumo = useCallback(async (id: string) => {
     try {
       setDados(await buscarPainel(id));
@@ -202,8 +216,11 @@ export default function RegistrarPresenca() {
 
   // Últimas entradas da portaria escolhida
   useEffect(() => {
-    if (portariaId) void carregarAvulsas(portariaId);
-  }, [portariaId, carregarAvulsas]);
+    if (portariaId) {
+      void carregarAvulsas(portariaId);
+      void carregarEntradas(portariaId);
+    }
+  }, [portariaId, carregarAvulsas, carregarEntradas]);
 
   // Resumo em tempo real: atualiza a cada 10 s (com a aba em segundo plano não consulta)
   useEffect(() => {
@@ -244,6 +261,7 @@ export default function RegistrarPresenca() {
 
   function escolherPortaria(id: string | null) {
     setAvulsas([]);
+    setEntradas([]);
     setDados(null);
     limpar(true);
     setPortariaId(id);
@@ -328,6 +346,19 @@ export default function RegistrarPresenca() {
       await Promise.all([carregarAvulsas(portaria.id), verResumo ? atualizarResumo(portaria.evento_id) : Promise.resolve()]);
     } catch (e) {
       setErroForm(e instanceof Error ? e.message : "Não foi possível desfazer a entrada.");
+    }
+  }
+
+  // Exclui um registro de presença de membro cadastrado (pede confirmação; o banco confere a permissão e a região)
+  async function excluirRegistro(entrada: EntradaRecente) {
+    if (!portaria) return;
+    if (!window.confirm(`Excluir o registro de presença de ${entrada.membro_nome}? Ele some da portaria e dos relatórios.`)) return;
+    try {
+      await excluirEntrada(entrada.presenca_id);
+      setAviso(`Registro excluído: ${entrada.membro_nome}`);
+      await Promise.all([carregarEntradas(portaria.id), verResumo ? atualizarResumo(portaria.evento_id) : Promise.resolve()]);
+    } catch (e) {
+      setErroForm(e instanceof Error ? e.message : "Não foi possível excluir o registro.");
     }
   }
 
@@ -705,6 +736,11 @@ export default function RegistrarPresenca() {
             </section>
           )}
 
+          {/* Últimas entradas de membros cadastrados (Excluir só para quem tem portaria.excluir) */}
+          {entradas.length > 0 && (
+            <EntradasRecentes entradas={entradas} onExcluir={podeExcluir ? (entrada) => void excluirRegistro(entrada) : undefined} />
+          )}
+
           {/* Membro cadastrado: lê o QR Code (ou busca pelo nome) em um popup e volta para esta tela */}
           <button
             type="button"
@@ -745,6 +781,7 @@ export default function RegistrarPresenca() {
             onRegistrado={async (mensagem) => {
               setQrAberto(false); // registrou: fecha o popup e volta para esta tela
               setAviso(mensagem);
+              await carregarEntradas(portaria.id); // a nova entrada aparece na lista
               if (verResumo) await atualizarResumo(portaria.evento_id);
             }}
           />
