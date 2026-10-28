@@ -109,9 +109,10 @@ export default function ConfiguracaoEventosPage() {
             <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
               <p className="font-semibold text-slate-700">Quem encerra manualmente (botão Encerrar, em Eventos)</p>
               <ul className="mt-1 list-disc space-y-0.5 pl-4">
-                <li>Ensaio Regional (e Treinamento, Reunião Musical, Outro): Secretário da Música.</li>
-                <li>Ensaio Local e Ensaios Técnicos: Instrutor.</li>
-                <li>Qualquer evento: Administrador e Administrador Regional.</li>
+                <li>Ensaio Local: Instrutor.</li>
+                <li>Ensaio Técnico de Famílias (Cordas, Madeiras e Metais): Secretário da Música.</li>
+                <li>Secretário da Música: qualquer evento (todas as opções).</li>
+                <li>Administrador e Administrador Regional: qualquer evento.</li>
               </ul>
             </div>
 

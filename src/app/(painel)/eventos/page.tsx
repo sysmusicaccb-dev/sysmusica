@@ -62,11 +62,12 @@ export default function EventosPage() {
       ativo = false;
     };
   }, []);
-  // Administrador/Administrador Regional: qualquer evento. Instrutor: ensaio Local. Secretário da Música: Regional e demais.
+  // Administrador, Administrador Regional e Secretário da Música: qualquer evento.
+  // Instrutor: só o Ensaio Local (os Ensaios Técnicos, mesmo sendo "Local", são do Secretário da Música).
   const podeEncerrarEste = (evento: Evento): boolean => {
-    if (pode("eventos.encerrar_qualquer")) return true;
+    if (pode("eventos.encerrar_qualquer") || pode("eventos.encerrar_regional")) return true;
     const modelo = modelos.get(chaveDoTipo(evento.tipo)) ?? null;
-    return modelo === "LOCAL" ? pode("eventos.encerrar_local") : pode("eventos.encerrar_regional");
+    return modelo === "LOCAL" && !chaveDoTipo(evento.tipo).startsWith("ensaio tecnico") && pode("eventos.encerrar_local");
   };
 
   // Busca eventos e finalidades
