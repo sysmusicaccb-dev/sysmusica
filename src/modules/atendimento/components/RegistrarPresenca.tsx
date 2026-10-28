@@ -30,7 +30,10 @@ import { descreverAvulsa, precisaInstrumento, precisaPerguntar, validarEntradaAv
 import {
   BLOCOS_ENTRADA,
   SINGULAR_BLOCO,
+  diaDoEvento,
+  diasComEvento,
   familiasDosInstrumentos,
+  filtrarPorDia,
   instrumentosDaFamilia,
   linhasDoBloco,
   passoAtual,
@@ -144,6 +147,7 @@ export default function RegistrarPresenca() {
   const [erroForm, setErroForm] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [qrAberto, setQrAberto] = useState(false); // popup "Registrar Presença com QR Code"
+  const [dia, setDia] = useState(""); // seletor de data da lista de portarias (AAAA-MM-DD; vazio = todas)
 
   const disponiveis = useMemo(
     () => portarias.filter((portaria) => janelaDaPortaria(portaria.evento_data, agora)?.situacao !== "encerrada" && !portaria.evento_encerrado_em), // evento encerrado à mão: a portaria sai junto
@@ -394,8 +398,54 @@ export default function RegistrarPresenca() {
     );
   }
   if (!portaria) {
+    // Seletor de data: ajuda a achar a portaria certa quando há vários eventos próximos
+    const filtradas = filtrarPorDia(disponiveis, dia);
+    const dias = diasComEvento(disponiveis);
     return (
-      <SelecaoPortaria portarias={disponiveis} agora={agora} controleTotal={controleTotal} onEscolher={(id) => escolherPortaria(id)} />
+      <div className="space-y-4">
+        {disponiveis.length > 1 && (
+          <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <div className="space-y-1.5">
+              <label htmlFor="presenca-dia" className="text-sm font-semibold text-slate-800">
+                Data do evento
+              </label>
+              <input
+                id="presenca-dia"
+                type="date"
+                value={dia}
+                min={dias[0]}
+                max={dias[dias.length - 1]}
+                onChange={(e) => setDia(e.target.value)}
+                className={classeSelect + " w-48"}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setDia(diaDoEvento(new Date().toISOString()))}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              Hoje
+            </button>
+            {dia !== "" && (
+              <button
+                type="button"
+                onClick={() => setDia("")}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Ver todas
+              </button>
+            )}
+            <p className="pb-2.5 text-xs text-slate-500" aria-live="polite">
+              {filtradas.length} de {disponiveis.length} portaria(s)
+            </p>
+          </div>
+        )}
+        {filtradas.length === 0 ? (
+          <EmptyState titulo="Nenhuma portaria nesta data." descricao="Escolha outra data ou clique em Ver todas." />
+        ) : (
+          <SelecaoPortaria portarias={filtradas} agora={agora} controleTotal={controleTotal} onEscolher={(id) => escolherPortaria(id)} />
+        )}
+      </div>
     );
   }
 

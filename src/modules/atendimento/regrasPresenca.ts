@@ -42,3 +42,21 @@ export function instrumentosDaFamilia(instrumentos: InstrumentoEntrada[], famili
   if (familia === "") return [];
   return instrumentos.filter((item) => item.familia === familia);
 }
+
+/** Dia do evento (AAAA-MM-DD, no horário local) para comparar com o seletor de data. Sem data válida = "". */
+export function diaDoEvento(dataIso: string | null): string {
+  if (!dataIso) return "";
+  const data = new Date(dataIso);
+  if (Number.isNaN(data.getTime())) return "";
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}-${String(data.getDate()).padStart(2, "0")}`;
+}
+
+/** Só os itens do dia escolhido; sem dia (""), devolve todos. */
+export function filtrarPorDia<T extends { evento_data: string | null }>(itens: T[], dia: string): T[] {
+  return dia === "" ? itens : itens.filter((item) => diaDoEvento(item.evento_data) === dia);
+}
+
+/** Dias que têm evento, sem repetir e em ordem crescente (limites do seletor de data). */
+export function diasComEvento(itens: { evento_data: string | null }[]): string[] {
+  return [...new Set(itens.map((item) => diaDoEvento(item.evento_data)).filter((dia) => dia !== ""))].sort();
+}
