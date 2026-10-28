@@ -248,7 +248,7 @@ export default function FormularioEnsaio({ resposta, hinos, cidades, temPermissa
                     {cargosAtende.length > 1 && (
                       <div className="space-y-1.5">
                         <label htmlFor="ensaio-cargo" className="text-sm font-semibold text-slate-800">
-                          Cargo
+                          Ministério
                         </label>
                         <select
                           id="ensaio-cargo"

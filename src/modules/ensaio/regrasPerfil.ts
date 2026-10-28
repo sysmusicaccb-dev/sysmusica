@@ -140,7 +140,7 @@ export function validarEnsaioCfg(estado: EstadoEnsaioCfg, config: ConfigEnsaio):
 
   if (config.quem_atendeu.ativo) {
     if (!estado.atendeCargo || !config.quem_atendeu.cargos.includes(estado.atendeCargo)) {
-      erros.push({ campo: "atende_cargo", mensagem: "Escolha o cargo de quem atendeu o ensaio." });
+      erros.push({ campo: "atende_cargo", mensagem: "Escolha o ministério de quem atendeu o ensaio." });
     }
     const nome = limparEspacos(estado.atendeNome);
     if (nome.length < NOME_MINIMO) {
