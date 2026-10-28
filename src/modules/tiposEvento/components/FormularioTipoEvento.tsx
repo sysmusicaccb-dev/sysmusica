@@ -11,12 +11,16 @@
 import { useState, type FormEvent } from "react";
 import { Pencil, Plus, RefreshCw, Save } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { DESCRICAO_MAXIMA, NOME_MAXIMO, ROTULO_MODELO, validarTipoEvento, type ModeloEnsaio, type TipoEvento } from "../regras";
+import Link from "next/link";
+import type { PerfilEvento } from "@/modules/perfisEvento/regras";
+import { DESCRICAO_MAXIMA, NOME_MAXIMO, validarTipoEvento, type TipoEvento } from "../regras";
 import { salvarTipoEvento } from "../services/tiposEvento";
 
 interface FormularioTipoEventoProps {
   tipo: TipoEvento | null;
   tipos: TipoEvento[]; // todos, para impedir nomes repetidos
+  perfis: PerfilEvento[]; // perfis do evento (campo Dados do Ensaio)
+  podeGerenciarPerfis: boolean; // mostra o atalho para a aba Perfil do Evento
   onSalvo: (mensagem: string) => void | Promise<void>;
   onLimpar: () => void; // "Limpar": descarta a edição e volta ao formulário em branco
 }
@@ -26,11 +30,15 @@ const classeInput =
   "placeholder:text-slate-400 focus:border-brand-500 focus:outline-none " +
   "focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-60";
 
-export default function FormularioTipoEvento({ tipo, tipos, onSalvo, onLimpar }: FormularioTipoEventoProps) {
+export default function FormularioTipoEvento({ tipo, tipos, perfis, podeGerenciarPerfis, onSalvo, onLimpar }: FormularioTipoEventoProps) {
   const editando = tipo !== null;
   const [nome, setNome] = useState(tipo?.nome ?? "");
   const [descricao, setDescricao] = useState(tipo?.descricao ?? "");
-  const [modelo, setModelo] = useState<ModeloEnsaio | "">(tipo?.modelo_ensaio ?? "");
+  // Dados do Ensaio = perfil escolhido ("" = o tipo não usa a tela de ensaio). O modelo do tipo segue o perfil.
+  const [perfilId, setPerfilId] = useState<string>(tipo?.perfil_id ?? "");
+  const perfilEscolhido = perfis.find((p) => p.id === perfilId) ?? null;
+  // Perfis ativos, mais o que o tipo já usa (mesmo que tenha sido desativado depois)
+  const opcoesPerfil = perfis.filter((p) => p.ativo || p.id === tipo?.perfil_id);
   const [ativo, setAtivo] = useState(tipo?.ativo ?? true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -48,7 +56,8 @@ export default function FormularioTipoEvento({ tipo, tipos, onSalvo, onLimpar }:
       await salvarTipoEvento(tipo?.id ?? null, {
         nome: nome.trim().replace(/\s+/g, " "),
         descricao: descricao.trim(),
-        modelo_ensaio: modelo === "" ? null : modelo,
+        modelo_ensaio: perfilEscolhido?.modelo_base ?? null,
+        perfil_id: perfilEscolhido?.id ?? null,
         ativo,
       });
       await onSalvo(editando ? `Tipo "${nome.trim()}" atualizado.` : `Tipo "${nome.trim()}" criado.`);
@@ -123,18 +132,29 @@ export default function FormularioTipoEvento({ tipo, tipos, onSalvo, onLimpar }:
           </label>
           <select
             id="modelo-tipo"
-            value={modelo}
-            onChange={(e) => setModelo(e.target.value as ModeloEnsaio | "")}
+            value={perfilId}
+            onChange={(e) => setPerfilId(e.target.value)}
             disabled={salvando}
             className={classeInput}
           >
             <option value="">Não usa (sem tela de ensaio)</option>
-            <option value="LOCAL">{ROTULO_MODELO.LOCAL}</option>
-            <option value="REGIONAL">{ROTULO_MODELO.REGIONAL}</option>
+            {opcoesPerfil.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nome}
+                {p.ativo ? "" : " (inativo)"}
+              </option>
+            ))}
           </select>
           <p className="text-xs text-slate-500">
-            Regional: quem atende é sempre Ancião e há a palavra. Local: quem atende pode ser Ancião, Diácono ou
-            Cooperador, sem palavra.
+            O perfil define como a tela Dados do Ensaio funciona neste tipo de evento.
+            {podeGerenciarPerfis && (
+              <>
+                {" "}
+                <Link href="/perfil-evento" className="font-semibold text-brand-700 underline">
+                  Gerenciar perfis
+                </Link>
+              </>
+            )}
           </p>
         </div>
 

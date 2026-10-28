@@ -81,7 +81,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         icone: CalendarDays,
         permissao: "eventos.visualizar",
         // Tipo do Evento, Gestão de portarias e Portaria são ABAS dentro de Eventos: o item continua marcado nessas telas
-        tambemAtivoEm: ["/tipos-evento", "/portarias", "/portaria", "/configuracao-eventos"],
+        tambemAtivoEm: ["/tipos-evento", "/portarias", "/portaria", "/perfil-evento", "/configuracao-eventos"],
       },
       {
         href: "/tipos-evento",

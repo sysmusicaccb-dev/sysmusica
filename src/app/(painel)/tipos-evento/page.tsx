@@ -12,6 +12,8 @@ import { excluirTipoEvento, listarTiposEvento, salvarTipoEvento } from "@/module
 import FormularioTipoEvento from "@/modules/tiposEvento/components/FormularioTipoEvento";
 import TabelaTiposEvento from "@/modules/tiposEvento/components/TabelaTiposEvento";
 import type { TipoEvento } from "@/modules/tiposEvento/regras";
+import { listarPerfis } from "@/modules/perfisEvento/services/perfisEvento";
+import type { PerfilEvento } from "@/modules/perfisEvento/regras";
 import { useSessao } from "@/modules/autenticacao/SessaoProvider";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import ErrorState from "@/components/ui/ErrorState";
@@ -22,6 +24,7 @@ import Skeleton from "@/components/ui/Skeleton";
 export default function TiposEventoPage() {
   const { pode } = useSessao();
   const [tipos, setTipos] = useState<TipoEvento[]>([]);
+  const [perfis, setPerfis] = useState<PerfilEvento[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [editando, setEditando] = useState<TipoEvento | null>(null); // tipo aberto no formulário (null = novo)
@@ -35,6 +38,8 @@ export default function TiposEventoPage() {
   const carregar = useCallback(async () => {
     try {
       setTipos(await listarTiposEvento());
+      // Perfis do evento (campo Dados do Ensaio); se falhar, o formulário segue só com "Não usa"
+      setPerfis(await listarPerfis().catch(() => []));
       setErro(null);
     } catch (e) {
       console.error("Falha ao carregar tipos de evento:", e);
@@ -162,6 +167,8 @@ export default function TiposEventoPage() {
               key={`${editando?.id ?? "novo"}-${versaoForm}`}
               tipo={editando}
               tipos={tipos}
+              perfis={perfis}
+              podeGerenciarPerfis={pode("tipoevento.editar")}
               onSalvo={aoSalvar}
               onLimpar={limparFormulario}
             />

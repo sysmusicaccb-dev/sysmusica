@@ -82,7 +82,7 @@ export default function TabelaTiposEvento({
                 <th scope="col" className={cn(classeCabecalho, "w-14")}>N°</th>
                 <th scope="col" className={classeCabecalho}>Tipo de Evento</th>
                 <th scope="col" className={classeCabecalho}>Descrição</th>
-                <th scope="col" className={classeCabecalho}>Dados do Ensaio</th>
+                <th scope="col" className={classeCabecalho}>Perfil (Dados do Ensaio)</th>
                 <th scope="col" className={classeCabecalho}>Status</th>
                 {mostrarAcoes && <th scope="col" className={cn(classeCabecalho, "text-center")}>Ações</th>}
               </tr>
@@ -104,7 +104,7 @@ export default function TabelaTiposEvento({
                     <td className="px-4 py-3 font-medium text-slate-900">{tipo.nome}</td>
                     <td className="px-4 py-3 text-slate-600">{tipo.descricao ?? "—"}</td>
                     <td className="px-4 py-3">
-                      <Badge variante={tipo.modelo_ensaio ? "marca" : "neutro"}>{rotuloDoModelo(tipo.modelo_ensaio)}</Badge>
+                      <Badge variante={tipo.modelo_ensaio ? "marca" : "neutro"}>{tipo.perfil_nome ?? rotuloDoModelo(tipo.modelo_ensaio)}</Badge>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">

@@ -15,6 +15,8 @@ export interface TipoEvento {
   descricao: string | null;
   modelo_ensaio: ModeloEnsaio | null; // nulo = o tipo não usa a tela Dados do Ensaio
   ativo: boolean;
+  perfil_id?: string | null; // perfil do evento ligado ao tipo (migração 0079)
+  perfil_nome?: string | null;
   em_uso: number; // quantos eventos usam o tipo (tipo usado não pode ser excluído, só desativado)
 }
 

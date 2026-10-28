@@ -23,6 +23,9 @@ export function abasDeEventos(pode: (permissao: CodigoPermissao) => boolean): Ab
     abas.push({ href: "/portarias", rotulo: "Gestão de Portarias" });
   }
 
+  // Perfil do Evento: perfis da tela Dados do Ensaio (só quem edita os tipos de evento; o banco exige administrador)
+  if (pode("tipoevento.editar")) abas.push({ href: "/perfil-evento", rotulo: "Perfil do Evento" });
+
   // Configurações: encerrar sozinho e horas (só quem tem eventos.configurar)
   if (pode("eventos.configurar")) abas.push({ href: "/configuracao-eventos", rotulo: "Configurações" });
 

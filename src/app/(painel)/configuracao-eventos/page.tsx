@@ -8,7 +8,8 @@
  */
 import { useEffect, useState } from "react";
 import Notificacao from "@/components/ui/Notificacao";
-import PageHeader from "@/components/ui/PageHeader";
+import { Settings } from "lucide-react";
+import CabecalhoDeAba from "@/components/ui/CabecalhoDeAba";
 import Skeleton from "@/components/ui/Skeleton";
 import { definirRegraEncerramento } from "@/modules/portarias/janela";
 import { obterConfigEventos, salvarConfigEventos } from "@/modules/eventos/services/configEventos";
@@ -64,14 +65,14 @@ export default function ConfiguracaoEventosPage() {
 
   return (
     <main className="text-slate-900">
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-        <PageHeader titulo="Configurações de Eventos" descricao="Encerramento do evento e da portaria." />
+      <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
+        <CabecalhoDeAba icone={Settings} titulo="Configurações" descricao="Encerramento do evento e da portaria." />
 
         {carregando ? (
           <Skeleton className="h-40 rounded-2xl" />
         ) : (
           <form
-            className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+            className="space-y-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
             onSubmit={(ev) => {
               ev.preventDefault();
               void salvar();
