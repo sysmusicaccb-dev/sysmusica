@@ -12,8 +12,8 @@ interface IlustracaoInstrumentoProps {
   tamanho?: "pequeno" | "grande";
 }
 
-/** Traços de cada desenho (caixa 48 x 48). */
-function tracos(chave: ChaveDesenho): ReactNode {
+/** Traços de cada desenho (caixa 48 x 48). Exportada: o Relatório do Ensaio usa os mesmos desenhos. */
+export function tracos(chave: ChaveDesenho): ReactNode {
   switch (chave) {
     case "clarinete":
       return (

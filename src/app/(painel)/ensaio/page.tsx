@@ -16,6 +16,7 @@ import { listarHinos } from "@/modules/hinos/services/hinos";
 import type { Hino } from "@/modules/hinos/regras";
 import FormularioEnsaio from "@/modules/ensaio/components/FormularioEnsaio";
 import BotaoImprimirEnsaio from "@/modules/ensaio/components/BotaoImprimirEnsaio";
+import BotaoRelatorioEnsaio from "@/modules/ensaio/relatorio/BotaoRelatorioEnsaio";
 import { carregarCidades } from "@/modules/ensaio/services/cidades";
 import { listarEventosParaEnsaio, obterDadosEnsaio } from "@/modules/ensaio/services/ensaio";
 import type { Cidade } from "@/modules/ensaio/cidades";
@@ -203,6 +204,11 @@ export default function EnsaioPage() {
             )}
             {resposta?.dados && !carregandoEvento && (
               <BotaoImprimirEnsaio resposta={resposta} hinos={hinos} totais={totais} />
+            )}
+            {resposta && !carregandoEvento && (
+              <div>
+                <BotaoRelatorioEnsaio eventoId={eventoId || null} />
+              </div>
             )}
             {resposta && !carregandoEvento && (
               <FormularioEnsaio
