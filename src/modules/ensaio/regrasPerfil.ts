@@ -3,7 +3,7 @@
  * Versão "por perfil" do estado, da validação e do envio: o que não está ligado no perfil não aparece, não é
  * conferido e vai vazio. Testadas em regrasPerfil.test.ts. O banco refaz as mesmas conferências (migração 0080).
  */
-import type { CargoEncarregado, ConfigEnsaio } from "./perfilConfig";
+import type { CampoExtra, CargoEncarregado, ConfigEnsaio } from "./perfilConfig";
 import {
   limparEspacos,
   removerHinos,
@@ -24,6 +24,7 @@ export interface EncarregadoCfg extends EncarregadoForm {
 export interface EstadoEnsaioCfg extends Omit<EstadoEnsaio, "encarregados"> {
   encarregados: EncarregadoCfg[];
   houveAbertura: "" | "SIM" | "NAO"; // resposta de "Houve hino de abertura?" (perfil com modo "pergunta")
+  extras: Record<string, string>; // campos extras por id; sim/não guarda "SIM" ou "NAO"; vazio = sem resposta
 }
 
 /** O que a tela envia para salvar_dados_ensaio (campos desligados no perfil vão nulos ou vazios). */
@@ -34,6 +35,25 @@ export interface CargaEnsaioCfg {
   hino_abertura_id: string | null;
   encarregados: { nome: string; cidade_uf: string | null; cargo: CargoEncarregado | null }[];
   hinos: string[];
+  extras: Record<string, string | number | boolean>; // só campos extras ativos e preenchidos
+}
+
+const EXTRA_CURTO_MAXIMO = 200;
+const EXTRA_LONGO_MAXIMO = 1000;
+
+/** "3,5" ou "3.5" viram 3.5; qualquer outra coisa vira null. */
+export function numeroDoTexto(texto: string): number | null {
+  const limpo = texto.trim();
+  if (!/^-?\d+([.,]\d+)?$/.test(limpo)) return null;
+  const n = Number(limpo.replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Valor guardado no banco -> texto do formulário. */
+function extraParaEstado(campo: CampoExtra, valor: unknown): string {
+  if (campo.tipo === "sim_nao") return valor === true ? "SIM" : valor === false ? "NAO" : "";
+  if (typeof valor === "number") return String(valor).replace(".", ",");
+  return typeof valor === "string" ? valor : "";
 }
 
 /** Cargo já escolhido quando o perfil só permite um. */
@@ -65,6 +85,7 @@ export function estadoVazioCfg(config: ConfigEnsaio): EstadoEnsaioCfg {
     // Começa com 1 linha (ou o mínimo do perfil); com mínimo 0 a pessoa escolhe a quantidade
     encarregados: config.encarregados.ativo ? ajustarQuantidadeCfg([], Math.max(1, config.encarregados.minimo), config) : [],
     hinosIds: [],
+    extras: {},
   };
 }
 
@@ -89,6 +110,12 @@ export function estadoDosDadosCfg(dados: DadosSalvos | null, config: ConfigEnsai
       ? ajustarQuantidadeCfg(salvos, Math.max(salvos.length, config.encarregados.minimo), config)
       : [],
     hinosIds: [...dados.hinos],
+    extras: Object.fromEntries(
+      config.campos_extras
+        .filter((c) => c.ativo)
+        .map((c) => [c.id, extraParaEstado(c, dados.extras?.[c.id])] as const)
+        .filter(([, valor]) => valor !== "")
+    ),
   };
 }
 
@@ -180,7 +207,48 @@ export function validarEnsaioCfg(estado: EstadoEnsaioCfg, config: ConfigEnsaio):
       erros.push({ campo: "hinos", mensagem: `Informe no máximo ${MAXIMO_HINOS} hinos executados.` });
     }
   }
+
+  // Campos extras do perfil (na ordem da tela)
+  for (const c of config.campos_extras) {
+    if (!c.ativo) continue;
+    const valor = (estado.extras[c.id] ?? "").trim();
+    const campo = `extra_${c.id}`;
+    if (valor === "") {
+      if (c.obrigatorio) erros.push({ campo, mensagem: `Preencha o campo "${c.nome}".` });
+    } else if (c.tipo === "texto_curto" && valor.length > EXTRA_CURTO_MAXIMO) {
+      erros.push({ campo, mensagem: `O campo "${c.nome}" aceita até ${EXTRA_CURTO_MAXIMO} caracteres.` });
+    } else if (c.tipo === "texto_longo" && valor.length > EXTRA_LONGO_MAXIMO) {
+      erros.push({ campo, mensagem: `O campo "${c.nome}" aceita até ${EXTRA_LONGO_MAXIMO} caracteres.` });
+    } else if (c.tipo === "numero" && numeroDoTexto(valor) === null) {
+      erros.push({ campo, mensagem: `O campo "${c.nome}" aceita só número.` });
+    } else if (c.tipo === "sim_nao" && valor !== "SIM" && valor !== "NAO") {
+      erros.push({ campo, mensagem: `Responda Sim ou Não no campo "${c.nome}".` });
+    } else if (c.tipo === "lista" && !c.opcoes.includes(valor)) {
+      erros.push({ campo, mensagem: `Escolha uma das opções do campo "${c.nome}".` });
+    }
+  }
   return erros;
+}
+
+/** Valores dos campos extras ativos e preenchidos, já no tipo certo (número, sim/não como verdadeiro/falso). */
+function montarExtras(estado: EstadoEnsaioCfg, config: ConfigEnsaio): CargaEnsaioCfg["extras"] {
+  const saida: CargaEnsaioCfg["extras"] = {};
+  for (const c of config.campos_extras) {
+    if (!c.ativo) continue;
+    const bruto = (estado.extras[c.id] ?? "").trim();
+    if (bruto === "") continue;
+    if (c.tipo === "numero") {
+      const n = numeroDoTexto(bruto);
+      if (n !== null) saida[c.id] = n;
+    } else if (c.tipo === "sim_nao") {
+      saida[c.id] = bruto === "SIM";
+    } else if (c.tipo === "texto_curto") {
+      saida[c.id] = limparEspacos(bruto);
+    } else {
+      saida[c.id] = bruto;
+    }
+  }
+  return saida;
 }
 
 /** Monta o que é enviado ao banco (já limpo). Só chame depois de validarEnsaioCfg devolver lista vazia. */
@@ -200,5 +268,6 @@ export function montarCargaCfg(estado: EstadoEnsaioCfg, config: ConfigEnsaio): C
         }))
       : [],
     hinos: config.hinos_executados.ativo ? [...estado.hinosIds] : [],
+    extras: montarExtras(estado, config),
   };
 }

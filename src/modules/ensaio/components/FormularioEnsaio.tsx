@@ -12,7 +12,7 @@
  * O banco refaz todas as conferências ao salvar.
  */
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { BookOpen, Music, RefreshCw, Save, User, Users, type LucideIcon } from "lucide-react";
+import { BookOpen, ClipboardList, Music, RefreshCw, Save, User, Users, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { rotuloCompleto, type Hino } from "@/modules/hinos/regras";
@@ -129,6 +129,10 @@ export default function FormularioEnsaio({ resposta, hinos, cidades, temPermissa
     mudar({ encarregados: estado.encarregados.map((e, i) => (i === indice ? { ...e, ...parte } : e)) });
   }
 
+  function mudarExtra(id: string, valor: string) {
+    setEstado((atual) => ({ ...atual, extras: { ...atual.extras, [id]: valor } }));
+  }
+
   async function salvar(submissao: FormEvent<HTMLFormElement>) {
     submissao.preventDefault();
     if (desabilitado) return; // evita envio duplicado e envio sem permissão
@@ -154,6 +158,7 @@ export default function FormularioEnsaio({ resposta, hinos, cidades, temPermissa
 
   const qa = config.quem_atendeu;
   const enc = config.encarregados;
+  const camposExtras = config.campos_extras.filter((c) => c.ativo);
   const cargosAtende = CARGOS_ATENDE.filter((c) => qa.cargos.includes(c.codigo));
   const abertura = config.hino_abertura.modo;
   const tituloEnc = tituloBlocoEncarregados(enc.cargos);
@@ -440,6 +445,69 @@ export default function FormularioEnsaio({ resposta, hinos, cidades, temPermissa
                   disabled={desabilitado}
                 />
                 {erroDe("hinos") && <p className="text-xs text-red-700">{erroDe("hinos")}</p>}
+              </div>
+            </Bloco>
+          )}
+
+          {/* Informações adicionais: campos extras criados no perfil do evento */}
+          {camposExtras.length > 0 && (
+            <Bloco titulo="Informações adicionais" icone={ClipboardList} tom="azul">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {camposExtras.map((c) => {
+                  const idCampo = `ensaio-extra-${c.id}`;
+                  const valor = estado.extras[c.id] ?? "";
+                  const erro = erroDe(`extra_${c.id}`);
+                  const classe = classeInput + (erro ? bordaErro : bordaOk);
+                  return (
+                    <div key={c.id} className={cn("space-y-1.5", c.tipo === "texto_longo" && "sm:col-span-2")}>
+                      <label htmlFor={idCampo} id={`${idCampo}-rotulo`} className="text-sm font-semibold text-slate-800">
+                        {c.nome}
+                        {c.obrigatorio && <span className="font-normal text-slate-500"> (obrigatório)</span>}
+                      </label>
+                      {c.tipo === "texto_curto" && (
+                        <input id={idCampo} type="text" maxLength={200} value={valor} disabled={desabilitado} className={classe} onChange={(e) => mudarExtra(c.id, e.target.value)} />
+                      )}
+                      {c.tipo === "texto_longo" && (
+                        <textarea id={idCampo} rows={3} maxLength={1000} value={valor} disabled={desabilitado} className={cn(classe, "resize-none")} onChange={(e) => mudarExtra(c.id, e.target.value)} />
+                      )}
+                      {c.tipo === "numero" && (
+                        <input id={idCampo} type="text" inputMode="decimal" value={valor} disabled={desabilitado} className={classe} onChange={(e) => mudarExtra(c.id, e.target.value)} />
+                      )}
+                      {c.tipo === "lista" && (
+                        <select id={idCampo} value={valor} disabled={desabilitado} className={classe} onChange={(e) => mudarExtra(c.id, e.target.value)}>
+                          <option value="">Selecione...</option>
+                          {c.opcoes.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {c.tipo === "sim_nao" && (
+                        <div role="radiogroup" aria-labelledby={`${idCampo}-rotulo`} className="flex items-center gap-2">
+                          {(["SIM", "NAO"] as const).map((opcao) => (
+                            <button
+                              key={opcao}
+                              type="button"
+                              role="radio"
+                              aria-checked={valor === opcao}
+                              disabled={desabilitado}
+                              // Clicar de novo na resposta marcada limpa (útil quando o campo não é obrigatório)
+                              onClick={() => mudarExtra(c.id, valor === opcao ? "" : opcao)}
+                              className={cn(
+                                "h-10 w-20 rounded-lg border text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 disabled:opacity-50",
+                                valor === opcao ? "border-brand-600 bg-brand-600 text-white" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                              )}
+                            >
+                              {opcao === "SIM" ? "Sim" : "Não"}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {erro && <p className="text-xs text-red-700">{erro}</p>}
+                    </div>
+                  );
+                })}
               </div>
             </Bloco>
           )}

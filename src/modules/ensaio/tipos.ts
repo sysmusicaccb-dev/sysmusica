@@ -47,6 +47,7 @@ export interface DadosSalvos {
   atualizado_em: string;
   encarregados: EncarregadoSalvo[];
   hinos: string[]; // ids dos hinos executados, na ordem
+  extras?: Record<string, unknown> | null; // valores dos campos extras do perfil, por id do campo
 }
 
 export interface RespostaEnsaio {

@@ -14,7 +14,7 @@ import { formatarDiaDoEvento, formatarHoraDoEvento } from "@/modules/painel/regr
 import type { DadosPainel } from "@/modules/painel/tipos";
 import { agoraEmSalvador } from "@/modules/relatorios/regras";
 import { montarImpressaoEnsaio } from "../impressao";
-import { normalizarConfig, rotuloDoCargoEncarregado, tituloBlocoEncarregados } from "../perfilConfig";
+import { normalizarConfig, rotuloDoCargoEncarregado, tituloBlocoEncarregados, valorExtraTexto } from "../perfilConfig";
 import { rotuloDoCargo } from "../regras";
 import type { RespostaEnsaio } from "../tipos";
 
@@ -73,6 +73,10 @@ export default function BotaoImprimirEnsaio({ resposta, hinos, totais }: BotaoIm
             ? "Não houve"
             : "",
         palavra: dados.palavra ?? "",
+        extras: config.campos_extras
+          .filter((c) => c.ativo)
+          .map((c) => ({ rotulo: c.nome, valor: valorExtraTexto(c, dados.extras?.[c.id]) }))
+          .filter((x) => x.valor !== ""),
         hinosExecutados: dados.hinos.map(rotuloDoHino),
         totalParticipantes: totais?.total,
         emitidoPor: conta?.nome ?? "usuário",

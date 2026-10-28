@@ -9,7 +9,7 @@
 import { useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
-import { configPadrao, normalizarConfig, type ConfigEnsaio } from "@/modules/ensaio/perfilConfig";
+import { configPadrao, normalizarCamposExtras, normalizarConfig, validarCamposExtras, type ConfigEnsaio } from "@/modules/ensaio/perfilConfig";
 import { DESCRICAO_MAXIMA, NOME_MAXIMO, formatarNomeTipo, type ModeloEnsaio } from "@/modules/tiposEvento/regras";
 import { validarPerfil, type PerfilEvento } from "../regras";
 import { salvarPerfil } from "../services/perfisEvento";
@@ -52,6 +52,8 @@ export default function FormularioPerfil({ perfil, perfis, onSalvo, onCancelar }
     setErro(null);
     const erroForm = validarPerfil({ nome, descricao }, perfis, perfil?.id);
     if (erroForm) return setErro(erroForm);
+    const erroExtras = validarCamposExtras(config.campos_extras);
+    if (erroExtras) return setErro(erroExtras);
 
     setSalvando(true);
     try {
@@ -60,7 +62,7 @@ export default function FormularioPerfil({ perfil, perfis, onSalvo, onCancelar }
         descricao: descricao.trim(),
         modelo_base: modelo,
         ativo,
-        config,
+        config: { ...config, campos_extras: normalizarCamposExtras(config.campos_extras) }, // limpa espaços e opções vazias
       });
       await onSalvo(editando ? `Perfil "${formatarNomeTipo(nome)}" atualizado.` : `Perfil "${formatarNomeTipo(nome)}" criado.`);
     } catch (e) {

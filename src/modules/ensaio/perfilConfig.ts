@@ -17,12 +17,37 @@ import type { CargoAtende } from "./tipos";
 export type ModoAbertura = "obrigatorio" | "pergunta" | "nao_usa";
 export type CargoEncarregado = "REGIONAL" | "LOCAL" | "INSTRUTOR";
 
+export type TipoCampoExtra = "texto_curto" | "texto_longo" | "numero" | "sim_nao" | "lista";
+
+/** Campo extra criado pelo administrador no perfil (guardado em config.campos_extras; valores em dados_ensaio.extras). */
+export interface CampoExtra {
+  id: string; // fixo: letras minúsculas, números e _ (até 24); o valor preenchido é guardado por ele
+  nome: string;
+  tipo: TipoCampoExtra;
+  obrigatorio: boolean;
+  ativo: boolean; // desativado some da tela, mas o que já foi preenchido continua guardado
+  opcoes: string[]; // só no tipo "lista" (2 a 20 opções)
+}
+
+export const MAXIMO_CAMPOS_EXTRAS = 10;
+export const TIPOS_CAMPO: TipoCampoExtra[] = ["texto_curto", "texto_longo", "numero", "sim_nao", "lista"];
+export const ROTULO_TIPO_CAMPO: Record<TipoCampoExtra, string> = {
+  texto_curto: "Texto curto",
+  texto_longo: "Texto longo",
+  numero: "Número",
+  sim_nao: "Sim / Não",
+  lista: "Lista de opções",
+};
+const MAXIMO_OPCOES = 20;
+const ID_VALIDO = /^[a-z0-9_]{1,24}$/;
+
 export interface ConfigEnsaio {
   quem_atendeu: { ativo: boolean; titulo: string; rotulo_nome: string; cargos: CargoAtende[] };
   hino_abertura: { modo: ModoAbertura };
   palavra: { ativo: boolean; obrigatoria: boolean; limite: number };
   encarregados: { ativo: boolean; cargos: CargoEncarregado[]; minimo: number; maximo: number; cidade_uf: boolean };
   hinos_executados: { ativo: boolean };
+  campos_extras: CampoExtra[]; // na ordem em que aparecem na tela
 }
 
 export const CARGOS_ENCARREGADO: { codigo: CargoEncarregado; rotulo: string }[] = [
@@ -55,6 +80,7 @@ export function configPadrao(modelo: ModeloEnsaio): ConfigEnsaio {
     palavra: { ativo: modelo === "REGIONAL", obrigatoria: true, limite: PALAVRA_MAXIMA },
     encarregados: { ativo: true, cargos: [...CODIGOS_ENCARREGADO], minimo: 1, maximo: MAXIMO_ENCARREGADOS, cidade_uf: true },
     hinos_executados: { ativo: true },
+    campos_extras: [],
   };
 }
 
@@ -110,6 +136,7 @@ export function normalizarConfig(bruto: unknown, modelo: ModeloEnsaio): ConfigEn
       cidade_uf: bool(en.cidade_uf, true),
     },
     hinos_executados: { ativo: bool(hx.ativo, true) },
+    campos_extras: normalizarCamposExtras(i.campos_extras),
   };
 }
 
@@ -134,6 +161,73 @@ export function verboAtendeu(quantidade: number): string {
   return quantidade >= 2 ? "atenderam" : "atendeu";
 }
 
+/** Limpa a lista de campos extras (mesmas regras do banco): até 10, id e nome únicos, tipo válido, lista com 2+ opções. */
+export function normalizarCamposExtras(bruto: unknown): CampoExtra[] {
+  if (!Array.isArray(bruto)) return [];
+  const saida: CampoExtra[] = [];
+  const ids = new Set<string>();
+  const nomes = new Set<string>();
+  for (const item of bruto) {
+    if (saida.length >= MAXIMO_CAMPOS_EXTRAS) break;
+    const e = objeto(item);
+    const id = typeof e.id === "string" ? e.id.toLowerCase() : "";
+    const nome = texto(e.nome, "");
+    const tipo = TIPOS_CAMPO.find((t) => t === e.tipo);
+    if (!ID_VALIDO.test(id) || ids.has(id) || nome === "" || nomes.has(nome.toLowerCase()) || !tipo) continue;
+    const opcoes: string[] = [];
+    if (tipo === "lista" && Array.isArray(e.opcoes)) {
+      for (const o of e.opcoes) {
+        const limpa = texto(o, "");
+        if (limpa !== "" && !opcoes.includes(limpa)) opcoes.push(limpa);
+        if (opcoes.length >= MAXIMO_OPCOES) break;
+      }
+    }
+    if (tipo === "lista" && opcoes.length < 2) continue;
+    ids.add(id);
+    nomes.add(nome.toLowerCase());
+    saida.push({ id, nome, tipo, obrigatorio: bool(e.obrigatorio, false), ativo: bool(e.ativo, true), opcoes });
+  }
+  return saida;
+}
+
+/** Id novo para um campo extra (aleatório, no formato que o banco aceita, diferente dos já usados). */
+export function novoIdCampoExtra(usados: string[]): string {
+  for (;;) {
+    const id = "c" + Math.random().toString(36).slice(2, 8);
+    if (!usados.includes(id)) return id;
+  }
+}
+
+/** Confere os campos extras antes de salvar o perfil (o banco descartaria os inválidos em silêncio). Null = tudo certo. */
+export function validarCamposExtras(campos: CampoExtra[]): string | null {
+  if (campos.length > MAXIMO_CAMPOS_EXTRAS) return `Use no máximo ${MAXIMO_CAMPOS_EXTRAS} campos extras.`;
+  const nomes = new Set<string>();
+  for (const c of campos) {
+    const nome = c.nome.trim().replace(/\s+/g, " ");
+    if (nome === "") return "Informe o nome de todos os campos extras.";
+    if (nomes.has(nome.toLowerCase())) return `Nome de campo extra repetido: "${nome}".`;
+    nomes.add(nome.toLowerCase());
+    if (c.tipo === "lista") {
+      const opcoes = new Set(c.opcoes.map((o) => o.trim().replace(/\s+/g, " ")).filter((o) => o !== ""));
+      if (opcoes.size < 2) return `O campo "${nome}" precisa de pelo menos 2 opções diferentes.`;
+      if (opcoes.size > MAXIMO_OPCOES) return `O campo "${nome}" aceita no máximo ${MAXIMO_OPCOES} opções.`;
+    }
+  }
+  return null;
+}
+
+/** Valor de um campo extra como texto (resumo e impressão): sim/não vira Sim/Não, vazio vira texto vazio. */
+export function valorExtraTexto(campo: CampoExtra, valor: unknown): string {
+  if (valor === undefined || valor === null) return "";
+  if (campo.tipo === "sim_nao") {
+    if (valor === true || valor === "SIM") return "Sim";
+    if (valor === false || valor === "NAO") return "Não";
+    return "";
+  }
+  if (typeof valor === "number") return String(valor).replace(".", ",");
+  return typeof valor === "string" ? valor.trim() : "";
+}
+
 /** Resumo em frases curtas do que a configuração liga (usado na prévia do editor de perfil). */
 export function descreverConfig(c: ConfigEnsaio): string[] {
   const linhas: string[] = [];
@@ -150,5 +244,7 @@ export function descreverConfig(c: ConfigEnsaio): string[] {
     linhas.push(`${rotuloEncarregados(c.encarregados.cargos)}: ${faixa}${c.encarregados.cidade_uf ? ", com Cidade-UF" : ""}`);
   }
   if (c.hinos_executados.ativo) linhas.push("Hinos executados");
+  const extras = c.campos_extras.filter((x) => x.ativo).length;
+  if (extras > 0) linhas.push(extras === 1 ? "1 campo extra" : `${extras} campos extras`);
   return linhas;
 }

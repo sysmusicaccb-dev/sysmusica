@@ -5,10 +5,10 @@
  * em tempo real, conforme a pessoa preenche o formulário. Mostra só o que o perfil do tipo de evento usa.
  */
 import type { ReactNode } from "react";
-import { BookOpen, CalendarDays, Clock, MapPin, Music, User, Users } from "lucide-react";
+import { BookOpen, CalendarDays, ClipboardList, Clock, MapPin, Music, User, Users } from "lucide-react";
 import { formatarDiaDoEvento, formatarHoraDoEvento } from "@/modules/painel/regras";
 import { rotuloCompleto, type Hino } from "@/modules/hinos/regras";
-import { rotuloDoCargoEncarregado, tituloBlocoEncarregados, type ConfigEnsaio } from "../perfilConfig";
+import { rotuloDoCargoEncarregado, tituloBlocoEncarregados, valorExtraTexto, type ConfigEnsaio } from "../perfilConfig";
 import { rotuloDoCargo } from "../regras";
 import type { EstadoEnsaioCfg } from "../regrasPerfil";
 import type { EventoDoEnsaio } from "../tipos";
@@ -41,6 +41,7 @@ export default function ResumoDoEnsaio({ estado, config, hinos, evento }: Resumo
   const escolhidos = estado.hinosIds.slice(0, LIMITE_HINOS);
   const cargo = rotuloDoCargo(estado.atendeCargo) || "Quem atendeu";
   const modoAbertura = config.hino_abertura.modo;
+  const camposExtras = config.campos_extras.filter((c) => c.ativo);
   // Texto do hino de abertura conforme a pergunta: sem resposta "—", Não "Não houve", Sim o hino escolhido
   const textoAbertura =
     modoAbertura === "pergunta" && estado.houveAbertura === "NAO"
@@ -119,6 +120,14 @@ export default function ResumoDoEnsaio({ estado, config, hinos, evento }: Resumo
               )}
             </Linha>
           )}
+          {camposExtras.map((c) => {
+            const valor = valorExtraTexto(c, estado.extras[c.id]);
+            return (
+              <Linha key={c.id} icone={ClipboardList}>
+                {c.nome}: {valor ? <span className="break-words">{valor.slice(0, 120)}{valor.length > 120 ? "…" : ""}</span> : "—"}
+              </Linha>
+            );
+          })}
         </ul>
       </div>
     </section>

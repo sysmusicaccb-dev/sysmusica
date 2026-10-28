@@ -13,6 +13,7 @@ export interface EntradaImpressaoEnsaio {
   encarregados: string[]; // "Nome (Cidade-UF)"
   hinoAbertura: string;
   palavra: string; // vazio no ensaio local
+  extras?: { rotulo: string; valor: string }[]; // campos extras do perfil já preenchidos
   mostrarEncarregados?: boolean; // perfil sem encarregados: falso (padrão: verdadeiro)
   mostrarHinosExecutados?: boolean; // perfil sem hinos executados: falso (padrão: verdadeiro)
   hinosExecutados: string[]; // rótulos completos, na ordem em que foram cantados
@@ -39,6 +40,7 @@ export function montarImpressaoEnsaio(entrada: EntradaImpressaoEnsaio): OpcoesIm
         ]),
     { rotulo: "Hino de abertura", valor: entrada.hinoAbertura, largo: true },
     { rotulo: "Palavra", valor: entrada.palavra.trim(), largo: true },
+    ...(entrada.extras ?? []).map((x) => ({ rotulo: x.rotulo, valor: x.valor, largo: true })),
     ...(entrada.mostrarHinosExecutados === false ? [] : [{ rotulo: "Hinos executados", valor: String(entrada.hinosExecutados.length) }]),
     {
       rotulo: "Total de participantes",

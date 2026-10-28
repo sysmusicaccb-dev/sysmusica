@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { CARGOS_ENCARREGADO, ROTULO_MODO_ABERTURA, descreverConfig, type ConfigEnsaio, type ModoAbertura } from "@/modules/ensaio/perfilConfig";
 import { CARGOS_ATENDE, MAXIMO_ENCARREGADOS, PALAVRA_MAXIMA } from "@/modules/ensaio/regras";
+import EditorCamposExtras from "./EditorCamposExtras";
 
 interface EditorCamposPerfilProps {
   config: ConfigEnsaio;
@@ -172,6 +173,8 @@ export default function EditorCamposPerfil({ config, onChange, disabled }: Edito
 
       <Cartao titulo="Hinos executados" ligado={config.hinos_executados.ativo} disabled={disabled}
         onLigar={() => onChange({ ...config, hinos_executados: { ativo: !config.hinos_executados.ativo } })} />
+
+      <EditorCamposExtras config={config} onChange={onChange} disabled={disabled} />
 
       <section aria-label="Como a tela vai ficar" className="rounded-xl border border-brand-100 bg-brand-50 p-4">
         <h3 className="text-sm font-semibold text-slate-900">Como a tela Dados do Ensaio vai ficar</h3>
