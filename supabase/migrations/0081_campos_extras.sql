@@ -6,6 +6,25 @@
 
 alter table public.dados_ensaio add column if not exists extras jsonb not null default '{}'::jsonb;
 
+-- Funções auxiliares da 0080 (recriadas aqui, sem efeito se já existirem, para este arquivo rodar sozinho)
+create or replace function public.cfg_bool(j jsonb, padrao boolean)
+returns boolean language sql immutable set search_path = public
+as $f$ select case when jsonb_typeof(j) = 'boolean' then (j #>> '{}')::boolean else padrao end $f$;
+
+create or replace function public.cfg_int(j jsonb, minimo integer, maximo integer, padrao integer)
+returns integer language sql immutable set search_path = public
+as $f$
+  select case when jsonb_typeof(j) = 'number'
+              then greatest(minimo::numeric, least(maximo::numeric, trunc((j #>> '{}')::numeric)))::integer
+              else padrao end
+$f$;
+
+create or replace function public.cfg_texto(j jsonb, padrao text)
+returns text language sql immutable set search_path = public
+as $f$
+  select coalesce(nullif(left(regexp_replace(btrim(case when jsonb_typeof(j) = 'string' then j #>> '{}' else '' end), '\s+', ' ', 'g'), 60), ''), padrao)
+$f$;
+
 -- Limpa a lista de campos extras enviada pela tela: ids únicos, nomes, tipos e opções válidos; no máximo 10 campos
 create or replace function public.normalizar_campos_extras(j jsonb)
 returns jsonb
