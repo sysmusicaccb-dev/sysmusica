@@ -16,6 +16,9 @@ import SeletorCasaOracao from "@/modules/organizacao/components/SeletorCasaOraca
  */
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { formatarDataHora } from "@/lib/datas";
+import { deveVerificarDuplicado, descreverEventoNoHorario, type EventoNoHorario } from "@/modules/eventos/duplicado";
 import { datetimeLocalParaIso, isoParaDatetimeLocal } from "@/lib/dataLocal";
 import type { Evento, FinalidadeEvento } from "@/types/database";
 import { validarDataDoEvento } from "@/modules/eventos/dataEvento";
@@ -29,7 +32,7 @@ import {
 } from "@/modules/eventos/camposEvento";
 import { cidadeDaCasa } from "@/modules/eventos/casaDoEvento";
 import { buscarDadosDaCasa } from "@/modules/eventos/services/casaDoEvento";
-import { atualizarEvento, criarEvento } from "@/modules/eventos/services/eventos";
+import { atualizarEvento, buscarEventosNoMesmoHorario, criarEvento } from "@/modules/eventos/services/eventos";
 import { tiposParaEscolher, type TipoEvento } from "@/modules/tiposEvento/regras";
 import { listarTiposEvento } from "@/modules/tiposEvento/services/tiposEvento";
 
@@ -88,6 +91,8 @@ export default function FormularioEvento({
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [faltando, setFaltando] = useState<string[]>([]); // campos obrigatórios vazios (borda vermelha)
+  // Eventos achados na mesma Casa de Oração, data e hora: abre o aviso "Continuar mesmo assim"
+  const [duplicados, setDuplicados] = useState<EventoNoHorario[]>([]);
 
   // Borda vermelha no campo obrigatório que ficou vazio
   const classeCampo = (rotulo: string) =>
@@ -117,8 +122,13 @@ export default function FormularioEvento({
     }
   }
 
-  async function salvar(submissao: FormEvent<HTMLFormElement>) {
+  function salvar(submissao: FormEvent<HTMLFormElement>) {
     submissao.preventDefault();
+    void gravar(false);
+  }
+
+  // ignorarDuplicado = true quando a pessoa clicou em "Continuar mesmo assim" no aviso de evento no mesmo horário
+  async function gravar(ignorarDuplicado: boolean) {
     if (salvando) return; // evita envio duplicado
     setErro(null);
 
@@ -139,17 +149,35 @@ export default function FormularioEvento({
     const erroData = validarDataDoEvento(dataIso, Date.now(), evento?.data_evento ?? null);
     if (erroData) return setErro(erroData);
 
+    // A finalidade não é mais enviada: eventos antigos mantêm a que já tinham.
+    const dados = {
+      tipo: tipoEscolhido?.nome ?? "", // o banco mantém eventos.tipo igual ao nome do tipo escolhido
+      tipo_evento_id: tipoEventoId,
+      data_evento: dataIso,
+      local: local.trim(),
+      cidade: cidade.trim() || null,
+      casa_oracao_id: casaOracaoId || null,
+    };
+
+    // Aviso de evento duplicado: mesma Casa de Oração, data e hora. Pode ser outra sala ou espaço, então a pessoa
+    // pode continuar. Se a verificação falhar, segue para salvar (é só um aviso).
+    if (!ignorarDuplicado && deveVerificarDuplicado(evento, casaOracaoId, dataIso)) {
+      setSalvando(true);
+      try {
+        const achados = await buscarEventosNoMesmoHorario(casaOracaoId, dataIso, evento?.id ?? null);
+        if (achados.length > 0) {
+          setDuplicados(achados);
+          return;
+        }
+      } catch {
+        // sem a verificação: salva normalmente
+      } finally {
+        setSalvando(false);
+      }
+    }
+
     setSalvando(true);
     try {
-      // Grava o evento. A finalidade não é mais enviada: eventos antigos mantêm a que já tinham.
-      const dados = {
-        tipo: tipoEscolhido?.nome ?? "", // o banco mantém eventos.tipo igual ao nome do tipo escolhido
-        tipo_evento_id: tipoEventoId,
-        data_evento: dataIso,
-        local: local.trim(),
-        cidade: cidade.trim() || null,
-        casa_oracao_id: casaOracaoId || null,
-      };
       if (evento) await atualizarEvento(evento.id, dados);
       else await criarEvento(dados);
 
@@ -162,6 +190,7 @@ export default function FormularioEvento({
   }
 
   return (
+    <>
     <form onSubmit={salvar} noValidate className="space-y-5">
       <p className="text-xs text-slate-500">Todos os campos são obrigatórios (marcados com *).</p>
 
@@ -267,5 +296,31 @@ export default function FormularioEvento({
         {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Cadastrar evento"}
       </Button>
     </form>
+    <ConfirmDialog
+      aberto={duplicados.length > 0}
+      titulo="Já existe evento neste horário"
+      variante="primario"
+      textoConfirmar="Continuar mesmo assim"
+      processando={salvando}
+      mensagem={
+        <div className="space-y-2">
+          <p>Esta Casa de Oração já tem evento na mesma data e hora:</p>
+          <ul className="list-disc space-y-0.5 pl-5">
+            {duplicados.map((item) => (
+              <li key={item.id}>
+                <strong>{formatarDataHora(item.data_evento)}</strong> · {descreverEventoNoHorario(item)}
+              </li>
+            ))}
+          </ul>
+          <p>Se for em outra sala ou espaço, pode continuar. Se for repetição, clique em Cancelar e confira a lista de eventos.</p>
+        </div>
+      }
+      onConfirmar={() => {
+        setDuplicados([]);
+        void gravar(true);
+      }}
+      onCancelar={() => setDuplicados([])}
+    />
+    </>
   );
 }

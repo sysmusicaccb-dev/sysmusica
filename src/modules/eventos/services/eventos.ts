@@ -5,6 +5,7 @@
 import { supabase } from "@/lib/supabase";
 import { mensagemDoErro } from "@/lib/erros";
 import type { Evento, EventoInsert, FinalidadeEvento } from "@/types/database";
+import { janelaDoMinuto, type EventoNoHorario } from "../duplicado";
 
 /** Busca eventos (do mais recente para o mais antigo) e finalidades. Lança erro se a consulta falhar. */
 export async function buscarEventosEFinalidades(): Promise<{
@@ -28,6 +29,31 @@ export async function buscarEventosEFinalidades(): Promise<{
 export async function criarEvento(dados: EventoInsert): Promise<void> {
   const { error } = await supabase.from("eventos").insert(dados);
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível cadastrar o evento."));
+}
+
+/**
+ * Eventos já cadastrados na MESMA Casa de Oração, na mesma data e no mesmo minuto (menos o próprio, ao editar).
+ * Só enxerga o que o usuário pode ver. É um aviso: quem chama decide se continua.
+ */
+export async function buscarEventosNoMesmoHorario(
+  casaOracaoId: string,
+  dataIso: string,
+  ignorarId: string | null
+): Promise<EventoNoHorario[]> {
+  const janela = janelaDoMinuto(dataIso);
+  if (!janela) return [];
+  let consulta = supabase
+    .from("eventos")
+    .select("id, tipo, data_evento, local")
+    .eq("casa_oracao_id", casaOracaoId)
+    .is("excluido_em", null)
+    .is("cancelado_em", null)
+    .gte("data_evento", janela.inicio)
+    .lt("data_evento", janela.fim);
+  if (ignorarId) consulta = consulta.neq("id", ignorarId);
+  const { data, error } = await consulta;
+  if (error) throw new Error(mensagemDoErro(error, "Não foi possível verificar eventos no mesmo horário."));
+  return (data ?? []) as EventoNoHorario[];
 }
 
 /** Campos que podem ser alterados na edição (o banco libera só estas colunas). */
