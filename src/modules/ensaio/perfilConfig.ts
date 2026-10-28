@@ -156,6 +156,18 @@ export function tituloBlocoEncarregados(cargos: CargoEncarregado[]): string {
   return cargos.length === 1 ? rotuloEncarregados(cargos) : "Encarregados";
 }
 
+/** Rótulo do campo de nome: "Nome do Instrutor" (um só) ou "Nome do 2º Instrutor" (vários). O cargo vem do perfil (se só há um) ou da linha. */
+export function rotuloNomeEncarregado(
+  indice: number,
+  total: number,
+  cargosPerfil: CargoEncarregado[],
+  cargoLinha: CargoEncarregado | ""
+): string {
+  const cargo = cargosPerfil.length === 1 ? cargosPerfil[0] : cargoLinha;
+  const base = rotuloDoCargoEncarregado(cargo) || "Encarregado";
+  return total >= 2 ? `Nome do ${indice + 1}º ${base}` : `Nome do ${base}`;
+}
+
 /** A partir de 2 encarregados o verbo vai para o plural. */
 export function verboAtendeu(quantidade: number): string {
   return quantidade >= 2 ? "atenderam" : "atendeu";

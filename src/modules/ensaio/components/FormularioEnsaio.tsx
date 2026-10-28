@@ -21,6 +21,7 @@ import {
   CARGOS_ENCARREGADO,
   normalizarConfig,
   rotuloEncarregados,
+  rotuloNomeEncarregado,
   tituloBlocoEncarregados,
   verboAtendeu,
 } from "../perfilConfig";
@@ -357,13 +358,13 @@ export default function FormularioEnsaio({ resposta, hinos, cidades, temPermissa
                       return (
                         <div key={i} className="space-y-1.5">
                           <label htmlFor={`enc-nome-${i}`} className="text-sm font-medium text-slate-500">
-                            Nome do {i + 1}º encarregado
+                            {rotuloNomeEncarregado(i, 2, enc.cargos, "")}
                           </label>
                           <input
                             id={`enc-nome-${i}`}
                             type="text"
                             disabled
-                            placeholder={`Digite o nome do ${i + 1}º encarregado...`}
+                            placeholder={`Digite o ${rotuloNomeEncarregado(i, 2, enc.cargos, "").toLowerCase()}...`}
                             className={classeInput + bordaOk}
                           />
                         </div>
@@ -395,7 +396,7 @@ export default function FormularioEnsaio({ resposta, hinos, cidades, temPermissa
                         )}
                         <div className="space-y-1.5">
                           <label htmlFor={`enc-nome-${i}`} className="text-sm font-semibold text-slate-800">
-                            Nome do {i + 1}º encarregado
+                            {rotuloNomeEncarregado(i, estado.encarregados.length, enc.cargos, encarregado.cargo)}
                           </label>
                           <input
                             id={`enc-nome-${i}`}
@@ -404,7 +405,7 @@ export default function FormularioEnsaio({ resposta, hinos, cidades, temPermissa
                             value={encarregado.nome}
                             onChange={(e) => alterarEncarregado(i, { nome: e.target.value })}
                             disabled={desabilitado}
-                            placeholder={`Digite o nome do ${i + 1}º encarregado...`}
+                            placeholder={`Digite o ${rotuloNomeEncarregado(i, estado.encarregados.length, enc.cargos, encarregado.cargo).toLowerCase()}...`}
                             className={classeInput + (erroDe(`encarregado_${i}_nome`) ? bordaErro : bordaOk)}
                           />
                           {erroDe(`encarregado_${i}_nome`) && <p className="text-xs text-red-700">{erroDe(`encarregado_${i}_nome`)}</p>}

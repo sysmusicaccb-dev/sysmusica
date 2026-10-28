@@ -3,7 +3,7 @@
  * Versão "por perfil" do estado, da validação e do envio: o que não está ligado no perfil não aparece, não é
  * conferido e vai vazio. Testadas em regrasPerfil.test.ts. O banco refaz as mesmas conferências (migração 0080).
  */
-import type { CampoExtra, CargoEncarregado, ConfigEnsaio } from "./perfilConfig";
+import { rotuloNomeEncarregado, type CampoExtra, type CargoEncarregado, type ConfigEnsaio } from "./perfilConfig";
 import {
   limparEspacos,
   removerHinos,
@@ -178,7 +178,7 @@ export function validarEnsaioCfg(estado: EstadoEnsaioCfg, config: ConfigEnsaio):
     estado.encarregados.forEach((item, indice) => {
       const nomeEnc = limparEspacos(item.nome);
       if (nomeEnc.length < NOME_MINIMO || nomeEnc.length > NOME_MAXIMO) {
-        erros.push({ campo: `encarregado_${indice}_nome`, mensagem: `Informe o nome do ${indice + 1}º encarregado.` });
+        erros.push({ campo: `encarregado_${indice}_nome`, mensagem: `Informe o ${rotuloNomeEncarregado(indice, estado.encarregados.length, cargos, item.cargo).toLowerCase()}.` });
       } else {
         const chave = nomeEnc.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
         if (nomesVistos.has(chave)) {
