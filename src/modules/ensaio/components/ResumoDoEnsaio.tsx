@@ -10,7 +10,7 @@ import { formatarDiaDoEvento, formatarHoraDoEvento } from "@/modules/painel/regr
 import { rotuloCompleto, type Hino } from "@/modules/hinos/regras";
 import { rotuloDoCargoEncarregado, tituloBlocoEncarregados, valorExtraTexto, type ConfigEnsaio } from "../perfilConfig";
 import { rotuloDoCargo } from "../regras";
-import type { EstadoEnsaioCfg } from "../regrasPerfil";
+import { cargosEmUso, type EstadoEnsaioCfg } from "../regrasPerfil";
 import type { EventoDoEnsaio } from "../tipos";
 import { localDoEvento } from "../apresentacao";
 import { partesDoHino } from "../hinosApresentacao";
@@ -74,7 +74,7 @@ export default function ResumoDoEnsaio({ estado, config, hinos, evento }: Resumo
           {config.encarregados.ativo && (
             <Linha icone={Users}>
               <p>
-                {tituloBlocoEncarregados(config.encarregados.cargos)} ({preenchidos.length}):
+                {tituloBlocoEncarregados(cargosEmUso(estado.encarregados, config))} ({preenchidos.length}):
               </p>
               {preenchidos.length === 0 ? (
                 <p>—</p>

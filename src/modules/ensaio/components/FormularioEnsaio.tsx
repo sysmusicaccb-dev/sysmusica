@@ -28,6 +28,7 @@ import {
 import { CARGOS_ATENDE, acharPeloRotulo, motivoSemEdicao, type ErroCampo } from "../regras";
 import {
   ajustarQuantidadeCfg,
+  cargosEmUso,
   escolherAberturaCfg,
   estadoDosDadosCfg,
   estadoVazioCfg,
@@ -162,8 +163,10 @@ export default function FormularioEnsaio({ resposta, hinos, cidades, temPermissa
   const camposExtras = config.campos_extras.filter((c) => c.ativo);
   const cargosAtende = CARGOS_ATENDE.filter((c) => qa.cargos.includes(c.codigo));
   const abertura = config.hino_abertura.modo;
-  const tituloEnc = tituloBlocoEncarregados(enc.cargos);
-  const rotuloQtd = rotuloEncarregados(enc.cargos);
+  // Título e "Quantidade de ..." acompanham o cargo escolhido nas linhas
+  const cargosAtuais = cargosEmUso(estado.encarregados, config);
+  const tituloEnc = tituloBlocoEncarregados(cargosAtuais);
+  const rotuloQtd = rotuloEncarregados(cargosAtuais);
   const faixaQtd = Array.from({ length: enc.maximo - enc.minimo + 1 }, (_, i) => enc.minimo + i);
 
   // Campo do hino de abertura (com a pergunta Sim/Não quando o perfil pede). Fica no cartão de quem atendeu.
@@ -375,7 +378,7 @@ export default function FormularioEnsaio({ resposta, hinos, cidades, temPermissa
                         {enc.cargos.length > 1 && (
                           <div className="space-y-1.5">
                             <label htmlFor={`enc-cargo-${i}`} className="text-sm font-semibold text-slate-800">
-                              Cargo do {i + 1}º encarregado
+                              {rotuloNomeEncarregado(i, estado.encarregados.length, enc.cargos, encarregado.cargo)}
                             </label>
                             <select
                               id={`enc-cargo-${i}`}

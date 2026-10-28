@@ -16,6 +16,7 @@ import { agoraEmSalvador } from "@/modules/relatorios/regras";
 import { montarImpressaoEnsaio } from "../impressao";
 import { normalizarConfig, rotuloDoCargoEncarregado, tituloBlocoEncarregados, valorExtraTexto } from "../perfilConfig";
 import { rotuloDoCargo } from "../regras";
+import { cargosEmUso } from "../regrasPerfil";
 import type { RespostaEnsaio } from "../tipos";
 
 interface BotaoImprimirEnsaioProps {
@@ -55,7 +56,7 @@ export default function BotaoImprimirEnsaio({ resposta, hinos, totais }: BotaoIm
           config.quem_atendeu.ativo && dados.atende_nome
             ? `${dados.atende_nome.trim()} — ${rotuloDoCargo(dados.atende_cargo ?? "")}`
             : "",
-        rotuloEncarregados: tituloBlocoEncarregados(config.encarregados.cargos),
+        rotuloEncarregados: tituloBlocoEncarregados(cargosEmUso(dados.encarregados, config)),
         mostrarEncarregados: config.encarregados.ativo,
         mostrarHinosExecutados: config.hinos_executados.ativo,
         encarregados: dados.encarregados

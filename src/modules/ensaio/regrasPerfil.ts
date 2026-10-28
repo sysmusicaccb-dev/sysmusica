@@ -56,6 +56,17 @@ function extraParaEstado(campo: CampoExtra, valor: unknown): string {
   return typeof valor === "string" ? valor : "";
 }
 
+/**
+ * Cargos que valem para o título do bloco e para o texto "Quantidade de ... que atendeu": os escolhidos nas linhas
+ * (na ordem do perfil); sem nenhuma escolha, todos os que o perfil permite.
+ */
+export function cargosEmUso(itens: { cargo?: string | null }[], config: ConfigEnsaio): CargoEncarregado[] {
+  const permitidos = config.encarregados.cargos;
+  if (permitidos.length === 1) return permitidos;
+  const escolhidos = permitidos.filter((c) => itens.some((item) => item.cargo === c));
+  return escolhidos.length > 0 ? escolhidos : permitidos;
+}
+
 /** Cargo já escolhido quando o perfil só permite um. */
 function cargoUnico(config: ConfigEnsaio): CargoEncarregado | "" {
   return config.encarregados.cargos.length === 1 ? config.encarregados.cargos[0] : "";
