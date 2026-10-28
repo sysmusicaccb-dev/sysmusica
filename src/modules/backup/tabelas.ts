@@ -27,6 +27,7 @@ export type NomeTabela =
   | "finalidades_evento"
   | "instrumentos"
   | "tipos_evento"
+  | "perfis_evento"
   | "hinos"
   | "grupos"
   | "grupo_permissoes"
@@ -110,6 +111,8 @@ export const TABELAS: DefinicaoTabela[] = [
   tabela("instrumentos", "Instrumentos", "cadastros", {
     referencias: [{ coluna: "familia_id", tabela: "familias" }],
   }),
+  // Perfis do Evento (campos da tela Dados do Ensaio, inclusive os extras): vêm antes dos tipos, que apontam para eles
+  tabela("perfis_evento", "Perfis do evento", "cadastros"),
   tabela("tipos_evento", "Tipos de evento", "cadastros"),
   tabela("hinos", "Hinos e coros", "cadastros"),
   tabela("grupos", "Grupos de acesso", "grupos"),
@@ -254,8 +257,8 @@ export const GRUPOS_DADOS: DefinicaoGrupo[] = [
   {
     id: "cadastros",
     rotulo: "Cargos, instrumentos e famílias",
-    descricao: "Cargos, famílias, instrumentos, finalidades e tipos de evento e hinos",
-    tabelas: ["familias", "cargos", "finalidades_evento", "instrumentos", "tipos_evento", "hinos"],
+    descricao: "Cargos, famílias, instrumentos, finalidades, perfis e tipos de evento e hinos",
+    tabelas: ["familias", "cargos", "finalidades_evento", "instrumentos", "perfis_evento", "tipos_evento", "hinos"],
   },
   {
     id: "grupos",
