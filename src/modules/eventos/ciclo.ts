@@ -36,7 +36,11 @@ function situacaoPelaData(dataEvento: string, agora: number, encerradoManual = f
   if (!janela) return "AGENDADO"; // data inválida: mantém visível para alguém corrigir
   if (janela.situacao === "antes") return "AGENDADO";
   // Encerrado à mão (migração 0051) antes das 3h: deixa de estar em andamento
-  if (janela.situacao === "aberta") return encerradoManual ? "ENCERRADO" : "EM_ANDAMENTO";
+  if (janela.situacao === "aberta") {
+    if (!encerradoManual) return "EM_ANDAMENTO";
+    // Encerrado à mão: passa para o Arquivo 30 dias depois do início
+    return agora - new Date(dataEvento).getTime() > DIAS_ARQUIVO * MS_DIA ? "ARQUIVADO" : "ENCERRADO";
+  }
   return agora - janela.fecha.getTime() > DIAS_ARQUIVO * MS_DIA ? "ARQUIVADO" : "ENCERRADO";
 }
 

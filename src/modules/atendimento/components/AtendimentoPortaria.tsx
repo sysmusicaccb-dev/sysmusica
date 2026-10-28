@@ -56,6 +56,7 @@ function guardarPortaria(id: string | null) {
 // Antes da abertura, só o controle total atende (com registro na Auditoria). Depois do encerramento, o Administrador
 // só corrige registros em "Registros e correções".
 function janelaLiberada(portaria: PortariaDetalhada, agora: number, controleTotal: boolean): boolean {
+  if (portaria.evento_encerrado_em) return false; // evento encerrado à mão: a portaria encerra junto
   const situacao = janelaDaPortaria(portaria.evento_data, agora)?.situacao;
   if (situacao === "encerrada") return false;
   if (controleTotal) return true;
@@ -91,7 +92,7 @@ export default function AtendimentoPortaria() {
 
   // Portarias que ainda podem aparecer: as ENCERRADAS saem da lista sozinhas (o relógio recalcula a cada 30 s)
   const disponiveis = useMemo(
-    () => portarias.filter((portaria) => janelaDaPortaria(portaria.evento_data, agora)?.situacao !== "encerrada"),
+    () => portarias.filter((portaria) => janelaDaPortaria(portaria.evento_data, agora)?.situacao !== "encerrada" && !portaria.evento_encerrado_em), // evento encerrado à mão: a portaria sai junto
     [portarias, agora]
   );
 

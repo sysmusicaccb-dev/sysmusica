@@ -26,6 +26,7 @@ import AbasDeLista from "@/components/AbasDeLista";
 import FormularioCancelamento from "@/modules/eventos/components/FormularioCancelamento";
 import { abaDoEvento, type AbaEvento } from "@/modules/eventos/ciclo";
 import { formatarDataHora } from "@/lib/datas";
+import { chaveDoTipo, listarModelosDosTipos } from "@/modules/eventos/services/configEventos";
 import { valoresDistintos } from "@/lib/listas";
 import type { Evento, FinalidadeEvento } from "@/types/database";
 
@@ -48,6 +49,25 @@ export default function EventosPage() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [aba, setAba] = useState<AbaEvento>("proximos");
   const [agora, setAgora] = useState(0); // instante atual (ms); 0 até a primeira carga
+  // Tipo do evento -> Local/Regional: decide quem vê o botão Encerrar (o banco confere de novo ao encerrar)
+  const [modelos, setModelos] = useState<Map<string, string | null>>(new Map());
+  useEffect(() => {
+    let ativo = true;
+    listarModelosDosTipos()
+      .then((mapa) => {
+        if (ativo) setModelos(mapa);
+      })
+      .catch((e: unknown) => console.error("Falha ao carregar os tipos de evento:", e));
+    return () => {
+      ativo = false;
+    };
+  }, []);
+  // Administrador/Administrador Regional: qualquer evento. Instrutor: ensaio Local. Secretário da Música: Regional e demais.
+  const podeEncerrarEste = (evento: Evento): boolean => {
+    if (pode("eventos.encerrar_qualquer")) return true;
+    const modelo = modelos.get(chaveDoTipo(evento.tipo)) ?? null;
+    return modelo === "LOCAL" ? pode("eventos.encerrar_local") : pode("eventos.encerrar_regional");
+  };
 
   // Busca eventos e finalidades
   const carregar = useCallback(async () => {
@@ -202,7 +222,8 @@ export default function EventosPage() {
           podeEditar={pode("eventos.editar")}
           podeExcluir={pode("eventos.excluir")}
           podeCancelar={pode("eventos.cancelar")}
-          podeEncerrar={pode("portarias.aprovar") || pode("portarias.controle_total")}
+          podeEncerrar={pode("eventos.encerrar_qualquer") || pode("eventos.encerrar_regional") || pode("eventos.encerrar_local")}
+          podeEncerrarEvento={podeEncerrarEste}
           onEncerrar={(evento) => {
             setErroEncerrar(null);
             setAlvoEncerrar(evento);

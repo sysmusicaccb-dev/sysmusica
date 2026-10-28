@@ -7,11 +7,14 @@
 import type { ReactNode } from "react";
 import AppShell from "@/components/layout/AppShell";
 import GuardaPainel from "@/modules/autenticacao/components/GuardaPainel";
+import CarregarRegraEncerramento from "@/modules/eventos/components/CarregarRegraEncerramento";
 
 export default function PainelLayout({ children }: { children: ReactNode }) {
   return (
     <GuardaPainel>
-      <AppShell>{children}</AppShell>
+      <CarregarRegraEncerramento>
+        <AppShell>{children}</AppShell>
+      </CarregarRegraEncerramento>
     </GuardaPainel>
   );
 }

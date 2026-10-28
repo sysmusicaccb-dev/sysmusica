@@ -11,7 +11,17 @@ import type { CotaPortarias, EventoParaPortaria, HistoricoPortaria, PortariaDeta
 export async function listarPortarias(): Promise<PortariaDetalhada[]> {
   const { data, error } = await supabase.rpc("listar_portarias");
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível carregar as portarias."));
-  return (data ?? []) as PortariaDetalhada[];
+  return marcarEventosEncerrados((data ?? []) as PortariaDetalhada[]);
+}
+
+/** Marca nas portarias os eventos encerrados à mão (quem encerra o evento encerra a portaria). Se a consulta falhar, segue sem marcar. */
+async function marcarEventosEncerrados(lista: PortariaDetalhada[]): Promise<PortariaDetalhada[]> {
+  const ids = Array.from(new Set(lista.map((p) => p.evento_id)));
+  if (ids.length === 0) return lista;
+  const { data, error } = await supabase.from("eventos").select("id, encerrado_em").in("id", ids).not("encerrado_em", "is", null);
+  if (error || !data) return lista;
+  const encerrados = new Map((data as { id: string; encerrado_em: string }[]).map((e) => [e.id, e.encerrado_em]));
+  return lista.map((p) => (encerrados.has(p.evento_id) ? { ...p, evento_encerrado_em: encerrados.get(p.evento_id) } : p));
 }
 
 /** Eventos para escolher ao criar uma portaria (os mais recentes primeiro). */

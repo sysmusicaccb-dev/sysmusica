@@ -23,6 +23,9 @@ export function abasDeEventos(pode: (permissao: CodigoPermissao) => boolean): Ab
     abas.push({ href: "/portarias", rotulo: "Gestão de Portarias" });
   }
 
+  // Configurações: encerrar sozinho e horas (só quem tem eventos.configurar)
+  if (pode("eventos.configurar")) abas.push({ href: "/configuracao-eventos", rotulo: "Configurações" });
+
   // Uma aba só não precisa de barra
   return abas.length > 1 ? abas : [];
 }

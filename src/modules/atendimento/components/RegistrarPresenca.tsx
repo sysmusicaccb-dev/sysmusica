@@ -67,6 +67,7 @@ function guardarPortaria(id: string | null) {
 
 // Portaria encerrada não atende ninguém; antes da abertura só o controle total atende (mesma regra da Portaria)
 function janelaLiberada(portaria: PortariaDetalhada, agora: number, controleTotal: boolean): boolean {
+  if (portaria.evento_encerrado_em) return false; // evento encerrado à mão: a portaria encerra junto
   const situacao = janelaDaPortaria(portaria.evento_data, agora)?.situacao;
   if (situacao === "encerrada") return false;
   if (controleTotal) return true;
@@ -145,7 +146,7 @@ export default function RegistrarPresenca() {
   const [qrAberto, setQrAberto] = useState(false); // popup "Registrar Presença com QR Code"
 
   const disponiveis = useMemo(
-    () => portarias.filter((portaria) => janelaDaPortaria(portaria.evento_data, agora)?.situacao !== "encerrada"),
+    () => portarias.filter((portaria) => janelaDaPortaria(portaria.evento_data, agora)?.situacao !== "encerrada" && !portaria.evento_encerrado_em), // evento encerrado à mão: a portaria sai junto
     [portarias, agora]
   );
   const portaria = disponiveis.find((item) => item.id === portariaId) ?? null;

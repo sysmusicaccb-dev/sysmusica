@@ -18,6 +18,17 @@ export interface JanelaPortaria {
   situacao: SituacaoJanela;
 }
 
+// Regra de encerramento (Eventos > Configurações, migração 0077). Começa no padrão antigo e é trocada ao entrar no painel
+// por CarregarRegraEncerramento. Sem "encerrar sozinho", a janela nunca fecha pelo relógio: só o botão Encerrar fecha.
+const regra = { encerraSozinho: true, horas: HORAS_DEPOIS };
+const SEM_FIM = 8_640_000_000_000_000; // maior data possível: "nunca encerra"
+
+/** Troca a regra de encerramento usada pelos cálculos da tela. */
+export function definirRegraEncerramento(encerraSozinho: boolean, horas: number): void {
+  regra.encerraSozinho = encerraSozinho;
+  regra.horas = Number.isFinite(horas) && horas > 0 ? horas : HORAS_DEPOIS;
+}
+
 /** Janela do evento no instante "agora" (ms). Nulo se o evento não tem data válida. Os limites são inclusivos. */
 export function janelaDaPortaria(dataEvento: string | null, agora: number): JanelaPortaria | null {
   if (!dataEvento) return null;
@@ -25,7 +36,7 @@ export function janelaDaPortaria(dataEvento: string | null, agora: number): Jane
   if (Number.isNaN(inicio)) return null;
 
   const abre = inicio - HORAS_ANTES * MS_HORA;
-  const fecha = inicio + HORAS_DEPOIS * MS_HORA;
+  const fecha = regra.encerraSozinho ? inicio + regra.horas * MS_HORA : SEM_FIM;
   const situacao: SituacaoJanela = agora < abre ? "antes" : agora > fecha ? "encerrada" : "aberta";
   return { abre: new Date(abre), fecha: new Date(fecha), situacao };
 }
@@ -52,7 +63,7 @@ export function rotuloDoHorario(data: Date, agora: number): string {
 /** Texto curto para a tela: "Abre às 12h00", "Aberta até 16h00" ou "Encerrada às 16h00" (com a data se não for hoje). */
 export function descreverJanela(janela: JanelaPortaria, agora: number): string {
   if (janela.situacao === "antes") return `Abre ${comPreposicao(janela.abre, agora)}`;
-  if (janela.situacao === "aberta") return `Aberta até ${rotuloDoHorario(janela.fecha, agora)}`;
+  if (janela.situacao === "aberta") return regra.encerraSozinho ? `Aberta até ${rotuloDoHorario(janela.fecha, agora)}` : "Aberta até o encerramento manual";
   return `Encerrada ${comPreposicao(janela.fecha, agora)}`;
 }
 

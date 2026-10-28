@@ -22,6 +22,8 @@ export interface PortariaDetalhada {
   pode_decidir: boolean;
   /** Calculado pelo banco: tem permissão (ou é o criador de uma pendente) e não há presenças. */
   pode_excluir: boolean;
+  /** Preenchido pela tela (serviço): quando o evento foi encerrado à mão. A portaria encerra junto. */
+  evento_encerrado_em?: string | null;
 }
 
 /** Evento que pode receber uma portaria. */

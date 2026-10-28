@@ -41,7 +41,8 @@ interface ListaEventosProps {
   onEditar: (evento: Evento) => void;
   onExcluir: (evento: Evento) => void;
   onCancelar: (evento: Evento) => void;
-  podeEncerrar?: boolean; // quem aprova portarias: encerra um evento em andamento antes do horário
+  podeEncerrar?: boolean; // alguma permissão de encerrar (mostra a coluna de ações)
+  podeEncerrarEvento?: (evento: Evento) => boolean; // refina por tipo de evento (Regional: Secretário; Local: Instrutor)
   onEncerrar?: (evento: Evento) => void;
   onReabrir?: (evento: Evento) => void; // só o Administrador (podeCancelar): reabre um evento encerrado à mão
 }
@@ -73,6 +74,7 @@ export default function ListaEventos({
   onExcluir,
   onCancelar,
   podeEncerrar = false,
+  podeEncerrarEvento,
   onEncerrar,
   onReabrir,
 }: ListaEventosProps) {
@@ -257,7 +259,7 @@ export default function ListaEventos({
                               onClick={() => onExcluir(evento)}
                             />
                           )}
-                          {podeEncerrar && onEncerrar && situacao === "EM_ANDAMENTO" && (
+                          {podeEncerrar && onEncerrar && situacao === "EM_ANDAMENTO" && (podeEncerrarEvento ? podeEncerrarEvento(evento) : true) && (
                             <BotaoIcone
                               icone={Flag}
                               rotulo={`Encerrar o evento de ${formatarDataHora(evento.data_evento)}`}
