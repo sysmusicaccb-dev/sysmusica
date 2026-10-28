@@ -73,7 +73,8 @@ function numeroDoHino(h: HinoRelatorio): string {
 }
 
 function diaDaSemana(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long" }).format(new Date(iso));
+  const nome = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long" }).format(new Date(iso));
+  return nome.charAt(0).toUpperCase() + nome.slice(1); // "Terça-feira"
 }
 
 export function montarModeloRelatorio(

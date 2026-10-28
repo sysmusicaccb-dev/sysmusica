@@ -18,6 +18,7 @@ const CINZA = "#475569";
 const FONTE = "Arial, Helvetica, sans-serif";
 
 const cartao: CSSProperties = {
+  flex: 1,
   background: "#fff",
   border: "1.5px solid #c7d6ee",
   borderRadius: 12,
@@ -39,26 +40,26 @@ function Cartao({ titulo, children, estilo }: { titulo: string; children: ReactN
   return (
     <section style={{ ...cartao, ...estilo }}>
       <div style={cabecalhoCartao}>{titulo}</div>
-      <div style={{ padding: "8px 12px", fontSize: 15, color: "#0f172a", flex: 1 }}>{children}</div>
+      <div style={{ padding: "8px 12px", fontSize: 15, color: "#0f172a", flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>{children}</div>
     </section>
   );
 }
 
 function Tabela({ bloco, destaque }: { bloco: BlocoFolha; destaque?: boolean }) {
   return (
-    <section style={{ ...cartao, flex: 1 }}>
+    <section style={{ ...cartao, alignSelf: "start" }}>
       <div style={cabecalhoCartao}>{bloco.titulo}</div>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
         <tbody>
           {bloco.linhas.map((l, i) => (
             <tr key={l.rotulo} style={{ background: i % 2 ? AZUL_CLARO : "#fff" }}>
-              <td style={{ padding: "3px 12px" }}>{l.rotulo}</td>
-              <td style={{ padding: "3px 12px", textAlign: "right", fontWeight: 700 }}>{l.qtd}</td>
+              <td style={{ padding: "4px 12px" }}>{l.rotulo}</td>
+              <td style={{ padding: "4px 12px", textAlign: "right", fontWeight: 700 }}>{l.qtd}</td>
             </tr>
           ))}
-          <tr style={{ background: destaque ? AZUL : AZUL_MEDIO, color: "#fff", fontWeight: 700 }}>
-            <td style={{ padding: "4px 12px" }}>TOTAL</td>
-            <td style={{ padding: "4px 12px", textAlign: "right" }}>{bloco.total}</td>
+          <tr style={{ color: "#fff", fontWeight: 700 }}>
+            <td style={{ padding: "4px 12px", background: destaque ? AZUL : AZUL_MEDIO }}>TOTAL</td>
+            <td style={{ padding: "4px 12px", textAlign: "right", background: destaque ? AZUL : AZUL_MEDIO }}>{bloco.total}</td>
           </tr>
         </tbody>
       </table>
@@ -200,13 +201,13 @@ export default function RelatorioEnsaioFolha({ m }: { m: ModeloRelatorio }) {
     );
   if (m.palavra !== null)
     topo.push(
-      <Cartao key="p" titulo="Palavra" estilo={{ gridColumn: "span 2" }}>
+      <Cartao key="p" titulo="Palavra" estilo={{ flex: 2 }}>
         <span style={{ fontStyle: "italic" }}>{m.palavra}</span>
       </Cartao>
     );
   if (m.hinos)
     topo.push(
-      <Cartao key="h" titulo={`Hinos (${m.hinos.total})`} estilo={{ gridColumn: "span 2" }}>
+      <Cartao key="h" titulo={`Hinos (${m.hinos.total})`} estilo={{ flex: 2 }}>
         {m.hinos.abertura && (
           <div style={{ marginBottom: 4 }}>
             <strong>Abertura:</strong> {m.hinos.abertura}
@@ -217,7 +218,7 @@ export default function RelatorioEnsaioFolha({ m }: { m: ModeloRelatorio }) {
     );
   if (m.extras.length > 0)
     topo.push(
-      <Cartao key="x" titulo="Informações adicionais" estilo={{ gridColumn: "span 2" }}>
+      <Cartao key="x" titulo="Informações adicionais" estilo={{ flex: 2 }}>
         {m.extras.map((x) => (
           <div key={x.rotulo}>
             <strong>{x.rotulo}:</strong> {x.valor}
@@ -243,7 +244,7 @@ export default function RelatorioEnsaioFolha({ m }: { m: ModeloRelatorio }) {
     >
       {/* Faixa azul da esquerda: nome do sistema, notas e silhueta simples de prédio */}
       <aside style={{ width: 130, background: AZUL, color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", padding: "22px 0", boxSizing: "border-box" }}>
-        <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: 1 }}>{m.marca}</div>
+        <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{m.marca}</div>
         <div style={{ fontSize: 34, opacity: 0.25, marginTop: 36 }}>♫</div>
         <div style={{ fontSize: 26, opacity: 0.18, marginTop: 10 }}>♪</div>
         <svg width={90} height={110} viewBox="0 0 90 110" style={{ marginTop: "auto", opacity: 0.3 }} aria-hidden="true">
@@ -253,14 +254,12 @@ export default function RelatorioEnsaioFolha({ m }: { m: ModeloRelatorio }) {
 
       <div style={{ flex: 1, padding: "20px 28px 14px", display: "flex", flexDirection: "column", gap: 12, boxSizing: "border-box" }}>
         {/* Cabeçalho */}
-        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderBottom: `4px solid ${AZUL_MEDIO}`, paddingBottom: 8 }}>
-          <div>
-            <div style={{ fontSize: 40, fontWeight: 800, color: AZUL, letterSpacing: 1, lineHeight: 1.05 }}>{m.titulo}</div>
-            <div style={{ fontSize: 20, color: AZUL_MEDIO, fontWeight: 700, marginTop: 2 }}>{m.subtitulo}</div>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
+        <header style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 6, borderBottom: `4px solid ${AZUL_MEDIO}`, paddingBottom: 10 }}>
+          <div style={{ fontSize: m.titulo.length > 26 ? 34 : 40, fontWeight: 800, color: AZUL, letterSpacing: 1, lineHeight: 1.05 }}>{m.titulo}</div>
+          <div style={{ fontSize: 20, color: AZUL_MEDIO, fontWeight: 700 }}>{m.subtitulo}</div>
+          <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
             {[m.dia, m.diaSemana, m.hora].map((t) => (
-              <span key={t} style={{ background: AZUL, color: "#fff", borderRadius: 999, padding: "6px 16px", fontSize: 16, fontWeight: 700, textTransform: "capitalize" }}>
+              <span key={t} style={{ background: AZUL, color: "#fff", borderRadius: 999, padding: "5px 18px", fontSize: 16, fontWeight: 700, whiteSpace: "nowrap" }}>
                 {t}
               </span>
             ))}
@@ -269,13 +268,13 @@ export default function RelatorioEnsaioFolha({ m }: { m: ModeloRelatorio }) {
 
         {/* Dados do ensaio (somente o que o perfil do evento usa) */}
         {topo.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gridAutoFlow: "dense", gap: 10 }}>
+          <div style={{ display: "flex", gap: 10 }}>
             {topo}
           </div>
         )}
 
         {/* Gráficos */}
-        <div style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: 10, flex: 1, minHeight: 0 }}>
           <Cartao titulo="Instrumentos por família">
             <Rosca m={m} />
           </Cartao>
@@ -285,7 +284,7 @@ export default function RelatorioEnsaioFolha({ m }: { m: ModeloRelatorio }) {
         </div>
 
         {/* Tabelas e totais */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10, flex: 1, minHeight: 0 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10 }}>
           <Tabela bloco={m.ministerio} />
           <Tabela bloco={m.musicos} />
           <Tabela bloco={m.organistas} />
