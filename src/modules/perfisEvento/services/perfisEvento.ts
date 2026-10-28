@@ -4,6 +4,7 @@
  */
 import { supabase } from "@/lib/supabase";
 import { mensagemDoErro } from "@/lib/erros";
+import type { ConfigEnsaio } from "@/modules/ensaio/perfilConfig";
 import type { ModeloEnsaio } from "@/modules/tiposEvento/regras";
 import type { PerfilEvento } from "../regras";
 
@@ -19,6 +20,7 @@ export interface DadosPerfil {
   descricao: string;
   modelo_base: ModeloEnsaio;
   ativo: boolean;
+  config?: ConfigEnsaio; // indefinido = não mexe nos campos do perfil
 }
 
 /** Cria (id = null) ou altera um perfil. Devolve o id. */
@@ -30,6 +32,7 @@ export async function salvarPerfil(id: string | null, dados: DadosPerfil): Promi
       descricao: dados.descricao.trim() === "" ? null : dados.descricao,
       modelo_base: dados.modelo_base,
       ativo: dados.ativo,
+      config: dados.config,
     },
   });
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível salvar o perfil."));

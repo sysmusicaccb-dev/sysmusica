@@ -5,6 +5,7 @@
  * tem nome, descrição, comportamento base (Local ou Regional) e status. As mesmas regras valem no banco (migração 0079).
  */
 import { normalizarTexto } from "@/lib/texto";
+import type { ConfigEnsaio } from "@/modules/ensaio/perfilConfig";
 import { DESCRICAO_MAXIMA, NOME_MAXIMO, NOME_MINIMO, formatarNomeTipo, type ModeloEnsaio } from "@/modules/tiposEvento/regras";
 
 /** Um perfil como a função listar_perfis_evento devolve. */
@@ -15,6 +16,7 @@ export interface PerfilEvento {
   modelo_base: ModeloEnsaio;
   ativo: boolean;
   em_uso: number; // quantos tipos de evento usam o perfil (perfil em uso não pode ser excluído)
+  config?: ConfigEnsaio; // campos da tela Dados do Ensaio que o perfil usa (migração 0080)
 }
 
 /** Confere o formulário; devolve a mensagem de erro ou null quando está tudo certo. */

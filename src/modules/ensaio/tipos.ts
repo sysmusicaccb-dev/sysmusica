@@ -1,5 +1,6 @@
 /** Sysmusica — Tipos do módulo Dados do Ensaio (campos = o que as funções do banco devolvem, migração 0041). */
 import type { ModeloEnsaio } from "@/modules/tiposEvento/regras";
+import type { ConfigEnsaio } from "./perfilConfig";
 
 export type CargoAtende = "ANCIAO" | "DIACONO" | "COOPERADOR_OFICIO" | "COOPERADOR_RJM";
 
@@ -33,15 +34,16 @@ export interface EventoDoEnsaio {
 export interface EncarregadoSalvo {
   ordem: number;
   nome: string;
-  cidade_uf: string;
+  cidade_uf: string | null; // vazio quando o perfil não pede a cidade
+  cargo?: string | null; // REGIONAL, LOCAL ou INSTRUTOR (vazio nos ensaios antigos)
 }
 
 /** Dados já gravados do ensaio. */
 export interface DadosSalvos {
-  atende_cargo: CargoAtende;
-  atende_nome: string;
+  atende_cargo: CargoAtende | null; // vazio quando o perfil não usa "Quem atendeu"
+  atende_nome: string | null;
   palavra: string | null;
-  hino_abertura_id: string;
+  hino_abertura_id: string | null; // vazio quando não houve hino de abertura
   atualizado_em: string;
   encarregados: EncarregadoSalvo[];
   hinos: string[]; // ids dos hinos executados, na ordem
@@ -52,6 +54,8 @@ export interface RespostaEnsaio {
   /** O banco já calcula: tem a permissão e o ensaio está dentro do prazo (ou é o Administrador). */
   pode_editar: boolean;
   dados: DadosSalvos | null;
+  /** Campos que o perfil do tipo de evento manda mostrar (o banco já manda normalizada). */
+  config?: ConfigEnsaio;
 }
 
 /** O que a tela envia para salvar_dados_ensaio. */

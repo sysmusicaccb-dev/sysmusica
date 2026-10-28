@@ -2,15 +2,18 @@
 
 /**
  * Sysmusica — Formulário do perfil de evento (dentro do painel lateral).
+ * Dados básicos (nome, descrição, modelo, status) e, embaixo, os CAMPOS da tela Dados do Ensaio que este perfil usa.
  * perfil = null -> novo; preenchido -> edição. O painel só monta este componente quando está aberto,
  * então os campos sempre abrem limpos (ou com os dados do perfil escolhido).
  */
 import { useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
-import { DESCRICAO_MAXIMA, NOME_MAXIMO, ROTULO_MODELO, formatarNomeTipo, type ModeloEnsaio } from "@/modules/tiposEvento/regras";
+import { configPadrao, normalizarConfig, type ConfigEnsaio } from "@/modules/ensaio/perfilConfig";
+import { DESCRICAO_MAXIMA, NOME_MAXIMO, formatarNomeTipo, type ModeloEnsaio } from "@/modules/tiposEvento/regras";
 import { validarPerfil, type PerfilEvento } from "../regras";
 import { salvarPerfil } from "../services/perfisEvento";
+import EditorCamposPerfil from "./EditorCamposPerfil";
 
 interface FormularioPerfilProps {
   perfil: PerfilEvento | null;
@@ -30,8 +33,18 @@ export default function FormularioPerfil({ perfil, perfis, onSalvo, onCancelar }
   const [descricao, setDescricao] = useState(perfil?.descricao ?? "");
   const [modelo, setModelo] = useState<ModeloEnsaio>(perfil?.modelo_base ?? "LOCAL");
   const [ativo, setAtivo] = useState(perfil?.ativo ?? true);
+  // Campos da tela Dados do Ensaio (perfil novo começa com o padrão do modelo)
+  const [config, setConfig] = useState<ConfigEnsaio>(() => normalizarConfig(perfil?.config, perfil?.modelo_base ?? "LOCAL"));
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // O modelo vale para os tipos já ligados ao perfil: não muda enquanto estiver em uso
+  const modeloTravado = editando && (perfil?.em_uso ?? 0) > 0;
+
+  function trocarModelo(novo: ModeloEnsaio) {
+    setModelo(novo);
+    // Perfil novo: os campos acompanham o padrão do modelo escolhido
+    if (!editando) setConfig(configPadrao(novo));
+  }
 
   async function salvar(submissao: FormEvent<HTMLFormElement>) {
     submissao.preventDefault();
@@ -42,7 +55,13 @@ export default function FormularioPerfil({ perfil, perfis, onSalvo, onCancelar }
 
     setSalvando(true);
     try {
-      await salvarPerfil(perfil?.id ?? null, { nome: formatarNomeTipo(nome), descricao: descricao.trim(), modelo_base: modelo, ativo });
+      await salvarPerfil(perfil?.id ?? null, {
+        nome: formatarNomeTipo(nome),
+        descricao: descricao.trim(),
+        modelo_base: modelo,
+        ativo,
+        config,
+      });
       await onSalvo(editando ? `Perfil "${formatarNomeTipo(nome)}" atualizado.` : `Perfil "${formatarNomeTipo(nome)}" criado.`);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível salvar o perfil.");
@@ -76,7 +95,7 @@ export default function FormularioPerfil({ perfil, perfis, onSalvo, onCancelar }
         </label>
         <textarea
           id="descricao-perfil"
-          rows={3}
+          rows={2}
           maxLength={DESCRICAO_MAXIMA}
           value={descricao}
           onChange={(e) => setDescricao(e.target.value)}
@@ -91,21 +110,22 @@ export default function FormularioPerfil({ perfil, perfis, onSalvo, onCancelar }
 
       <div className="space-y-1.5">
         <label htmlFor="modelo-perfil" className="text-sm font-semibold text-slate-800">
-          Comportamento base
+          Modelo do evento
         </label>
         <select
           id="modelo-perfil"
           value={modelo}
-          onChange={(e) => setModelo(e.target.value as ModeloEnsaio)}
-          disabled={salvando}
+          onChange={(e) => trocarModelo(e.target.value as ModeloEnsaio)}
+          disabled={salvando || modeloTravado}
           className={classeInput}
         >
-          <option value="LOCAL">{ROTULO_MODELO.LOCAL}</option>
-          <option value="REGIONAL">{ROTULO_MODELO.REGIONAL}</option>
+          <option value="LOCAL">Local</option>
+          <option value="REGIONAL">Regional</option>
         </select>
         <p className="text-xs text-slate-500">
-          Regional: quem atende é sempre Ancião e há a palavra. Local: quem atende pode ser Ancião, Diácono ou
-          Cooperador, sem palavra. A configuração campo a campo do perfil chega na próxima etapa.
+          Define quem pode encerrar o evento: no modelo Local o Instrutor também encerra (menos nos Ensaios Técnicos); no
+          Regional, só o Secretário da Música e os administradores. Os campos da tela são escolhidos abaixo.
+          {modeloTravado && " Este perfil está em uso: troque o perfil dos tipos de evento para poder mudar o modelo."}
         </p>
       </div>
 
@@ -138,13 +158,21 @@ export default function FormularioPerfil({ perfil, perfis, onSalvo, onCancelar }
         <p className="text-xs text-slate-500">Só perfis ativos aparecem para escolher no Tipo do Evento.</p>
       </div>
 
+      <div className="space-y-2">
+        <h3 className="text-base font-semibold text-slate-900">Campos da tela Dados do Ensaio</h3>
+        <p className="text-xs text-slate-500">
+          Ligue os campos que este perfil usa. A tela Dados do Ensaio mostra só o que estiver ligado aqui.
+        </p>
+        <EditorCamposPerfil config={config} onChange={setConfig} disabled={salvando} />
+      </div>
+
       {erro && (
         <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
           {erro}
         </p>
       )}
 
-      <div className="flex justify-end gap-2">
+      <div className="sticky bottom-0 -mx-6 flex justify-end gap-2 border-t border-slate-200 bg-white px-6 py-3">
         <Button variante="secundario" onClick={onCancelar} disabled={salvando}>
           Cancelar
         </Button>

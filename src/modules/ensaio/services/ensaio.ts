@@ -4,6 +4,7 @@
  */
 import { supabase } from "@/lib/supabase";
 import { mensagemDoErro } from "@/lib/erros";
+import type { CargaEnsaioCfg } from "../regrasPerfil";
 import type { CargaEnsaio, EventoParaEnsaio, RespostaEnsaio } from "../tipos";
 
 /** Ensaios (Local/Regional) recentes ou próximos, dentro da abrangência de quem consulta. */
@@ -21,7 +22,7 @@ export async function obterDadosEnsaio(eventoId: string): Promise<RespostaEnsaio
 }
 
 /** Grava (cria ou substitui) os dados do ensaio. O banco refaz todas as conferências. */
-export async function salvarDadosEnsaio(eventoId: string, carga: CargaEnsaio): Promise<void> {
+export async function salvarDadosEnsaio(eventoId: string, carga: CargaEnsaio | CargaEnsaioCfg): Promise<void> {
   const { error } = await supabase.rpc("salvar_dados_ensaio", { p_evento_id: eventoId, p_dados: carga });
   if (error) throw new Error(mensagemDoErro(error, "Não foi possível salvar os dados do ensaio."));
 }

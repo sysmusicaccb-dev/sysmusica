@@ -14,7 +14,8 @@ import { formatarDiaDoEvento, formatarHoraDoEvento } from "@/modules/painel/regr
 import type { DadosPainel } from "@/modules/painel/tipos";
 import { agoraEmSalvador } from "@/modules/relatorios/regras";
 import { montarImpressaoEnsaio } from "../impressao";
-import { rotuloDoCargo, rotuloEncarregado } from "../regras";
+import { normalizarConfig, rotuloDoCargoEncarregado, tituloBlocoEncarregados } from "../perfilConfig";
+import { rotuloDoCargo } from "../regras";
 import type { RespostaEnsaio } from "../tipos";
 
 interface BotaoImprimirEnsaioProps {
@@ -39,6 +40,7 @@ export default function BotaoImprimirEnsaio({ resposta, hinos, totais }: BotaoIm
     setAviso(null);
 
     const evento = resposta.evento;
+    const config = normalizarConfig(resposta.config, evento.modelo_ensaio); // campos que o perfil usa
     const rotuloDoHino = (id: string) => {
       const hino = hinos.find((item) => item.id === id);
       return hino ? rotuloCompleto(hino) : "Hino não encontrado";
@@ -49,12 +51,27 @@ export default function BotaoImprimirEnsaio({ resposta, hinos, totais }: BotaoIm
         tipoEvento: evento.tipo,
         quando: `${formatarDiaDoEvento(evento.data_evento)} às ${formatarHoraDoEvento(evento.data_evento)}`,
         local: [evento.casa_oracao ?? evento.local, evento.cidade].filter((parte): parte is string => Boolean(parte)).join(" · "),
-        atende: `${dados.atende_nome.trim()} — ${rotuloDoCargo(dados.atende_cargo)}`,
-        rotuloEncarregados: rotuloEncarregado(evento.modelo_ensaio),
+        atende:
+          config.quem_atendeu.ativo && dados.atende_nome
+            ? `${dados.atende_nome.trim()} — ${rotuloDoCargo(dados.atende_cargo ?? "")}`
+            : "",
+        rotuloEncarregados: tituloBlocoEncarregados(config.encarregados.cargos),
+        mostrarEncarregados: config.encarregados.ativo,
+        mostrarHinosExecutados: config.hinos_executados.ativo,
         encarregados: dados.encarregados
           .filter((item) => item.nome.trim() !== "")
-          .map((item) => item.nome.trim() + (item.cidade_uf ? ` (${item.cidade_uf})` : "")),
-        hinoAbertura: rotuloDoHino(dados.hino_abertura_id),
+          .map((item) => {
+            // Cargo (quando o perfil admite mais de um) e Cidade-UF, entre parênteses
+            const detalhes = [config.encarregados.cargos.length > 1 ? rotuloDoCargoEncarregado(item.cargo) : "", item.cidade_uf ?? ""]
+              .filter((parte) => parte !== "")
+              .join(", ");
+            return item.nome.trim() + (detalhes ? ` (${detalhes})` : "");
+          }),
+        hinoAbertura: dados.hino_abertura_id
+          ? rotuloDoHino(dados.hino_abertura_id)
+          : config.hino_abertura.modo === "pergunta"
+            ? "Não houve"
+            : "",
         palavra: dados.palavra ?? "",
         hinosExecutados: dados.hinos.map(rotuloDoHino),
         totalParticipantes: totais?.total,

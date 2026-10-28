@@ -140,7 +140,8 @@ export default function PerfilEventoPage() {
       <Drawer
         aberto={painel !== null}
         titulo={painel?.tipo === "editar" ? "Editar Perfil" : "Novo Perfil"}
-        descricao="Defina o nome e o comportamento base do perfil."
+        descricao="Defina o nome e escolha os campos da tela Dados do Ensaio."
+        larguraMaxima="max-w-3xl"
         onFechar={() => setPainel(null)}
       >
         {painel !== null && (

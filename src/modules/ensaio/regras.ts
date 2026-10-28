@@ -110,12 +110,12 @@ export function estadoDosDados(dados: DadosSalvos | null, modelo: ModeloEnsaio):
   if (!dados) return estadoVazio(modelo);
   const encarregados = [...dados.encarregados]
     .sort((a, b) => a.ordem - b.ordem)
-    .map((item) => ({ nome: item.nome, cidadeUf: item.cidade_uf }));
+    .map((item) => ({ nome: item.nome, cidadeUf: item.cidade_uf ?? "" }));
   return {
-    atendeCargo: dados.atende_cargo,
-    atendeNome: dados.atende_nome,
+    atendeCargo: dados.atende_cargo ?? "",
+    atendeNome: dados.atende_nome ?? "",
     palavra: dados.palavra ?? "",
-    hinoAberturaId: dados.hino_abertura_id,
+    hinoAberturaId: dados.hino_abertura_id ?? "",
     encarregados: encarregados.length > 0 ? encarregados : [{ ...ENCARREGADO_VAZIO }],
     hinosIds: [...dados.hinos],
   };

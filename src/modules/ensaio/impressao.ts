@@ -13,6 +13,8 @@ export interface EntradaImpressaoEnsaio {
   encarregados: string[]; // "Nome (Cidade-UF)"
   hinoAbertura: string;
   palavra: string; // vazio no ensaio local
+  mostrarEncarregados?: boolean; // perfil sem encarregados: falso (padrão: verdadeiro)
+  mostrarHinosExecutados?: boolean; // perfil sem hinos executados: falso (padrão: verdadeiro)
   hinosExecutados: string[]; // rótulos completos, na ordem em que foram cantados
   totalParticipantes?: number; // só quando a pessoa pode ver o painel
   emitidoPor: string;
@@ -26,14 +28,18 @@ export function montarImpressaoEnsaio(entrada: EntradaImpressaoEnsaio): OpcoesIm
     { rotulo: "Evento", valor: `${entrada.quando} · ${entrada.tipoEvento}`, largo: true },
     { rotulo: "Local", valor: entrada.local, largo: true },
     { rotulo: "Quem atendeu", valor: entrada.atende, largo: true },
-    {
-      rotulo: `${entrada.rotuloEncarregados} (${entrada.encarregados.length})`,
-      valor: entrada.encarregados.join("; "),
-      largo: true,
-    },
+    ...(entrada.mostrarEncarregados === false
+      ? []
+      : [
+          {
+            rotulo: `${entrada.rotuloEncarregados} (${entrada.encarregados.length})`,
+            valor: entrada.encarregados.join("; "),
+            largo: true,
+          },
+        ]),
     { rotulo: "Hino de abertura", valor: entrada.hinoAbertura, largo: true },
     { rotulo: "Palavra", valor: entrada.palavra.trim(), largo: true },
-    { rotulo: "Hinos executados", valor: String(entrada.hinosExecutados.length) },
+    ...(entrada.mostrarHinosExecutados === false ? [] : [{ rotulo: "Hinos executados", valor: String(entrada.hinosExecutados.length) }]),
     {
       rotulo: "Total de participantes",
       valor: entrada.totalParticipantes === undefined ? "" : String(entrada.totalParticipantes),

@@ -37,7 +37,7 @@ export default function TabelaPerfis({ perfis, podeCriar, podeEditar, podeExclui
               <th scope="col" className={cn(classeCabecalho, "w-14")}>N°</th>
               <th scope="col" className={classeCabecalho}>Perfil</th>
               <th scope="col" className={classeCabecalho}>Descrição</th>
-              <th scope="col" className={classeCabecalho}>Comportamento base</th>
+              <th scope="col" className={classeCabecalho}>Modelo</th>
               <th scope="col" className={classeCabecalho}>Status</th>
               {mostrarAcoes && <th scope="col" className={cn(classeCabecalho, "text-center")}>Ações</th>}
             </tr>
